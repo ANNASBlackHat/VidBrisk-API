@@ -1,0 +1,95 @@
+# ==============================================================================
+# Video Generation Pipeline — .gitignore
+# ==============================================================================
+
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+.env.local
+
+# Secrets & Environment Variables (keep .env.example)
+.env
+*.env
+!.env.example
+
+# Distribution / Packaging / Eggs
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Generated Video, Audio, and Intermediate Output
+output/
+!output/.gitkeep
+data/storage/
+data/cache/
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+*.db
+*.sqlite
+*.sqlite3
+
+# Large Model Weights & Downloads
+models/kokoro/
+models/*.onnx
+models/*.bin
+models/*.pt
+models/*.safetensors
+models/*.json
+!models/.gitkeep
+
+# Temporary Media Artifacts
+*.mp4
+*.webm
+*.mov
+*.wav
+*.mp3
+timeline.json
+
+# Operating System & IDE Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

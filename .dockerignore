@@ -1,0 +1,12 @@
+.git
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+*.egg-info
+.DS_Store
+.env
+output/*.mp4
+output/audio/*.wav
+experiment_output.mp4
+timeline.json
