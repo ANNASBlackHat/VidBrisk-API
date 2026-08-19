@@ -1,0 +1,81 @@
+"""Pydantic schemas for Job request, response, approval, and timeline serialization."""
+
+from datetime import datetime
+from typing import Any, Literal, Optional
+from pydantic import BaseModel, ConfigDict, Field
+from backend.models.job import JobStage, JobStatus
+
+
+class JobCreateRequest(BaseModel):
+    """Payload for submitting a new video generation run."""
+    raw_input: str = Field(..., min_length=5, description="Raw messy script or article text to generate a video from")
+    tts_provider: str = Field(default="kokoro", description="Voice synthesis provider: kokoro, chatterbox, or mock")
+    aligner_provider: str = Field(default="mock", description="Alignment provider: mock, easytranscriber, or whisperx")
+    target_orientation: Literal["horizontal", "vertical", "square", "any"] = Field(
+        default="horizontal",
+        description="Target aspect ratio / orientation for footage retrieval",
+    )
+    auto_approve: bool = Field(
+        default=True,
+        description="Whether to auto-advance past Stage 2 and Stage 5 checkpoints without pausing",
+    )
+    single_pass_llm: bool = Field(
+        default=False,
+        description="Use single combined LLM prompt for Stage 1 + 2",
+    )
+
+
+class JobApprovalRequest(BaseModel):
+    """Payload for human approval checkpoint advancement or overrides."""
+    action: Literal["approve", "reject"] = Field(default="approve", description="Action: 'approve' or 'reject'")
+    beats_override: Optional[list[dict[str, Any]]] = Field(
+        default=None,
+        description="Optional edited beats list to replace Stage 2 output before continuing",
+    )
+    candidates_override: Optional[dict[str, list[dict[str, Any]]]] = Field(
+        default=None,
+        description="Optional edited candidates map to replace Stage 5 output before continuing",
+    )
+
+
+class JobSummaryResponse(BaseModel):
+    """Lightweight summary representation of a job for listing."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    stage: JobStage
+    status: JobStatus
+    tts_provider: str
+    aligner_provider: str
+    target_orientation: str
+    auto_approve: bool
+    created_at: datetime
+    updated_at: datetime
+    error_message: Optional[str] = None
+
+
+class JobResponse(BaseModel):
+    """Full detail view of a video generation job with all intermediate outputs."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    raw_input: str
+    stage: JobStage
+    status: JobStatus
+    tts_provider: str
+    aligner_provider: str
+    target_orientation: str
+    auto_approve: bool
+    single_pass_llm: bool
+    
+    clean_script: Optional[str] = None
+    beats: Optional[list[dict[str, Any]]] = None
+    voice_clips: Optional[list[dict[str, Any]]] = None
+    timings: Optional[dict[str, Any]] = None
+    footage_candidates: Optional[dict[str, Any]] = None
+    asset_plan: Optional[list[dict[str, Any]]] = None
+    timeline: Optional[dict[str, Any]] = None
+    
+    error_message: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
