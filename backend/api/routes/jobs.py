@@ -184,3 +184,67 @@ def cancel_active_job(
         )
     cancelled = cancel_job(session=db, job=job)
     return cancelled
+
+
+@router.post(
+    "/{job_id}/render",
+    summary="Render timeline to MP4 video using FFmpeg engine",
+)
+def render_job_video(
+    job_id: str,
+    payload: Optional[dict[str, Any]] = None,
+    width: int = Query(default=1280),
+    height: int = Query(default=720),
+    fps: int = Query(default=24),
+    db: Session = Depends(get_db),
+) -> Any:
+    """Renders the compiled/edited timeline with trimmed clips, motion graphics, and synchronized voiceover to an MP4 file."""
+    import os
+    from pipeline.renderer.engine import VideoRenderer
+
+    job = get_job(session=db, job_id=job_id)
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job with ID '{job_id}' was not found.",
+        )
+
+    timeline_data = (payload.get("timeline") if payload and "timeline" in payload else None) or job.timeline
+    if not timeline_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Job '{job_id}' has no compiled timeline available to render.",
+        )
+
+    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+    out_dir = os.path.join(root_dir, "output", "rendered")
+    os.makedirs(out_dir, exist_ok=True)
+    out_filename = f"{job_id}_{width}x{height}_{fps}fps.mp4"
+    out_path = os.path.join(out_dir, out_filename)
+
+    renderer = VideoRenderer(debug=True)
+    try:
+        renderer.render_timeline(
+            timeline=timeline_data,
+            output_path=out_path,
+            width=width,
+            height=height,
+            fps=fps,
+            fit_mode="blur_bg",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Rendering failed: {str(e)}",
+        )
+
+    video_url = f"http://localhost:8000/static/output/rendered/{out_filename}"
+    return {
+        "status": "complete",
+        "video_url": video_url,
+        "filename": out_filename,
+        "width": width,
+        "height": height,
+        "fps": fps,
+    }
+

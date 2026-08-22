@@ -72,7 +72,7 @@ def worker_tick(
 
     try:
         if job.stage == JobStage.CLEANING:
-            cleaned = clean_script(raw_input=job.raw_input)
+            cleaned = clean_script(raw_text=job.raw_input)
             advance_job_stage(
                 session=session,
                 job=job,
@@ -82,7 +82,7 @@ def worker_tick(
             )
 
         elif job.stage == JobStage.STRUCTURING:
-            beats = structure_beats(script_text=job.clean_script or job.raw_input)
+            beats = structure_beats(clean_text=job.clean_script or job.raw_input)
             beats_data = [b.model_dump() for b in beats]
 
             if should_pause_for_approval(job, JobStage.STRUCTURING):

@@ -1,5 +1,5 @@
 services:
-  api:
+  backend:
     build:
       context: .
       dockerfile: Dockerfile
@@ -7,27 +7,21 @@ services:
     container_name: video-generation-api
     ports:
       - "8000:8000"
-    env_file:
-      - .env
     volumes:
-      - ./output:/app/output
-      - ./data:/app/data
-      - ./models:/app/models
+      - .:/app
     command: ["python", "server.py", "--host", "0.0.0.0", "--port", "8000"]
     restart: unless-stopped
 
-  # Optional dedicated worker service if splitting API and worker containers
-  worker:
+  frontend:
     build:
-      context: .
+      context: ../video-generation-frontend
       dockerfile: Dockerfile
-    image: video-generation-pipeline:latest
-    container_name: video-generation-worker
-    env_file:
-      - .env
-    volumes:
-      - ./output:/app/output
-      - ./data:/app/data
-      - ./models:/app/models
-    command: ["python", "server.py", "--worker-only", "--interval", "1.0"]
+    image: video-generation-frontend:latest
+    container_name: video-generation-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
     restart: unless-stopped

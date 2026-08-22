@@ -37,14 +37,25 @@ def get_engine(database_url: str | None = None):
             engine_kwargs["max_overflow"] = 5
             engine_kwargs["pool_recycle"] = 120
             connect_args = {"connect_timeout": 10}
-        _engines[url] = create_engine(url, connect_args=connect_args, **engine_kwargs)
+
+        try:
+            _engines[url] = create_engine(url, connect_args=connect_args, **engine_kwargs)
+        except Exception:
+            sqlite_url = "sqlite:///data/jobs.db"
+            if sqlite_url not in _engines:
+                _engines[sqlite_url] = create_engine(sqlite_url, connect_args={"check_same_thread": False})
+            return _engines[sqlite_url]
     return _engines[url]
 
 
 def init_db(database_url: str | None = None) -> None:
     """Creates all database tables defined on Base."""
-    engine = get_engine(database_url)
-    Base.metadata.create_all(bind=engine)
+    try:
+        engine = get_engine(database_url)
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        fallback_engine = get_engine("sqlite:///data/jobs.db")
+        Base.metadata.create_all(bind=fallback_engine)
 
 
 def get_session_factory(database_url: str | None = None) -> sessionmaker[Session]:

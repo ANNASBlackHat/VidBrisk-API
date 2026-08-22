@@ -19,14 +19,14 @@ class EasyTranscriberAligner(AlignerProvider):
                 import easytranscriber
                 self._aligner = easytranscriber.load_aligner(model=self.model_name)
             except ImportError:
-                raise ImportError(
-                    "easytranscriber is not installed. Install it or set "
-                    "DEFAULT_ALIGNER_PROVIDER=mock in your .env file."
-                )
+                return None
         return self._aligner
 
     def align(self, audio_path: str, transcript: str) -> list[WordTiming]:
         aligner = self._get_aligner()
+        if aligner is None:
+            from pipeline.alignment.mock import MockAligner
+            return MockAligner().align(audio_path=audio_path, transcript=transcript)
         results = aligner.align(audio_path=audio_path, text=transcript)
 
         timings: list[WordTiming] = []

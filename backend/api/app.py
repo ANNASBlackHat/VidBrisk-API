@@ -1,9 +1,11 @@
 """FastAPI application factory for the Video Generation Pipeline Backend."""
 
+import os
 from contextlib import asynccontextmanager
 from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from backend.api.routes.jobs import router as jobs_router
 from backend.models.db import init_db
 
@@ -28,7 +30,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Enable CORS for future Next.js frontend
+    # Enable CORS for Next.js frontend
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -36,6 +38,14 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Mount static files for output directory (audio clips, rendered videos, assets)
+    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    output_dir = os.path.join(root_dir, "output")
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(os.path.join(output_dir, "audio"), exist_ok=True)
+    os.makedirs(os.path.join(output_dir, "rendered"), exist_ok=True)
+    app.mount("/static/output", StaticFiles(directory=output_dir), name="static_output")
 
     # Health check & root endpoints
     @app.get("/", tags=["System"], summary="API Root / Metadata")

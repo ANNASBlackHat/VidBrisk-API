@@ -110,6 +110,20 @@ class VideoRenderer:
                         self._create_text_card_clip(
                             seg_out, content=content, style=style, duration=dur, width=width, height=height, fps=fps
                         )
+                    elif item.get("assetType") == "motion" or item.get("componentId"):
+                        props = item.get("props", {})
+                        content = item.get("rawContent") or item.get("content") or ""
+                        self._log(f"• Segment {idx}: [MOTION] {t_start:.2f}s-{t_end:.2f}s ({dur:.2f}s) - Component: {item.get('componentId')}")
+                        self._create_text_card_clip(
+                            seg_out,
+                            content=content,
+                            style="stat-callout",
+                            duration=dur,
+                            width=width,
+                            height=height,
+                            fps=fps,
+                            props=props,
+                        )
                     else:
                         asset_path = item.get("storagePath") or item.get("storageUrl") or item.get("assetId") or ""
                         source_in = float(item.get("sourceIn", 0.0))
@@ -299,20 +313,55 @@ class VideoRenderer:
                 "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", output_path
             ])
 
-    def _create_text_card_clip(self, output_path: str, content: str, style: str, duration: float, width: int, height: int, fps: int) -> None:
-        clean_text = content.replace("'", "\\'").replace(":", "\\:").replace("%", "\\%")
-        bg_color = "0x0B0F19" if style == "stat-callout" else "0x161B26"
-        font_size = int(height * 0.075) if style == "stat-callout" else int(height * 0.05)
-        font_color = "0xFCD34D" if style == "stat-callout" else "0xFFFFFF"
+    def _create_text_card_clip(
+        self,
+        output_path: str,
+        content: str,
+        style: str,
+        duration: float,
+        width: int,
+        height: int,
+        fps: int,
+        props: Optional[dict[str, Any]] = None,
+    ) -> None:
+        """Generates a professional typography motion graphics segment with smooth zoom/fade."""
+        from pipeline.renderer.motion_card import generate_motion_card_image
 
-        drawtext_filter = (
-            f"drawtext=text='{clean_text}':fontcolor={font_color}:fontsize={font_size}:"
-            f"x=(w-text_w)/2:y=(h-text_h)/2"
+        props = props or {}
+        hero_val = str(props.get("value") or "").strip()
+        label = str(props.get("label") or "STATISTICAL HIGHLIGHT").strip()
+        subtext = str(props.get("subtext") or content).strip()
+
+        if not hero_val:
+            import re
+            m = re.search(r"(\$?\d+(?:\.\d+)?\s*(?:billion|million|thousand|percent|%|k|m|b)?|\d+%)", content, re.I)
+            if m:
+                hero_val = m.group(1).upper()
+            else:
+                hero_val = "APOLLO 11"
+
+        card_type = "stat" if (style == "stat-callout" or bool(hero_val)) else "quote"
+        temp_img = output_path.replace(".mp4", "_card.png")
+
+        generate_motion_card_image(
+            output_path=temp_img,
+            hero_text=hero_val if card_type == "stat" else content,
+            label=label,
+            subtext=subtext if card_type == "stat" else "",
+            theme_color="#3B82F6" if card_type == "stat" else "#9333EA",
+            card_type=card_type,
+            width=width,
+            height=height,
         )
 
+        vf = f"scale={width}:{height},fade=t=in:st=0:d=0.3"
+
         self._run_cmd([
-            self.ffmpeg_bin, "-y", "-f", "lavfi",
-            "-i", f"color=c={bg_color}:s={width}x{height}:d={duration}:r={fps}",
-            "-vf", drawtext_filter,
+            self.ffmpeg_bin, "-y", "-loop", "1",
+            "-i", temp_img,
+            "-t", str(duration),
+            "-vf", vf,
+            "-r", str(fps),
             "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", output_path
         ])
+
