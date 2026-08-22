@@ -29,6 +29,7 @@ dev = [
 ]
 tts = [
     "kokoro-onnx>=0.5.0",
+    "supertonic>=1.0.0",
     "soundfile>=0.12.1",
 ]
 alignment = [

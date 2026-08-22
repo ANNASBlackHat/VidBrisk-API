@@ -8,8 +8,9 @@ from backend.models.job import JobStage, JobStatus
 
 class JobCreateRequest(BaseModel):
     """Payload for submitting a new video generation run."""
+    title: Optional[str] = Field(default=None, max_length=255, description="Optional title or label for the video")
     raw_input: str = Field(..., min_length=5, description="Raw messy script or article text to generate a video from")
-    tts_provider: str = Field(default="kokoro", description="Voice synthesis provider: kokoro, chatterbox, or mock")
+    tts_provider: str = Field(default="kokoro", description="Voice synthesis provider: kokoro, supersonic, chatterbox, or mock")
     aligner_provider: str = Field(default="mock", description="Alignment provider: mock, easytranscriber, or whisperx")
     target_orientation: Literal["horizontal", "vertical", "square", "any"] = Field(
         default="horizontal",
@@ -23,6 +24,11 @@ class JobCreateRequest(BaseModel):
         default=False,
         description="Use single combined LLM prompt for Stage 1 + 2",
     )
+
+
+class JobUpdateRequest(BaseModel):
+    """Payload for updating job metadata."""
+    title: Optional[str] = Field(default=None, max_length=255, description="New title for the video")
 
 
 class JobApprovalRequest(BaseModel):
@@ -43,6 +49,7 @@ class JobSummaryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
+    title: Optional[str] = None
     stage: JobStage
     status: JobStatus
     tts_provider: str
@@ -52,6 +59,7 @@ class JobSummaryResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     error_message: Optional[str] = None
+    progress: Optional[dict[str, Any]] = None
 
 
 class JobResponse(BaseModel):
@@ -59,6 +67,7 @@ class JobResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
+    title: Optional[str] = None
     raw_input: str
     stage: JobStage
     status: JobStatus
@@ -76,6 +85,7 @@ class JobResponse(BaseModel):
     asset_plan: Optional[list[dict[str, Any]]] = None
     timeline: Optional[dict[str, Any]] = None
     motion_qa_thumbnails: Optional[Union[list[dict[str, Any]], dict[str, Any]]] = None
+    progress: Optional[dict[str, Any]] = None
     
     error_message: Optional[str] = None
     created_at: datetime

@@ -60,6 +60,11 @@ def _migrate_columns(engine) -> None:
                         conn.execute(text("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS motion_qa_thumbnails JSON;"))
                     else:
                         conn.execute(text("ALTER TABLE video_jobs ADD COLUMN motion_qa_thumbnails JSON;"))
+                if "title" not in columns:
+                    if engine.dialect.name == "postgresql":
+                        conn.execute(text("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS title VARCHAR(255);"))
+                    else:
+                        conn.execute(text("ALTER TABLE video_jobs ADD COLUMN title VARCHAR(255);"))
     except Exception as e:
         # Non-fatal if table not created yet or permission restricted
         pass

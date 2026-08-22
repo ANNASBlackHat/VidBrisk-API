@@ -19,6 +19,11 @@ DEFAULT_HEADERS = {
 }
 
 
+class RenderEngineMismatchError(Exception):
+    """Raised when the FFmpeg fallback renderer is asked to render motion components requiring Remotion."""
+    pass
+
+
 class VideoRenderer:
     """Headless MP4 video renderer driven by timeline.json and FFmpeg."""
 
@@ -61,6 +66,20 @@ class VideoRenderer:
             data = timeline
 
         tracks = data.get("tracks", [])
+        has_motion_items = any(
+            item.get("assetType") == "motion" or bool(item.get("componentId"))
+            for track in tracks
+            for item in track.get("items", [])
+        )
+        if has_motion_items:
+            raise RenderEngineMismatchError(
+                "This timeline contains motion components that require the Remotion "
+                "renderer (headless Chromium + frame-accurate interpolation). The "
+                "ffmpeg-only fallback cannot render these correctly and will not "
+                "attempt to — fix the primary Remotion render path instead of "
+                "silently degrading output."
+            )
+
         video_items = []
         text_items = []
         audio_items = []

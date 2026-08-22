@@ -6,6 +6,7 @@ from pipeline.tts.base import AudioResult, TTSProvider
 from pipeline.tts.kokoro import KokoroTTSProvider
 from pipeline.tts.chatterbox import ChatterboxTTSProvider
 from pipeline.tts.mock import MockTTSProvider
+from pipeline.tts.supersonic import SuperSonicTTSProvider, SupertonicTTSProvider
 
 
 def get_tts_provider(provider_name: Optional[str] = None) -> TTSProvider:
@@ -17,10 +18,14 @@ def get_tts_provider(provider_name: Optional[str] = None) -> TTSProvider:
         return KokoroTTSProvider()
     elif name == "chatterbox":
         return ChatterboxTTSProvider()
+    elif name in ("supersonic", "supersonic3", "supertonic", "supertonic3", "supertonic-3", "supersonic-3"):
+        return SuperSonicTTSProvider()
     elif name == "mock":
         return MockTTSProvider()
     else:
-        raise ValueError(f"Unknown TTS provider '{name}'. Supported: kokoro, chatterbox, mock")
+        raise ValueError(
+            f"Unknown TTS provider '{name}'. Supported: kokoro, chatterbox, supersonic, mock"
+        )
 
 
 __all__ = [
@@ -28,6 +33,9 @@ __all__ = [
     "AudioResult",
     "KokoroTTSProvider",
     "ChatterboxTTSProvider",
+    "SuperSonicTTSProvider",
+    "SupertonicTTSProvider",
     "MockTTSProvider",
     "get_tts_provider",
 ]
+

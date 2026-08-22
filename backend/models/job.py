@@ -41,6 +41,7 @@ class VideoJob(Base):
         default=lambda: str(uuid.uuid4()),
         index=True,
     )
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     raw_input: Mapped[str] = mapped_column(Text, nullable=False)
     
     # State Machine columns
@@ -77,6 +78,9 @@ class VideoJob(Base):
 
     # Lightweight Still-Frame QA Thumbnails for motion components
     motion_qa_thumbnails: Mapped[list | dict | None] = mapped_column(JSON, nullable=True)
+
+    # Real-time execution progress tracking (e.g. current/total items, percentage, active message)
+    progress: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     # Diagnostic & Error tracking
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)

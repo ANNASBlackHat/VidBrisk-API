@@ -113,7 +113,58 @@ Run the entire unit and integration test suite:
 ```bash
 uv run pytest
 ```
-*Current test suite: **49 passing tests** covering stage functions, ORM state transitions, component registry prop extraction, worker loop checkpoints & crash recovery, FastAPI REST routes, and end-to-end HTTP pipeline runs.*
+*Current test suite: **53 passing tests** covering stage functions, ORM state transitions, component registry prop extraction, worker loop checkpoints & crash recovery, FastAPI REST routes, and end-to-end HTTP pipeline runs.*
+
+---
+
+## 💻 Headless CLI Automation
+
+You can run the entire video generation workflow completely from the command line without opening the web frontend:
+
+```bash
+# 1. Generate Timeline & Audio only (fast, no rendering)
+python run_pipeline.py \
+  --script examples/sample_raw_script.txt \
+  --output output/timeline.json \
+  --tts kokoro \
+  --orientation horizontal
+
+# 2. Auto-export directly to MP4 with Remotion motion components (StatCards, QuoteCards, etc.)
+python run_pipeline.py \
+  --script examples/sample_raw_script.txt \
+  --output output/timeline.json \
+  --tts kokoro \
+  --render output/final_video.mp4 \
+  --orientation horizontal
+```
+
+### CLI Options Reference
+| Flag | Short | Default | Description |
+|---|---|---|---|
+| `--script` | `-s` | *Required* | Path to raw narration script text file |
+| `--output` | `-o` | `output/timeline.json` | Path to save the compiled timeline JSON |
+| `--tts` | | `kokoro` | TTS engine (`kokoro`, `supersonic`, `chatterbox`, `mock`) |
+| `--aligner` | | `mock` | Alignment engine (`whisperx`, `easytranscriber`, `mock`) |
+| `--orientation` | | `horizontal` | Video aspect ratio (`horizontal` 16:9, `vertical` 9:16, `square` 1:1) |
+| `--render` | `-r` | `None` | Output MP4 path. If specified, auto-renders final video |
+| `--single-pass` | | `False` | Use single combined LLM call for script clean + beat structure |
+
+---
+
+## 🎙️ Audio Processing & Long Script Handling
+
+### Beat-by-Beat Chunking
+* The pipeline **does not** synthesize entire scripts in a single massive TTS audio request.
+* **Stage 2 (`structuring`)** segments long narration scripts (such as 10–20 minute scripts with 2,000–3,000 words) into atomic visual **beats** (1–2 sentences each, ~3–7 seconds of speech).
+* **Stage 3 (`voicing`)** synthesizes each beat sequentially into individual `.wav` files (`output/audio/b1.wav`, `b2.wav`, ...).
+
+### Real-Time Progress & Logs
+* **Console Logging**: As each beat is processed, detailed progress is printed to `stdout`:
+  ```text
+  [INFO] [VOICING] Beat 14/180 (b14) synthesized in 1.12s -> 4.25s audio
+  [INFO] [ALIGNING] Beat 14/180 (b14) aligned 12 words in 0.38s
+  ```
+* **Frontend Tracking**: If using the UI, `/jobs/[id]` displays a live beat counter (`14 / 180 (7.8%)`) and animated progress bar in real time.
 
 ---
 

@@ -1,6 +1,6 @@
-"""Durable Worker Execution Engine for Video Generation Pipeline."""
-
+import logging
 import os
+import time
 from typing import Any, Optional
 from sqlalchemy.orm import Session
 
@@ -25,6 +25,15 @@ from pipeline.tts import TTSProvider, get_tts_provider
 from pipeline.tts.chatterbox import ChatterboxTTSProvider
 from pipeline.tts.kokoro import KokoroTTSProvider
 from pipeline.tts.mock import MockTTSProvider
+from pipeline.tts.supersonic import SuperSonicTTSProvider
+
+logger = logging.getLogger("backend.worker")
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] [Worker] %(message)s", datefmt="%H:%M:%S")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
 
 
 def resolve_tts_provider(provider_name: Optional[str]) -> TTSProvider:
@@ -34,6 +43,8 @@ def resolve_tts_provider(provider_name: Optional[str]) -> TTSProvider:
         return KokoroTTSProvider()
     elif p_name == "chatterbox":
         return ChatterboxTTSProvider()
+    elif p_name in ("supersonic", "supersonic3", "supertonic", "supertonic3", "supertonic-3", "supersonic-3"):
+        return SuperSonicTTSProvider()
     elif p_name == "mock":
         return MockTTSProvider()
     return KokoroTTSProvider()
@@ -49,6 +60,27 @@ def resolve_aligner_provider(provider_name: Optional[str]) -> AlignerProvider:
     elif p_name == "mock":
         return MockAligner()
     return MockAligner()
+
+
+def _update_job_progress(
+    session: Session,
+    job: VideoJob,
+    stage: str,
+    current: int,
+    total: int,
+    message: str,
+) -> None:
+    """Saves atomic progress to the database row for real-time frontend feedback."""
+    percent = round((current / total) * 100, 1) if total > 0 else 0.0
+    job.progress = {
+        "stage": stage,
+        "current": current,
+        "total": total,
+        "percent": percent,
+        "message": message,
+    }
+    session.commit()
+    session.refresh(job)
 
 
 def worker_tick(
@@ -71,9 +103,16 @@ def worker_tick(
     session.commit()
     session.refresh(job)
 
+    job_prefix = job.id[:8]
+
     try:
         if job.stage == JobStage.CLEANING:
+            logger.info(f"[{job_prefix}] [CLEANING] Starting script cleanup ({len(job.raw_input)} chars)...")
+            _update_job_progress(
+                session, job, "cleaning", 0, 1, "Cleaning raw script and removing cues..."
+            )
             cleaned = clean_script(job.raw_input)
+            logger.info(f"[{job_prefix}] [CLEANING] Completed cleanup -> {len(cleaned)} chars.")
             advance_job_stage(
                 session=session,
                 job=job,
@@ -83,10 +122,16 @@ def worker_tick(
             )
 
         elif job.stage == JobStage.STRUCTURING:
+            logger.info(f"[{job_prefix}] [STRUCTURING] Segmenting narration into beats with Gemini LLM...")
+            _update_job_progress(
+                session, job, "structuring", 0, 1, "Segmenting narration into atomic beats with LLM..."
+            )
             beats = structure_beats(job.clean_script or job.raw_input)
             beats_data = [b.model_dump() for b in beats]
+            logger.info(f"[{job_prefix}] [STRUCTURING] Extracted {len(beats_data)} beats.")
 
             if should_pause_for_approval(job, JobStage.STRUCTURING):
+                logger.info(f"[{job_prefix}] [CHECKPOINT] Pausing at Structuring checkpoint for human review.")
                 pause_at_checkpoint(
                     session=session,
                     job=job,
@@ -106,15 +151,45 @@ def worker_tick(
             tts_engine = tts_override or resolve_tts_provider(job.tts_provider)
             os.makedirs(audio_output_dir, exist_ok=True)
             voice_clips_data = []
+            total_beats = len(job.beats or [])
 
-            for raw_b in (job.beats or []):
+            logger.info(
+                f"[{job_prefix}] [VOICING] Starting TTS synthesis for {total_beats} beats using provider='{job.tts_provider}'..."
+            )
+
+            for idx, raw_b in enumerate(job.beats or [], start=1):
                 beat = Beat(**raw_b)
+                _update_job_progress(
+                    session=session,
+                    job=job,
+                    stage="voicing",
+                    current=idx - 1,
+                    total=total_beats,
+                    message=f"Synthesizing audio for beat {idx}/{total_beats} ({beat.id})...",
+                )
+
+                t0 = time.time()
                 vc = synthesize_voice(
                     beat=beat,
                     provider=tts_engine,
                     output_dir=audio_output_dir,
                 )
+                duration_synth = time.time() - t0
                 voice_clips_data.append(vc.model_dump())
+
+                logger.info(
+                    f"[{job_prefix}] [VOICING] Beat {idx}/{total_beats} ({beat.id}) "
+                    f"synthesized in {duration_synth:.2f}s -> {vc.duration_sec:.2f}s audio"
+                )
+
+            _update_job_progress(
+                session=session,
+                job=job,
+                stage="voicing",
+                current=total_beats,
+                total=total_beats,
+                message=f"Voicing complete: {total_beats} clips generated.",
+            )
 
             advance_job_stage(
                 session=session,
@@ -129,11 +204,28 @@ def worker_tick(
             timings_map = {}
             current_offset = 0.0
             beat_map = {b["id"]: Beat(**b) for b in (job.beats or [])}
+            total_clips = len(job.voice_clips or [])
 
-            for raw_vc in (job.voice_clips or []):
+            logger.info(
+                f"[{job_prefix}] [ALIGNING] Starting word-level alignment for {total_clips} clips using provider='{job.aligner_provider}'..."
+            )
+
+            for idx, raw_vc in enumerate(job.voice_clips or [], start=1):
                 vc = VoiceClip(**raw_vc)
                 beat = beat_map.get(vc.beat_id, Beat(id=vc.beat_id, text="", visual_intent=""))
+                
+                _update_job_progress(
+                    session=session,
+                    job=job,
+                    stage="aligning",
+                    current=idx - 1,
+                    total=total_clips,
+                    message=f"Aligning timestamps for beat {idx}/{total_clips} ({vc.beat_id})...",
+                )
+
+                t0 = time.time()
                 word_timings = extract_timestamps(voice_clip=vc, beat=beat, aligner=aligner_engine)
+                duration_align = time.time() - t0
                 
                 duration = vc.duration_sec
                 start_ts = current_offset
@@ -151,6 +243,20 @@ def worker_tick(
                 }
                 current_offset = end_ts
 
+                logger.info(
+                    f"[{job_prefix}] [ALIGNING] Beat {idx}/{total_clips} ({vc.beat_id}) "
+                    f"aligned {len(words_data)} words in {duration_align:.2f}s"
+                )
+
+            _update_job_progress(
+                session=session,
+                job=job,
+                stage="aligning",
+                current=total_clips,
+                total=total_clips,
+                message=f"Alignment complete: {total_clips} beats timed.",
+            )
+
             advance_job_stage(
                 session=session,
                 job=job,
@@ -162,9 +268,22 @@ def worker_tick(
         elif job.stage == JobStage.RESOLVING_FOOTAGE:
             resolver = resolver_override or FootageResolver()
             candidates_map = {}
+            total_beats = len(job.beats or [])
 
-            for raw_b in (job.beats or []):
+            logger.info(f"[{job_prefix}] [RESOLVING] Searching footage for {total_beats} beats...")
+
+            for idx, raw_b in enumerate(job.beats or [], start=1):
                 beat = Beat(**raw_b)
+                _update_job_progress(
+                    session=session,
+                    job=job,
+                    stage="resolving_footage",
+                    current=idx - 1,
+                    total=total_beats,
+                    message=f"Searching footage for beat {idx}/{total_beats} ({beat.id})...",
+                )
+
+                t0 = time.time()
                 try:
                     candidates = resolve_footage(
                         beat=beat,
@@ -172,11 +291,28 @@ def worker_tick(
                         top_k=5,
                         target_orientation=job.target_orientation,
                     )
-                except Exception:
+                except Exception as ex:
+                    logger.warning(f"[{job_prefix}] [RESOLVING] Footage error for {beat.id}: {ex}")
                     candidates = []
+                duration_res = time.time() - t0
+
                 candidates_map[beat.id] = [c.model_dump() for c in candidates]
+                logger.info(
+                    f"[{job_prefix}] [RESOLVING] Beat {idx}/{total_beats} ({beat.id}) "
+                    f"matched {len(candidates)} candidates in {duration_res:.2f}s"
+                )
+
+            _update_job_progress(
+                session=session,
+                job=job,
+                stage="resolving_footage",
+                current=total_beats,
+                total=total_beats,
+                message=f"Footage resolution complete: {total_beats} beats resolved.",
+            )
 
             if should_pause_for_approval(job, JobStage.RESOLVING_FOOTAGE):
+                logger.info(f"[{job_prefix}] [CHECKPOINT] Pausing at Footage checkpoint for human review.")
                 pause_at_checkpoint(
                     session=session,
                     job=job,
@@ -193,6 +329,10 @@ def worker_tick(
                 )
 
         elif job.stage == JobStage.ASSEMBLING:
+            logger.info(f"[{job_prefix}] [ASSEMBLING] Planning track layout and asset durations...")
+            _update_job_progress(
+                session, job, "assembling", 0, 1, "Planning timeline tracks and transitions..."
+            )
             asset_plans_data = []
             timings = job.timings or {}
             voice_map = {vc["beat_id"]: VoiceClip(**vc) for vc in (job.voice_clips or [])}
@@ -217,6 +357,7 @@ def worker_tick(
                 asset_plans_data.append(plan.model_dump())
                 cursor += vc.duration_sec
 
+            logger.info(f"[{job_prefix}] [ASSEMBLING] Assembled {len(asset_plans_data)} asset plans.")
             advance_job_stage(
                 session=session,
                 job=job,
@@ -226,6 +367,10 @@ def worker_tick(
             )
 
         elif job.stage == JobStage.COMPILING:
+            logger.info(f"[{job_prefix}] [COMPILING] Compiling multi-track Remotion timeline...")
+            _update_job_progress(
+                session, job, "compiling", 0, 1, "Compiling multi-track Remotion timeline and QA thumbnails..."
+            )
             compiled_timeline = compile_timeline(job=job)
             try:
                 qa_thumbnails = generate_motion_qa_thumbnails(
@@ -233,9 +378,11 @@ def worker_tick(
                     timeline=compiled_timeline,
                     output_base_dir="output/qa_thumbnails",
                 )
-            except Exception:
+            except Exception as qa_err:
+                logger.warning(f"[{job_prefix}] [COMPILING] QA thumbnail error: {qa_err}")
                 qa_thumbnails = None
 
+            logger.info(f"[{job_prefix}] [COMPILING] Timeline compiled successfully. Job COMPLETE!")
             advance_job_stage(
                 session=session,
                 job=job,
@@ -248,5 +395,6 @@ def worker_tick(
         return job
 
     except Exception as e:
+        logger.error(f"[{job_prefix}] Error executing stage {job.stage}: {e}", exc_info=True)
         fail_job(session=session, job=job, error_message=str(e))
         return job

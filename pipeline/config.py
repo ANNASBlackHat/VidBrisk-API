@@ -29,9 +29,13 @@ class Settings(BaseSettings):
     OUTPUT_DIR: str = "./output"
 
     # TTS Settings
-    DEFAULT_TTS_PROVIDER: Literal["kokoro", "chatterbox", "mock"] = "kokoro"
+    DEFAULT_TTS_PROVIDER: Literal[
+        "kokoro", "chatterbox", "mock", "supersonic", "supersonic3", "supertonic", "supertonic3"
+    ] = "kokoro"
     KOKORO_VOICE: str = "af_sarah"
     KOKORO_LANG: str = "en-us"
+    SUPERSONIC_VOICE: str = "M1"
+    SUPERSONIC_LANG: str = "en"
 
     # Timestamp Alignment Settings
     DEFAULT_ALIGNER_PROVIDER: Literal["easytranscriber", "whisperx", "mock"] = "mock"

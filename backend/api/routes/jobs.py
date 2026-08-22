@@ -11,14 +11,17 @@ from backend.models.schemas import (
     JobCreateRequest,
     JobResponse,
     JobSummaryResponse,
+    JobUpdateRequest,
 )
 from backend.repository import (
     approve_job,
     cancel_job,
     create_job,
+    delete_job,
     get_job,
     list_jobs,
     retry_job,
+    update_job,
 )
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
@@ -81,6 +84,47 @@ def get_job_detail(
             detail=f"Job with ID '{job_id}' was not found.",
         )
     return job
+
+
+@router.patch(
+    "/{job_id}",
+    response_model=JobResponse,
+    summary="Update job metadata like title",
+)
+def update_job_metadata(
+    job_id: str,
+    payload: JobUpdateRequest,
+    db: Session = Depends(get_db),
+) -> Any:
+    """Updates mutable job metadata, such as its display title."""
+    job = get_job(session=db, job_id=job_id)
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job with ID '{job_id}' was not found.",
+        )
+    updated = update_job(session=db, job=job, title=payload.title)
+    return updated
+
+
+@router.delete(
+    "/{job_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a video generation job and its artifacts",
+)
+def delete_job_by_id(
+    job_id: str,
+    db: Session = Depends(get_db),
+) -> None:
+    """Deletes a job from the database and cleans up any rendered output files."""
+    job = get_job(session=db, job_id=job_id)
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job with ID '{job_id}' was not found.",
+        )
+    delete_job(session=db, job=job)
+    return None
 
 
 @router.get(
@@ -200,7 +244,7 @@ def render_job_video(
 ) -> Any:
     """Renders the compiled/edited timeline with trimmed clips, motion graphics, and synchronized voiceover to an MP4 file."""
     import os
-    from pipeline.renderer.engine import VideoRenderer
+    from pipeline.renderer.engine import RenderEngineMismatchError, VideoRenderer
 
     job = get_job(session=db, job_id=job_id)
     if not job:
@@ -232,6 +276,11 @@ def render_job_video(
             fps=fps,
             fit_mode="blur_bg",
         )
+    except RenderEngineMismatchError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e),
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -241,6 +290,7 @@ def render_job_video(
     video_url = f"http://localhost:8000/static/output/rendered/{out_filename}"
     return {
         "status": "complete",
+        "render_engine": "ffmpeg-fallback",
         "video_url": video_url,
         "filename": out_filename,
         "width": width,

@@ -9,7 +9,17 @@ from backend.models.schemas import JobCreateRequest
 
 def create_job(session: Session, req: JobCreateRequest) -> VideoJob:
     """Creates a new job in the database with stage=CLEANING and status=PENDING."""
+    title = req.title.strip() if req.title and req.title.strip() else None
+    if not title:
+        lines = [l.strip() for l in req.raw_input.splitlines() if l.strip()]
+        if lines:
+            first_line = lines[0]
+            title = first_line[:60] + ("..." if len(first_line) > 60 else "")
+        else:
+            title = "Untitled Video"
+
     job = VideoJob(
+        title=title,
         raw_input=req.raw_input,
         tts_provider=req.tts_provider,
         aligner_provider=req.aligner_provider,
@@ -70,6 +80,7 @@ def advance_job_stage(
     **kwargs: Any,
 ) -> VideoJob:
     """Updates job outputs and advances stage/status atomically."""
+    job.progress = kwargs.pop("progress", None)
     for k, v in kwargs.items():
         if hasattr(job, k):
             setattr(job, k, v)
@@ -153,3 +164,34 @@ def cancel_job(session: Session, job: VideoJob) -> VideoJob:
     session.commit()
     session.refresh(job)
     return job
+
+
+def update_job(session: Session, job: VideoJob, title: Optional[str] = None) -> VideoJob:
+    """Updates job metadata like title."""
+    if title is not None:
+        job.title = title.strip()
+    session.commit()
+    session.refresh(job)
+    return job
+
+
+def delete_job(session: Session, job: VideoJob) -> bool:
+    """Deletes a job from the database and cleans up rendered artifacts."""
+    import glob
+    import os
+
+    try:
+        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        rendered_pattern = os.path.join(root_dir, "output", "rendered", f"{job.id}*")
+        for f in glob.glob(rendered_pattern):
+            try:
+                if os.path.isfile(f):
+                    os.remove(f)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    session.delete(job)
+    session.commit()
+    return True
