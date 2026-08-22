@@ -66,6 +66,12 @@ def main():
         help="Use single combined LLM call for clean + structure stages",
     )
     parser.add_argument(
+        "--audio-dir",
+        type=str,
+        default=None,
+        help="Directory to save generated audio clips (default: auto-derived from output path)",
+    )
+    parser.add_argument(
         "--render",
         "-r",
         type=str,
@@ -82,11 +88,14 @@ def main():
     with open(args.script, "r", encoding="utf-8") as f:
         raw_text = f.read()
 
+    audio_dir = args.audio_dir or os.path.join(os.path.dirname(args.output) or "output", "audio")
+
     print(f"==================================================")
     print(f"🎬 Video Generation Pipeline — Processing Script")
     print(f"==================================================")
     print(f"Input: {args.script} ({len(raw_text)} chars)")
-    print(f"Output: {args.output}\n")
+    print(f"Output Timeline: {args.output}")
+    print(f"Audio Output Dir: {audio_dir}\n")
 
     try:
         tts_engine = get_tts_provider(args.tts) if args.tts else None
@@ -97,6 +106,7 @@ def main():
             tts_provider=tts_engine,
             aligner_provider=aligner_engine,
             output_json_path=args.output,
+            audio_output_dir=audio_dir,
             single_pass_llm=args.single_pass,
             target_orientation=args.orientation,
         )

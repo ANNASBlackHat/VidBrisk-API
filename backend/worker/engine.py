@@ -149,12 +149,13 @@ def worker_tick(
 
         elif job.stage == JobStage.VOICING:
             tts_engine = tts_override or resolve_tts_provider(job.tts_provider)
-            os.makedirs(audio_output_dir, exist_ok=True)
+            job_audio_dir = os.path.join(audio_output_dir, str(job.id))
+            os.makedirs(job_audio_dir, exist_ok=True)
             voice_clips_data = []
             total_beats = len(job.beats or [])
 
             logger.info(
-                f"[{job_prefix}] [VOICING] Starting TTS synthesis for {total_beats} beats using provider='{job.tts_provider}'..."
+                f"[{job_prefix}] [VOICING] Starting TTS synthesis for {total_beats} beats using provider='{job.tts_provider}' (dir={job_audio_dir})..."
             )
 
             for idx, raw_b in enumerate(job.beats or [], start=1):
@@ -172,7 +173,7 @@ def worker_tick(
                 vc = synthesize_voice(
                     beat=beat,
                     provider=tts_engine,
-                    output_dir=audio_output_dir,
+                    output_dir=job_audio_dir,
                 )
                 duration_synth = time.time() - t0
                 voice_clips_data.append(vc.model_dump())
