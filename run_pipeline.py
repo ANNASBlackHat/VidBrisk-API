@@ -114,14 +114,35 @@ def main():
         print(f"\n✨ Pipeline execution complete! Timeline saved to '{args.output}'.")
 
         if args.render:
-            print(f"\n▶ Rendering MP4 output to '{args.render}' (fit_mode={args.fit_mode})...")
-            renderer = VideoRenderer()
-            out_mp4 = renderer.render_timeline(
-                timeline=timeline,
-                output_path=args.render,
-                fit_mode=args.fit_mode,
-            )
-            print(f"🎉 Rendered video ready at: {out_mp4}")
+            print(f"\n▶ Rendering MP4 output to '{args.render}'...")
+            
+            # Check for Remotion headless renderer script
+            frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "video-generation-frontend"))
+            remotion_script = os.path.join(frontend_dir, "scripts", "render_video.mjs")
+
+            if os.path.exists(remotion_script):
+                print(f"[CLI] Launching Headless Remotion Renderer (supporting StatCards, QuoteCards & React animations)...")
+                import subprocess
+                cmd = [
+                    "node",
+                    remotion_script,
+                    "--timeline",
+                    os.path.abspath(args.output),
+                    "--out",
+                    os.path.abspath(args.render),
+                ]
+                res = subprocess.run(cmd, cwd=frontend_dir)
+                if res.returncode != 0:
+                    raise RuntimeError(f"Remotion render failed with exit code {res.returncode}")
+                print(f"🎉 Rendered video ready at: {args.render}")
+            else:
+                renderer = VideoRenderer()
+                out_mp4 = renderer.render_timeline(
+                    timeline=timeline,
+                    output_path=args.render,
+                    fit_mode=args.fit_mode,
+                )
+                print(f"🎉 Rendered video ready at: {out_mp4}")
 
     except Exception as e:
         print(f"\n❌ Pipeline failed: {e}", file=sys.stderr)
