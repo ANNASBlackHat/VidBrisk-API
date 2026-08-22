@@ -12,6 +12,8 @@ class StatCardProps(BaseModel):
     value: str = Field(..., description="Key numerical or metric value, e.g. '$25B' or '650M+' or '4%'")
     label: str = Field(..., description="Short headline label, e.g. 'Project Apollo Total Cost'")
     subtext: Optional[str] = Field(default=None, description="Optional secondary context or supporting figure")
+    numeric_value: Optional[float] = Field(default=None, description="Extracted raw float for count-up animation if applicable")
+    unit: Optional[str] = Field(default=None, description="Prefix/suffix unit e.g. '$', '%', 'B', 'M'")
 
 
 class QuoteCardProps(BaseModel):
@@ -30,19 +32,21 @@ class TitleProps(BaseModel):
 def extract_stat_props(text: str, client: Optional[GeminiLLMClient] = None) -> dict[str, Any]:
     """Extracts concise, structured statistical props from narrative text via LLM with fallback."""
     if not text or not text.strip():
-        return {"value": "0", "label": "", "subtext": None}
+        return {"value": "0", "label": "", "subtext": None, "numeric_value": 0.0, "unit": ""}
 
     llm = client or GeminiLLMClient()
     prompt = (
         "You are an expert motion graphics designer. "
         "Extract the core numerical statistic, concise label, and optional subtext from this text "
-        "to display on an eye-catching video data callout card.\n\n"
+        "to display on an eye-catching video data callout card with full-duration count-up animation.\n\n"
         f"Input Text:\n\"{text.strip()}\"\n\n"
         "Return ONLY a JSON object matching this schema:\n"
         "{\n"
         "  \"value\": \"<short impactful number/metric, e.g. $25B, 650M, 4%>\",\n"
         "  \"label\": \"<concise label 2-5 words>\",\n"
-        "  \"subtext\": \"<optional supporting detail or context, or null>\"\n"
+        "  \"subtext\": \"<optional supporting detail or context, or null>\",\n"
+        "  \"numeric_value\": <float number for count-up, e.g. 25 or 650 or 4, or null>,\n"
+        "  \"unit\": \"<unit string e.g. $, %, B, M or null>\"\n"
         "}"
     )
 
@@ -53,6 +57,8 @@ def extract_stat_props(text: str, client: Optional[GeminiLLMClient] = None) -> d
                 "value": str(data["value"]),
                 "label": str(data["label"]),
                 "subtext": data.get("subtext"),
+                "numeric_value": data.get("numeric_value"),
+                "unit": data.get("unit"),
             }
     except Exception:
         pass
@@ -61,10 +67,15 @@ def extract_stat_props(text: str, client: Optional[GeminiLLMClient] = None) -> d
     # Extract numbers or currency like $25 billion, 4 percent, 650 million
     match = re.search(r"(\$?\d+(?:\.\d+)?\s*(?:billion|million|thousand|percent|%|k|m|b)?|\d+%)", text, re.IGNORECASE)
     value = match.group(1).upper() if match else "DATA"
+    num_match = re.search(r"(\d+(?:\.\d+)?)", value)
+    num_val = float(num_match.group(1)) if num_match else None
+
     return {
         "value": value,
         "label": text[:40] + ("..." if len(text) > 40 else ""),
         "subtext": None,
+        "numeric_value": num_val,
+        "unit": "$" if "$" in value else ("%" if "%" in value else ""),
     }
 
 

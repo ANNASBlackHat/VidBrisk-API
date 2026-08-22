@@ -3,7 +3,7 @@
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Generator
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from pipeline.config import get_settings
 
@@ -48,14 +48,33 @@ def get_engine(database_url: str | None = None):
     return _engines[url]
 
 
+def _migrate_columns(engine) -> None:
+    """Ensures newly added model columns exist in existing database tables."""
+    try:
+        inspector = inspect(engine)
+        if "video_jobs" in inspector.get_table_names():
+            columns = {col["name"] for col in inspector.get_columns("video_jobs")}
+            with engine.begin() as conn:
+                if "motion_qa_thumbnails" not in columns:
+                    if engine.dialect.name == "postgresql":
+                        conn.execute(text("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS motion_qa_thumbnails JSON;"))
+                    else:
+                        conn.execute(text("ALTER TABLE video_jobs ADD COLUMN motion_qa_thumbnails JSON;"))
+    except Exception as e:
+        # Non-fatal if table not created yet or permission restricted
+        pass
+
+
 def init_db(database_url: str | None = None) -> None:
-    """Creates all database tables defined on Base."""
+    """Creates all database tables defined on Base and applies safe lightweight migrations."""
     try:
         engine = get_engine(database_url)
         Base.metadata.create_all(bind=engine)
+        _migrate_columns(engine)
     except Exception:
         fallback_engine = get_engine("sqlite:///data/jobs.db")
         Base.metadata.create_all(bind=fallback_engine)
+        _migrate_columns(fallback_engine)
 
 
 def get_session_factory(database_url: str | None = None) -> sessionmaker[Session]:

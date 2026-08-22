@@ -8,6 +8,7 @@ from backend.models.job import VideoJob
 def compile_timeline(
     job: Union[VideoJob, dict[str, Any]],
     registry: Optional[ComponentRegistry] = None,
+    fps: int = 30,
 ) -> dict[str, Any]:
     """Compiles a completed VideoJob's intermediate outputs into a structured, component-resolved timeline.
     
@@ -80,10 +81,18 @@ def compile_timeline(
             component = resolve_component(style_key, registry=registry)
             extracted_props = component.extract_props(content_text)
 
+            duration_sec = max(end_ts - start_ts, 0.1)
+            duration_in_frames = int(round(duration_sec * fps))
+
+            if getattr(component, "requires_duration", True):
+                extracted_props["durationInFrames"] = duration_in_frames
+                extracted_props["fps"] = fps
+
             video_items.append({
                 "id": f"{beat_id}_motion",
                 "trackStart": round(start_ts, 3),
                 "trackEnd": round(end_ts, 3),
+                "durationInFrames": duration_in_frames,
                 "assetType": "motion",
                 "componentId": component.id,
                 "props": extracted_props,

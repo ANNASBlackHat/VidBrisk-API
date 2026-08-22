@@ -75,6 +75,9 @@ class VideoJob(Base):
     # Compiled renderable tracks timeline (Frontend/Remotion consumable)
     timeline: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
+    # Lightweight Still-Frame QA Thumbnails for motion components
+    motion_qa_thumbnails: Mapped[list | dict | None] = mapped_column(JSON, nullable=True)
+
     # Diagnostic & Error tracking
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 

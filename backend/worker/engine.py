@@ -4,6 +4,7 @@ import os
 from typing import Any, Optional
 from sqlalchemy.orm import Session
 
+from backend.compiler.qa import generate_motion_qa_thumbnails
 from backend.compiler.timeline_compiler import compile_timeline
 from backend.models.job import JobStage, JobStatus, VideoJob
 from backend.repository import advance_job_stage, fail_job, get_next_runnable_job
@@ -72,7 +73,7 @@ def worker_tick(
 
     try:
         if job.stage == JobStage.CLEANING:
-            cleaned = clean_script(raw_text=job.raw_input)
+            cleaned = clean_script(job.raw_input)
             advance_job_stage(
                 session=session,
                 job=job,
@@ -82,7 +83,7 @@ def worker_tick(
             )
 
         elif job.stage == JobStage.STRUCTURING:
-            beats = structure_beats(clean_text=job.clean_script or job.raw_input)
+            beats = structure_beats(job.clean_script or job.raw_input)
             beats_data = [b.model_dump() for b in beats]
 
             if should_pause_for_approval(job, JobStage.STRUCTURING):
@@ -226,12 +227,22 @@ def worker_tick(
 
         elif job.stage == JobStage.COMPILING:
             compiled_timeline = compile_timeline(job=job)
+            try:
+                qa_thumbnails = generate_motion_qa_thumbnails(
+                    job_id=str(job.id),
+                    timeline=compiled_timeline,
+                    output_base_dir="output/qa_thumbnails",
+                )
+            except Exception:
+                qa_thumbnails = None
+
             advance_job_stage(
                 session=session,
                 job=job,
                 next_stage=JobStage.DONE,
                 next_status=JobStatus.COMPLETE,
                 timeline=compiled_timeline,
+                motion_qa_thumbnails=qa_thumbnails,
             )
 
         return job

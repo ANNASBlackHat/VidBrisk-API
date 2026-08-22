@@ -13,16 +13,20 @@ def test_component_registry_resolution():
     # Test default mappings
     stat_comp = reg.get("stat-callout")
     assert stat_comp.id == "DataAnimations/StatCard"
+    assert stat_comp.requires_duration is True
 
     quote_comp = reg.get("abstract-card")
     assert quote_comp.id == "TextAnimations/QuoteCard"
+    assert quote_comp.requires_duration is True
 
     title_comp = reg.get("kinetic-title")
     assert title_comp.id == "TextAnimations/Typewriter"
+    assert title_comp.requires_duration is True
 
     # Test unregistered fallback
     unknown_comp = reg.get("non-existent-style")
     assert unknown_comp.id == "TextAnimations/StandardCard"
+    assert unknown_comp.requires_duration is True
 
 
 def test_custom_component_registration():
@@ -31,10 +35,12 @@ def test_custom_component_registration():
         style="custom-3d-chart",
         component_id="ThreeD/BarChart3D",
         extract_props=lambda t: {"title": t, "chartType": "bar"},
+        requires_duration=True,
     )
 
     resolved = reg.get("custom-3d-chart")
     assert resolved.id == "ThreeD/BarChart3D"
+    assert resolved.requires_duration is True
     props = resolved.extract_props("Sales Data Q3")
     assert props == {"title": "Sales Data Q3", "chartType": "bar"}
 
@@ -46,6 +52,8 @@ def test_prop_extractors_fallback():
     assert "value" in props
     assert "label" in props
     assert "25" in props["value"] or "BILLION" in props["value"] or "$" in props["value"]
+    assert "numeric_value" in props
+    assert props["numeric_value"] == 25.0
 
     # Test quote extraction
     quote_text = "Yet its true value was not measured in dollars, but in proving the impossible was within reach."
@@ -119,7 +127,7 @@ def test_compile_timeline_full_job():
         ],
     )
 
-    timeline = compile_timeline(job)
+    timeline = compile_timeline(job, fps=30)
 
     assert "tracks" in timeline
     assert len(timeline["tracks"]) == 3
@@ -142,10 +150,13 @@ def test_compile_timeline_full_job():
     assert motion_2["id"] == "b2_motion"
     assert motion_2["trackStart"] == 6.0
     assert motion_2["trackEnd"] == 11.5
+    assert motion_2["durationInFrames"] == 165  # 5.5s * 30fps
     assert motion_2["assetType"] == "motion"
     assert motion_2["componentId"] == "DataAnimations/StatCard"
     assert "props" in motion_2
     assert "value" in motion_2["props"]
+    assert motion_2["props"]["durationInFrames"] == 165
+    assert motion_2["props"]["fps"] == 30
 
     # Audio track
     audio_track = timeline["tracks"][2]
@@ -153,3 +164,37 @@ def test_compile_timeline_full_job():
     assert len(audio_track["items"]) == 2
     assert audio_track["items"][0]["assetId"] == "output/audio/b1.wav"
     assert audio_track["items"][1]["assetId"] == "output/audio/b2.wav"
+
+
+def test_qa_thumbnails_hook():
+    from backend.compiler.qa import generate_motion_qa_thumbnails
+
+    timeline = {
+        "tracks": [
+            {
+                "type": "video",
+                "items": [
+                    {
+                        "id": "b2_motion",
+                        "trackStart": 6.0,
+                        "trackEnd": 11.5,
+                        "assetType": "motion",
+                        "componentId": "DataAnimations/StatCard",
+                        "style": "stat-callout",
+                        "props": {"value": "$25B", "label": "Apollo Cost", "subtext": "Total"},
+                    }
+                ],
+            }
+        ]
+    }
+    qa_results = generate_motion_qa_thumbnails(
+        job_id="test-job-qa",
+        timeline=timeline,
+        output_base_dir="output/test_qa_thumbnails",
+    )
+    assert len(qa_results) == 1
+    assert qa_results[0]["item_id"] == "b2_motion"
+    assert len(qa_results[0]["checkpoints"]) == 3
+    assert qa_results[0]["checkpoints"][0]["percent"] == 20
+    assert qa_results[0]["checkpoints"][1]["percent"] == 50
+    assert qa_results[0]["checkpoints"][2]["percent"] == 80

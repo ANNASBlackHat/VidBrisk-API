@@ -1,7 +1,7 @@
 """Pydantic schemas for Job request, response, approval, and timeline serialization."""
 
 from datetime import datetime
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field
 from backend.models.job import JobStage, JobStatus
 
@@ -75,6 +75,7 @@ class JobResponse(BaseModel):
     footage_candidates: Optional[dict[str, Any]] = None
     asset_plan: Optional[list[dict[str, Any]]] = None
     timeline: Optional[dict[str, Any]] = None
+    motion_qa_thumbnails: Optional[Union[list[dict[str, Any]], dict[str, Any]]] = None
     
     error_message: Optional[str] = None
     created_at: datetime

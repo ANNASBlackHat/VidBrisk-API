@@ -155,13 +155,16 @@ def test_e2e_criterion_1_and_3_full_http_run_and_compiled_timeline(e2e_env):
     assert clip_1["assetType"] == "video"
     assert clip_1["storagePath"] == "https://example.com/rocket.mp4"
 
-    # Verify motion component on video track with structured extracted props
+    # Verify motion component on video track with structured extracted props and durationInFrames
     motion_2 = video_track["items"][1]
     assert motion_2["id"] == "b2_motion"
     assert motion_2["assetType"] == "motion"
     assert motion_2["componentId"] == "DataAnimations/StatCard"
     assert "props" in motion_2
     assert "value" in motion_2["props"]
+    assert "durationInFrames" in motion_2["props"]
+    assert motion_2["props"]["durationInFrames"] > 0
+    assert "motion_qa_thumbnails" in job_data
 
     # Verify audio track
     audio_track = timeline["tracks"][2]
