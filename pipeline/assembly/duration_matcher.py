@@ -32,10 +32,19 @@ def plan_beat_assets(
     # Case 1: 'stat' or 'abstract' beats -> motion_text strategy
     # --------------------------------------------------------------------------
     if beat.beat_type == "stat":
-        # Extract prominent numerical expression or short punchy text
+        motion_props = beat.motion_props or {}
+        comp_id = motion_props.get("component", "DataAnimations/StatCard")
         plan = AssetPlan(
             strategy="motion_text",
-            items=[AssetItem(type="text_card", content=beat.text, style="stat-callout")],
+            items=[
+                AssetItem(
+                    type="motion",
+                    content=beat.text,
+                    style="stat-callout",
+                    component_id=comp_id,
+                    props=motion_props,
+                )
+            ],
         )
         text_item = TrackItem(
             id=f"txt_{beat.id}",
@@ -43,13 +52,25 @@ def plan_beat_assets(
             trackEnd=beat_end,
             content=beat.text,
             style="stat-callout",
+            componentId=comp_id,
+            props=motion_props,
         )
         return plan, [], [text_item]
 
     if beat.beat_type == "abstract" or not candidates:
+        motion_props = beat.motion_props or {}
+        comp_id = motion_props.get("component", "TextAnimations/QuoteCard")
         plan = AssetPlan(
             strategy="motion_text",
-            items=[AssetItem(type="text_card", content=beat.text, style="abstract-card")],
+            items=[
+                AssetItem(
+                    type="motion",
+                    content=beat.text,
+                    style="abstract-card",
+                    component_id=comp_id,
+                    props=motion_props,
+                )
+            ],
         )
         text_item = TrackItem(
             id=f"txt_{beat.id}",
@@ -57,6 +78,8 @@ def plan_beat_assets(
             trackEnd=beat_end,
             content=beat.text,
             style="abstract-card",
+            componentId=comp_id,
+            props=motion_props,
         )
         return plan, [], [text_item]
 

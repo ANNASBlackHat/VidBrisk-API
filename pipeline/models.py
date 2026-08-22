@@ -16,6 +16,7 @@ class Beat(BaseModel):
     text: str
     visual_intent: str
     beat_type: BeatType = "narrative"
+    motion_props: Optional[dict[str, Any]] = None
 
 
 class VoiceClip(BaseModel):
@@ -36,7 +37,7 @@ class WordTiming(BaseModel):
 
 class AssetItem(BaseModel):
     """Specific asset chunk or visual card component used in an AssetPlan."""
-    type: Literal["video", "image", "text_card"]
+    type: Literal["video", "image", "text_card", "motion"]
     chunk_id: Optional[str] = None
     source_in: Optional[float] = None
     source_out: Optional[float] = None
@@ -44,6 +45,8 @@ class AssetItem(BaseModel):
     style: Optional[str] = None
     storage_path: Optional[str] = None
     storage_url: Optional[str] = None
+    component_id: Optional[str] = None
+    props: Optional[dict[str, Any]] = None
 
 
 class AssetPlan(BaseModel):
@@ -89,13 +92,15 @@ class TrackItem(BaseModel):
     trackStart: float
     trackEnd: float
 
-    # Video track specific fields
+    # Video & Motion track specific fields
     assetId: Optional[str] = None
     sourceIn: Optional[float] = None
     sourceOut: Optional[float] = None
-    assetType: Optional[Literal["video", "image"]] = None
+    assetType: Optional[Literal["video", "image", "motion"]] = None
     storagePath: Optional[str] = None
     storageUrl: Optional[str] = None
+    componentId: Optional[str] = None
+    props: Optional[dict[str, Any]] = None
 
     # Text track specific fields
     content: Optional[str] = None
