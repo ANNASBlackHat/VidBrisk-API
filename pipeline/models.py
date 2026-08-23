@@ -5,7 +5,17 @@ from typing import Any, Literal, Optional
 from pydantic import BaseModel, Field
 
 
-BeatType = Literal["narrative", "stat", "abstract"]
+BeatType = Literal[
+    "narrative",
+    "stat",
+    "abstract",
+    "kinetic",
+    "quote",
+    "typewriter",
+    "swipe_deck",
+    "chat_bubbles",
+    "split_screen",
+]
 StrategyType = Literal[
     "single_clip",
     "concat_clips",

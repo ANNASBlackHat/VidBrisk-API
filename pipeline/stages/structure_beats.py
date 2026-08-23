@@ -22,27 +22,58 @@ For each beat:
 2. `text`: 1–2 sentences of spoken narration (roughly 3–7 seconds of speech).
 3. `visual_intent`: A vivid, concrete, semantic search prompt describing the ideal footage or visual to accompany this beat. Focus on physical actions, environments, lighting, and subjects.
 4. `beat_type`: Choose one of:
-   - "narrative": Concrete storytelling, actions, physical subjects, or scenes. (Default)
-   - "stat": Focuses on a standout number, percentage, dollar amount, or metric where a motion typography stat card or data chart would excel.
-   - "abstract": High-level conceptual quotes, introspective thoughts, or philosophical transitions where kinetic quote cards or typewriter text are appropriate.
-5. `motion_props`: (Required if beat_type is "stat" or "abstract", or when a multi-layer composition recipe applies; null otherwise):
+   - "narrative": Concrete storytelling, actions, physical subjects, or documentary footage scenes. (Default)
+   - "stat": Standout numbers, percentages, dollar amounts, metrics, or data points suitable for an animated stat card or chart.
+   - "abstract": High-level conceptual quotes, philosophical thoughts, or thematic transitions.
+   - "swipe_deck": Sequential 3–5 takeaways, key bullet points, or ordered steps best presented as stacked cards swiping one at a time.
+   - "chat_bubbles": Conversational dialogue, exchanges, or message notifications building up in a chat thread format.
+   - "kinetic": High-energy, rhythmic keywords or slogans where synchronized word-by-word kinetic typography excels.
+   - "typewriter": Terminal, retro narrative, or mechanical character-by-character typewriter exposition.
+   - "split_screen": Comparative concepts, dual perspectives, or before/after entities shown side-by-side.
+5. `motion_props`: (Required if beat_type is not "narrative", or when a multi-layer composition recipe applies; null otherwise):
    - Optional `layout_recipe`:
      - "stat_over_footage": Pairs standout stat motion typography with background footage or photography.
      - "quote_over_footage": Pairs key kinetic quote cards over contextual background imagery.
      - "split_screen": Pairs two distinct entities or comparative subjects side-by-side.
    - If "stat":
      - `component`: "DataAnimations/StatCard"
-     - `primary_value`: String of the standout stat (e.g., "$25.4B", "650M+", "4.0%")
-     - `kicker`: Short 2-4 word uppercase category label (e.g., "PROGRAM BUDGET", "GLOBAL AUDIENCE", "PERCENTAGE SHARE")
-     - `visual_type`: "chart" (for financial/time trends), "ring" (for % / shares), or "bar" (for single comparisons)
+     - `primary_value`: Standout metric string (e.g., "$25.4B", "650M+", "4.0%")
+     - `kicker`: Short 2-4 word uppercase category label (e.g., "TOTAL INVESTMENT", "AUDIENCE SHARE")
+     - `visual_type`: "chart" (for financial/time trends), "ring" (for % / shares), or "bar" (for comparisons)
      - `subtext`: 1 brief contextual sentence explaining the metric.
-     - `display_mode`: "overlay" (if visual intent can pair with background footage) or "takeover" (if pure motion graphic).
-   - If "abstract":
+     - `display_mode`: "overlay" (if visual intent pairs with footage) or "takeover" (pure full-screen graphic).
+   - If "abstract" or "quote":
      - `component`: "TextAnimations/QuoteCard"
      - `quote`: The key quoted sentence or thought.
-     - `emphasis`: 2-5 words within the quote that should receive glowing highlight styling.
-     - `author`: Attributed speaker or context (e.g., "Neil Armstrong, Commander" or "Mission Overview").
+     - `emphasis`: 2-5 words within the quote for highlight styling.
+     - `author`: Attributed speaker or context (e.g., "Neil Armstrong" or "Mission Overview").
      - `display_mode`: "overlay" | "takeover"
+   - If "swipe_deck":
+     - `component`: "ListAnimations/SwipeDeck"
+     - `items`: 3–5 short, punchy bullet points or steps extracted from the beat text (each under 12 words).
+     - `title`: Short uppercase category title (e.g., "MISSION MILESTONES", "KEY FINDINGS").
+     - `display_mode`: "takeover" | "overlay"
+   - If "chat_bubbles":
+     - `component`: "ListAnimations/ChatBubbles"
+     - `messages`: Array of 2–4 messages, e.g. [{"text": "...", "sender": "system"}, {"text": "...", "sender": "user"}].
+     - `title`: Header label (e.g., "MISSION CONTROL LOG", "LIVE DIALOGUE").
+     - `display_mode`: "takeover" | "overlay"
+   - If "kinetic":
+     - `component`: "TextAnimations/KineticText"
+     - `text`: Narration phrase for dynamic word reveal.
+     - `mode`: "reveal" | "karaoke"
+     - `display_mode`: "takeover" | "overlay"
+   - If "typewriter":
+     - `component`: "TextAnimations/Typewriter"
+     - `text`: Narration phrase.
+     - `display_mode`: "takeover"
+   - If "split_screen":
+     - `component`: "Layouts/SplitScreen"
+     - `layout_recipe`: "split_screen"
+     - `leftTitle`: Left entity title.
+     - `leftContent`: Left entity summary.
+     - `rightTitle`: Right entity title.
+     - `rightContent`: Right entity summary.
 
 Output JSON format:
 {
@@ -68,6 +99,18 @@ Output JSON format:
         "subtext": "Represented 4% of the entire federal budget at its peak.",
         "display_mode": "overlay"
       }
+    },
+    {
+      "id": "b3",
+      "text": "...",
+      "visual_intent": "...",
+      "beat_type": "swipe_deck",
+      "motion_props": {
+        "component": "ListAnimations/SwipeDeck",
+        "title": "KEY PHASES",
+        "items": ["1. Saturn V Ignition", "2. Translunar Injection", "3. Lunar Descent"],
+        "display_mode": "takeover"
+      }
     }
   ]
 }
@@ -83,8 +126,8 @@ Rules:
    - `id`: "b1", "b2", ...
    - `text`: Pure spoken narration for this beat.
    - `visual_intent`: Detailed semantic footage search prompt.
-   - `beat_type`: "narrative" | "stat" | "abstract".
-   - `motion_props`: Detailed structured visual props if beat_type is "stat" or "abstract" (primary_value, kicker, visual_type, quote, emphasis, author, display_mode).
+   - `beat_type`: "narrative" | "stat" | "abstract" | "swipe_deck" | "chat_bubbles" | "kinetic" | "typewriter" | "split_screen".
+   - `motion_props`: Structured visual properties if a motion component or layout recipe applies (component, items, messages, primary_value, kicker, visual_type, quote, emphasis, author, display_mode).
 
 Output JSON format:
 {
@@ -100,6 +143,18 @@ Output JSON format:
 }
 """
 
+VALID_BEAT_TYPES = {
+    "narrative",
+    "stat",
+    "abstract",
+    "kinetic",
+    "quote",
+    "typewriter",
+    "swipe_deck",
+    "chat_bubbles",
+    "split_screen",
+}
+
 
 def _parse_beat_json(raw_beats: list[dict[str, Any]]) -> list[Beat]:
     beats: list[Beat] = []
@@ -108,7 +163,7 @@ def _parse_beat_json(raw_beats: list[dict[str, Any]]) -> list[Beat]:
         text = str(b.get("text", "")).strip()
         visual_intent = str(b.get("visual_intent", "")).strip()
         beat_type: BeatType = b.get("beat_type", "narrative")
-        if beat_type not in ("narrative", "stat", "abstract"):
+        if beat_type not in VALID_BEAT_TYPES:
             beat_type = "narrative"
         motion_props = b.get("motion_props")
         if isinstance(motion_props, dict):

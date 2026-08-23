@@ -93,16 +93,55 @@ def plan_beat_assets(
         )
         return plan, [], [text_item]
 
-    if beat.beat_type == "abstract" or not candidates:
+    if (
+        beat.beat_type
+        in (
+            "abstract",
+            "kinetic",
+            "quote",
+            "typewriter",
+            "swipe_deck",
+            "chat_bubbles",
+        )
+        or not candidates
+    ):
         motion_props = beat.motion_props or {}
-        comp_id = motion_props.get("component", "TextAnimations/QuoteCard")
+        comp_id = motion_props.get("component")
+        if not comp_id:
+            if beat.beat_type == "swipe_deck":
+                comp_id = "ListAnimations/SwipeDeck"
+            elif beat.beat_type == "chat_bubbles":
+                comp_id = "ListAnimations/ChatBubbles"
+            elif beat.beat_type == "kinetic":
+                comp_id = "TextAnimations/KineticText"
+            elif beat.beat_type == "typewriter":
+                comp_id = "TextAnimations/Typewriter"
+            else:
+                comp_id = "TextAnimations/QuoteCard"
+
+        # Determine style identifier
+        if "SwipeDeck" in comp_id:
+            style = "swipe-deck"
+        elif "ChatBubbles" in comp_id:
+            style = "chat-reveal"
+        elif "KineticText" in comp_id or "Typewriter" in comp_id:
+            style = "kinetic-title"
+        elif "StatCard" in comp_id:
+            style = "stat-callout"
+        else:
+            style = "quote-card"
+
+        layout_role = motion_props.get("display_mode", "takeover")
+        if layout_role not in ("full", "takeover", "overlay", "overlay-lower-third"):
+            layout_role = "takeover"
+
         plan = AssetPlan(
             strategy="motion_text",
             items=[
                 AssetItem(
                     type="motion",
                     content=beat.text,
-                    style="abstract-card",
+                    style=style,
                     component_id=comp_id,
                     props=motion_props,
                 )
@@ -112,10 +151,10 @@ def plan_beat_assets(
                     role="overlay",
                     z=0,
                     type="motion",
-                    layout="takeover",
+                    layout=layout_role,
                     component_id=comp_id,
                     content=beat.text,
-                    style="abstract-card",
+                    style=style,
                     props=motion_props,
                 )
             ],
@@ -126,9 +165,9 @@ def plan_beat_assets(
             trackEnd=beat_end,
             zIndex=0,
             layerRole="overlay",
-            layout="takeover",
+            layout=layout_role,
             content=beat.text,
-            style="abstract-card",
+            style=style,
             componentId=comp_id,
             props=motion_props,
         )
