@@ -17,6 +17,7 @@ class JobStage(str, enum.Enum):
     RESOLVING_FOOTAGE = "resolving_footage"
     ASSEMBLING = "assembling"
     COMPILING = "compiling"
+    RENDERING = "rendering"
     DONE = "done"
     FAILED = "failed"
 
@@ -81,6 +82,9 @@ class VideoJob(Base):
 
     # Real-time execution progress tracking (e.g. current/total items, percentage, active message)
     progress: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    # Rendered video output URL
+    video_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # Diagnostic & Error tracking
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)

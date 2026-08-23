@@ -9,9 +9,9 @@ import pytest
 from pipeline.alignment.mock import MockAligner
 from pipeline.footage.resolver import FootageResolver
 from pipeline.llm.gemini import GeminiLLMClient
-from pipeline.models import CandidateChunk, TimelinePlan
+from pipeline.models import CandidateChunk, TimelinePlan, Track, TrackItem
 from pipeline.orchestrator import run_pipeline
-from pipeline.renderer.engine import VideoRenderer
+from pipeline.renderer.engine import VideoRenderer, RenderEngineMismatchError
 from pipeline.tts.mock import MockTTSProvider
 
 
@@ -116,10 +116,48 @@ def test_full_pipeline_e2e(tmp_path, mock_gemini, mock_footage_resolver):
     styles = [it.style for it in text_track.items]
     assert "stat-callout" in styles
 
-    # 5. Stage 7: Render MP4 from timeline.json
+    # 5. Stage 7: VideoRenderer safety check and rendering
     renderer = VideoRenderer()
+    with pytest.raises(RenderEngineMismatchError):
+        renderer.render_timeline(
+            timeline=timeline_json,
+            output_path=output_mp4,
+            width=640,
+            height=360,
+            fps=24,
+        )
+
+    # Pure narrative timeline renders successfully with VideoRenderer
+    narrative_timeline = TimelinePlan(
+        tracks=[
+            Track(
+                type="text",
+                items=[
+                    TrackItem(
+                        id="txt_narrative",
+                        trackStart=0.0,
+                        trackEnd=2.0,
+                        content="Apollo Voyage",
+                        style="title",
+                    )
+                ],
+            ),
+            Track(
+                type="audio",
+                items=[
+                    TrackItem(
+                        id="vo_narrative",
+                        assetId=timeline.tracks[2].items[0].assetId,
+                        trackStart=0.0,
+                        trackEnd=2.0,
+                    )
+                ],
+            ),
+        ],
+        total_duration=2.0,
+    )
     rendered_file = renderer.render_timeline(
-        timeline=timeline_json,
+        timeline=narrative_timeline,
         output_path=output_mp4,
         width=640,
         height=360,

@@ -70,6 +70,11 @@ def _migrate_columns(engine) -> None:
                         conn.execute(text("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS title VARCHAR(255);"))
                     else:
                         conn.execute(text("ALTER TABLE video_jobs ADD COLUMN title VARCHAR(255);"))
+                if "video_url" not in columns:
+                    if engine.dialect.name == "postgresql":
+                        conn.execute(text("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS video_url VARCHAR(500);"))
+                    else:
+                        conn.execute(text("ALTER TABLE video_jobs ADD COLUMN video_url VARCHAR(500);"))
     except Exception as e:
         # Non-fatal if table not created yet or permission restricted
         pass
@@ -94,6 +99,7 @@ def get_session_factory(database_url: str | None = None) -> sessionmaker[Session
 
     if url not in _session_factories:
         engine = get_engine(url)
+        _migrate_columns(engine)
         _session_factories[url] = sessionmaker(
             autocommit=False,
             autoflush=False,

@@ -6,6 +6,7 @@ from pipeline.models import (
     AssetPlan,
     Beat,
     CandidateChunk,
+    Layer,
     ResolvedBeat,
     TimelinePlan,
     Track,
@@ -126,3 +127,60 @@ def test_timeline_plan_spec_schema_compliance():
     loaded_plan = TimelinePlan.model_validate(json.loads(json_str))
     assert len(loaded_plan.tracks) == 3
     assert loaded_plan.tracks[0].items[0].id == "clip1"
+
+
+def test_layer_model_and_multilayer_asset_plan():
+    layer1 = Layer(
+        role="background",
+        z=0,
+        type="video",
+        layout="split-left",
+        chunk_id="chunk_1",
+        source_in=0.0,
+        source_out=5.0,
+        storage_path="vids/clip1.mp4",
+    )
+    layer2 = Layer(
+        role="overlay",
+        z=1,
+        type="motion",
+        layout="overlay-lower-third",
+        component_id="DataAnimations/StatCard",
+        content="$25B Budget",
+        props={"value": "$25B"},
+    )
+    plan = AssetPlan(
+        strategy="stat_over_footage",
+        items=[AssetItem(type="video", chunk_id="chunk_1")],
+        layers=[layer1, layer2],
+    )
+    assert plan.strategy == "stat_over_footage"
+    assert len(plan.layers) == 2
+    assert plan.layers[0].layout == "split-left"
+    assert plan.layers[1].role == "overlay"
+    assert plan.layers[1].z == 1
+
+    # Round trip
+    dumped = plan.model_dump(exclude_none=True)
+    assert len(dumped["layers"]) == 2
+    assert dumped["layers"][1]["component_id"] == "DataAnimations/StatCard"
+    restored = AssetPlan.model_validate(dumped)
+    assert restored.layers[1].role == "overlay"
+
+
+def test_track_item_multilayer_fields():
+    item = TrackItem(
+        id="layer_item_1",
+        trackStart=0.0,
+        trackEnd=5.0,
+        zIndex=1,
+        layerRole="overlay",
+        layout="overlay-lower-third",
+        componentId="DataAnimations/StatCard",
+        props={"metric": "95%"},
+    )
+    data = item.model_dump(exclude_none=True)
+    assert data["zIndex"] == 1
+    assert data["layerRole"] == "overlay"
+    assert data["layout"] == "overlay-lower-third"
+

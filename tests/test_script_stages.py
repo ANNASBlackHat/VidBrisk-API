@@ -83,3 +83,30 @@ def test_clean_and_structure_beats_single_pass(mock_gemini_client):
     assert len(beats) == 1
     assert beats[0].id == "b1"
     assert beats[0].beat_type == "abstract"
+
+
+def test_structure_beats_with_layout_recipe(mock_gemini_client):
+    clean_text = "NASA invested $25.4 billion into the Apollo project."
+    mock_gemini_client.generate_json.return_value = {
+        "beats": [
+            {
+                "id": "b1",
+                "text": clean_text,
+                "visual_intent": "NASA historical control room",
+                "beat_type": "stat",
+                "motion_props": {
+                    "layout_recipe": "stat_over_footage",
+                    "component": "DataAnimations/StatCard",
+                    "primary_value": "$25.4B",
+                    "kicker": "APOLLO INVESTMENT",
+                    "display_mode": "overlay",
+                },
+            }
+        ]
+    }
+    beats = structure_beats(clean_text, client=mock_gemini_client)
+    assert len(beats) == 1
+    assert beats[0].motion_props is not None
+    assert beats[0].motion_props["layout_recipe"] == "stat_over_footage"
+    assert beats[0].motion_props["primary_value"] == "$25.4B"
+

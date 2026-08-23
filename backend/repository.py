@@ -92,10 +92,17 @@ def advance_job_stage(
 
 
 def fail_job(session: Session, job: VideoJob, error_message: str) -> VideoJob:
-    """Marks a job as failed with error details."""
+    """Marks a job as failed with error details and updates progress."""
     job.stage = JobStage.FAILED
     job.status = JobStatus.FAILED
     job.error_message = error_message
+    job.progress = {
+        "stage": "failed",
+        "current": 0,
+        "total": 1,
+        "percent": 0.0,
+        "message": f"Error: {error_message}",
+    }
     session.commit()
     session.refresh(job)
     return job
@@ -195,3 +202,31 @@ def delete_job(session: Session, job: VideoJob) -> bool:
     session.delete(job)
     session.commit()
     return True
+
+
+def update_job_progress(
+    session: Session,
+    job_id: str,
+    progress: Optional[dict[str, Any]] = None,
+    status: Optional[JobStatus] = None,
+    stage: Optional[JobStage] = None,
+    video_url: Optional[str] = None,
+    error_message: Optional[str] = None,
+) -> Optional[VideoJob]:
+    """Updates job progress and status safely."""
+    job = session.query(VideoJob).filter(VideoJob.id == job_id).one_or_none()
+    if not job:
+        return None
+    if progress is not None:
+        job.progress = progress
+    if status is not None:
+        job.status = status
+    if stage is not None:
+        job.stage = stage
+    if video_url is not None:
+        job.video_url = video_url
+    if error_message is not None:
+        job.error_message = error_message
+    session.commit()
+    session.refresh(job)
+    return job

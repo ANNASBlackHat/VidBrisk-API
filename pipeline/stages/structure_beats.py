@@ -25,7 +25,11 @@ For each beat:
    - "narrative": Concrete storytelling, actions, physical subjects, or scenes. (Default)
    - "stat": Focuses on a standout number, percentage, dollar amount, or metric where a motion typography stat card or data chart would excel.
    - "abstract": High-level conceptual quotes, introspective thoughts, or philosophical transitions where kinetic quote cards or typewriter text are appropriate.
-5. `motion_props`: (Required if beat_type is "stat" or "abstract", null otherwise):
+5. `motion_props`: (Required if beat_type is "stat" or "abstract", or when a multi-layer composition recipe applies; null otherwise):
+   - Optional `layout_recipe`:
+     - "stat_over_footage": Pairs standout stat motion typography with background footage or photography.
+     - "quote_over_footage": Pairs key kinetic quote cards over contextual background imagery.
+     - "split_screen": Pairs two distinct entities or comparative subjects side-by-side.
    - If "stat":
      - `component`: "DataAnimations/StatCard"
      - `primary_value`: String of the standout stat (e.g., "$25.4B", "650M+", "4.0%")
@@ -56,6 +60,7 @@ Output JSON format:
       "visual_intent": "...",
       "beat_type": "stat",
       "motion_props": {
+        "layout_recipe": "stat_over_footage",
         "component": "DataAnimations/StatCard",
         "primary_value": "$25.4B",
         "kicker": "TOTAL PROGRAM INVESTMENT",

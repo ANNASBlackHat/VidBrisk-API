@@ -80,6 +80,29 @@ class VideoRenderer:
                 "silently degrading output."
             )
 
+        # Multi-layer layout guard: detect overlay roles, split-screen layouts, or concurrent video intervals
+        has_multilayer_items = any(
+            item.get("layerRole") in ("overlay", "midground")
+            or item.get("layout") in (
+                "split-left",
+                "split-right",
+                "overlay-lower-third",
+                "corner-tl",
+                "corner-tr",
+                "corner-bl",
+                "corner-br",
+            )
+            or (item.get("zIndex") is not None and item.get("zIndex") > 0)
+            for track in tracks
+            for item in track.get("items", [])
+        )
+        if has_multilayer_items:
+            raise RenderEngineMismatchError(
+                "This timeline contains multi-layer visual compositions (split-screen, "
+                "z-ordered overlays, or non-full layouts) that require the Remotion "
+                "compositor. The ffmpeg fallback renderer only supports single-stream sequential cuts."
+            )
+
         video_items = []
         text_items = []
         audio_items = []

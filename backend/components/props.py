@@ -23,6 +23,11 @@ class QuoteCardProps(BaseModel):
     author: Optional[str] = Field(default=None, description="Speaker or attribution if mentioned, otherwise None")
 
 
+class ListCardProps(BaseModel):
+    """Structured props for ListAnimations/SwipeDeck or list reveal components."""
+    items: list[str] = Field(..., description="Short, punchy, standalone facts or points (under 12 words)")
+
+
 class TitleProps(BaseModel):
     """Structured props for TextAnimations/Typewriter or KineticTitle."""
     text: str
@@ -121,3 +126,41 @@ def extract_title_props(text: str) -> dict[str, Any]:
         "text": text.strip(),
         "variant": "kinetic",
     }
+
+
+def extract_list_props(text: str, client: Optional[GeminiLLMClient] = None) -> dict[str, Any]:
+    """Splits narrative text into a short list of discrete, on-screen-displayable items."""
+    if not text or not text.strip():
+        return {"items": []}
+
+    llm = client or GeminiLLMClient()
+    prompt = (
+        "Break this narration into 3-5 short, punchy, standalone facts or points "
+        "suitable for displaying one at a time on video cards. Each item must be "
+        "under 12 words and make sense read in isolation.\n\n"
+        f"Input Text:\n\"{text.strip()}\"\n\n"
+        "Return ONLY a JSON object: {\"items\": [\"<item 1>\", \"<item 2>\", ...]}"
+    )
+    try:
+        data = llm.generate_json(prompt=prompt, schema=ListCardProps)
+        if isinstance(data, dict) and isinstance(data.get("items"), list) and data["items"]:
+            items = [str(i).strip() for i in data["items"] if str(i).strip()]
+            if items:
+                return {"items": items[:5]}
+    except Exception:
+        pass
+
+    # Deterministic fallback: split on sentence boundaries, cap at 5, trim length
+    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s.strip()]
+    return {"items": sentences[:5] if sentences else [text.strip()[:60]]}
+
+
+def extract_chat_props(text: str, client: Optional[GeminiLLMClient] = None) -> dict[str, Any]:
+    """Same extraction as extract_list_props, reshaped into alternating chat messages."""
+    base = extract_list_props(text, client)
+    messages = [
+        {"text": item, "sender": "system" if i % 2 == 0 else "user"}
+        for i, item in enumerate(base.get("items", []))
+    ]
+    return {"messages": messages}
+

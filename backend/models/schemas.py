@@ -60,6 +60,7 @@ class JobSummaryResponse(BaseModel):
     updated_at: datetime
     error_message: Optional[str] = None
     progress: Optional[dict[str, Any]] = None
+    video_url: Optional[str] = None
 
 
 class JobResponse(BaseModel):
@@ -86,6 +87,7 @@ class JobResponse(BaseModel):
     timeline: Optional[dict[str, Any]] = None
     motion_qa_thumbnails: Optional[Union[list[dict[str, Any]], dict[str, Any]]] = None
     progress: Optional[dict[str, Any]] = None
+    video_url: Optional[str] = None
     
     error_message: Optional[str] = None
     created_at: datetime

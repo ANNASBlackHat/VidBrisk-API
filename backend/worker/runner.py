@@ -19,8 +19,12 @@ class WorkerRunner:
         self._setup_signals()
 
     def _setup_signals(self) -> None:
-        signal.signal(signal.SIGINT, self._handle_shutdown)
-        signal.signal(signal.SIGTERM, self._handle_shutdown)
+        try:
+            signal.signal(signal.SIGINT, self._handle_shutdown)
+            signal.signal(signal.SIGTERM, self._handle_shutdown)
+        except (ValueError, AttributeError):
+            # Signal handling is only supported in the main thread
+            pass
 
     def _handle_shutdown(self, signum, frame) -> None:
         print(f"\n[Worker] Received signal {signum}, stopping gracefully...")

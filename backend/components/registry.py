@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 from backend.components.props import (
+    extract_chat_props,
+    extract_list_props,
     extract_quote_props,
     extract_stat_props,
     extract_title_props,
@@ -90,6 +92,20 @@ class ComponentRegistry:
             component_id="Layouts/SplitScreen",
             extract_props=lambda t: {"text": t.strip()},
             description="Two-pane comparison or dual visual layout",
+            requires_duration=True,
+        )
+        self.register(
+            style="swipe-deck",
+            component_id="ListAnimations/SwipeDeck",
+            extract_props=extract_list_props,
+            description="Stacked cards swiped away one at a time, each showing a short fact",
+            requires_duration=True,
+        )
+        self.register(
+            style="chat-reveal",
+            component_id="ListAnimations/ChatBubbles",
+            extract_props=extract_chat_props,
+            description="Conversational back-and-forth bubble reveal of short facts",
             requires_duration=True,
         )
 

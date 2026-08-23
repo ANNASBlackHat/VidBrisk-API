@@ -70,10 +70,70 @@ def compile_timeline(
 
         # 1. Compile Visual Assets on Video Track
         strategy = plan_data.get("strategy", "motion_text") if isinstance(plan_data, dict) else "motion_text"
+        plan_layers = plan_data.get("layers", []) if isinstance(plan_data, dict) else []
         plan_items = plan_data.get("items", []) if isinstance(plan_data, dict) else []
 
-        if strategy in ("motion_text", "abstract-card", "stat-callout") or (plan_items and plan_items[0].get("style")):
-            # Motion graphics component
+        if plan_layers:
+            for l_idx, layer_info in enumerate(plan_layers, start=1):
+                l_type = layer_info.get("type", "video")
+                l_role = layer_info.get("role", "background")
+                l_layout = layer_info.get("layout", "full")
+                l_z = int(layer_info.get("z", 0))
+
+                if l_type in ("motion", "text") or layer_info.get("component_id") or layer_info.get("style"):
+                    style_key = layer_info.get("style", "stat-callout")
+                    content_text = layer_info.get("content", beat_data.get("text", ""))
+                    comp_id = layer_info.get("component_id") or layer_info.get("componentId")
+                    
+                    component = resolve_component(style_key, registry=registry)
+                    comp_id_final = comp_id or component.id
+                    extracted_props = component.extract_props(content_text)
+                    if layer_info.get("props"):
+                        extracted_props.update(layer_info.get("props"))
+
+                    duration_sec = max(end_ts - start_ts, 0.1)
+                    duration_in_frames = int(round(duration_sec * fps))
+                    if getattr(component, "requires_duration", True):
+                        extracted_props["durationInFrames"] = duration_in_frames
+                        extracted_props["fps"] = fps
+
+                    video_items.append({
+                        "id": f"{beat_id}_l{l_idx}_motion" if len(plan_layers) > 1 else f"{beat_id}_motion",
+                        "trackStart": round(start_ts, 3),
+                        "trackEnd": round(end_ts, 3),
+                        "durationInFrames": duration_in_frames,
+                        "assetType": "motion",
+                        "componentId": comp_id_final,
+                        "props": extracted_props,
+                        "rawContent": content_text,
+                        "style": style_key,
+                        "zIndex": l_z,
+                        "layerRole": l_role,
+                        "layout": l_layout,
+                    })
+                else:
+                    c_start = float(layer_info.get("track_start", layer_info.get("trackStart", start_ts)))
+                    c_end = float(layer_info.get("track_end", layer_info.get("trackEnd", end_ts)))
+                    asset_id = layer_info.get("chunk_id") or layer_info.get("assetId") or f"asset_{beat_id}_{l_idx}"
+                    storage_path = layer_info.get("storage_path") or layer_info.get("storagePath") or ""
+                    storage_url = layer_info.get("storage_url") or layer_info.get("storageUrl") or storage_path
+
+                    video_items.append({
+                        "id": f"clip_{beat_id}_l{l_idx}" if len(plan_layers) > 1 else f"clip_{beat_id}",
+                        "trackStart": round(c_start, 3),
+                        "trackEnd": round(c_end, 3),
+                        "assetId": asset_id,
+                        "sourceIn": round(float(layer_info.get("source_in", layer_info.get("sourceIn", 0.0))), 3),
+                        "sourceOut": round(float(layer_info.get("source_out", layer_info.get("sourceOut", c_end - c_start))), 3),
+                        "assetType": l_type,
+                        "storagePath": storage_path,
+                        "storageUrl": storage_url,
+                        "zIndex": l_z,
+                        "layerRole": l_role,
+                        "layout": l_layout,
+                    })
+        elif strategy in ("motion_text", "abstract-card", "stat-callout") or (plan_items and plan_items[0].get("style")):
+            # Motion graphics component (Legacy items fallback)
             item_info = plan_items[0] if plan_items else {}
             style_key = item_info.get("style", "stat-callout")
             content_text = item_info.get("content", beat_data.get("text", ""))
@@ -98,9 +158,12 @@ def compile_timeline(
                 "props": extracted_props,
                 "rawContent": content_text,
                 "style": style_key,
+                "zIndex": 0,
+                "layerRole": "overlay",
+                "layout": "takeover",
             })
         else:
-            # Concrete video / image clips
+            # Concrete video / image clips (Legacy items fallback)
             for sub_idx, item_info in enumerate(plan_items, start=1):
                 sub_id = f"clip_{beat_id}_{sub_idx}" if len(plan_items) > 1 else f"clip_{beat_id}"
                 c_start = float(item_info.get("track_start", item_info.get("trackStart", start_ts)))
@@ -119,6 +182,9 @@ def compile_timeline(
                     "assetType": item_info.get("asset_type", item_info.get("assetType", "video")),
                     "storagePath": storage_path,
                     "storageUrl": storage_url,
+                    "zIndex": 0,
+                    "layerRole": "background",
+                    "layout": "full",
                 })
 
         # 2. Compile Audio Track (Voiceover)

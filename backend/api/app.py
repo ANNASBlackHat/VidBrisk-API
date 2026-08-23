@@ -1,6 +1,7 @@
 """FastAPI application factory for the Video Generation Pipeline Backend."""
 
 import os
+import threading
 from contextlib import asynccontextmanager
 from typing import Any
 from fastapi import FastAPI
@@ -12,9 +13,25 @@ from backend.models.db import init_db
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initializes database schemas on application startup."""
+    """Initializes database schemas and manages embedded worker lifecycle."""
     init_db()
-    yield
+
+    worker_runner = None
+    disable_worker = (
+        os.environ.get("DISABLE_EMBEDDED_WORKER", "").lower() in ("1", "true", "yes")
+        or "PYTEST_CURRENT_TEST" in os.environ
+    )
+    if not disable_worker:
+        from backend.worker.runner import WorkerRunner
+        worker_runner = WorkerRunner(interval_sec=1.0)
+        worker_thread = threading.Thread(target=worker_runner.start, daemon=True)
+        worker_thread.start()
+
+    try:
+        yield
+    finally:
+        if worker_runner:
+            worker_runner.running = False
 
 
 def create_app() -> FastAPI:

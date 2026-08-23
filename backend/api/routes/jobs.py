@@ -232,7 +232,7 @@ def cancel_active_job(
 
 @router.post(
     "/{job_id}/render",
-    summary="Render timeline to MP4 video using FFmpeg engine",
+    summary="Enqueue async video render with live progress stream support",
 )
 def render_job_video(
     job_id: str,
@@ -242,9 +242,8 @@ def render_job_video(
     fps: int = Query(default=24),
     db: Session = Depends(get_db),
 ) -> Any:
-    """Renders the compiled/edited timeline with trimmed clips, motion graphics, and synchronized voiceover to an MP4 file."""
-    import os
-    from pipeline.renderer.engine import RenderEngineMismatchError, VideoRenderer
+    """Enqueues async timeline render (Remotion or FFmpeg) and immediately returns 202."""
+    from backend.worker.renderer_task import run_async_render_task
 
     job = get_job(session=db, job_id=job_id)
     if not job:
@@ -260,41 +259,107 @@ def render_job_video(
             detail=f"Job '{job_id}' has no compiled timeline available to render.",
         )
 
-    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-    out_dir = os.path.join(root_dir, "output", "rendered")
-    os.makedirs(out_dir, exist_ok=True)
-    out_filename = f"{job_id}_{width}x{height}_{fps}fps.mp4"
-    out_path = os.path.join(out_dir, out_filename)
+    # Persist updated timeline if supplied
+    if payload and "timeline" in payload:
+        job.timeline = timeline_data
 
-    renderer = VideoRenderer(debug=True)
-    try:
-        renderer.render_timeline(
-            timeline=timeline_data,
-            output_path=out_path,
-            width=width,
-            height=height,
-            fps=fps,
-            fit_mode="blur_bg",
-        )
-    except RenderEngineMismatchError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(e),
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Rendering failed: {str(e)}",
-        )
-
-    video_url = f"http://localhost:8000/static/output/rendered/{out_filename}"
-    return {
-        "status": "complete",
-        "render_engine": "ffmpeg-fallback",
-        "video_url": video_url,
-        "filename": out_filename,
-        "width": width,
-        "height": height,
-        "fps": fps,
+    # Synchronously reset render state so stream and UI start cleanly at 0%
+    job.video_url = None
+    job.progress = {
+        "percent": 0,
+        "is_rendering": True,
+        "message": "Enqueued render task in background worker...",
     }
+    job.error_message = None
+    db.commit()
+
+    run_async_render_task(
+        job_id=job_id,
+        timeline_data=timeline_data,
+        width=width,
+        height=height,
+        fps=fps,
+    )
+
+    return {
+        "status": "rendering",
+        "job_id": job_id,
+        "message": "Video rendering enqueued in background",
+        "stream_url": f"/jobs/{job_id}/stream",
+    }
+
+
+@router.get(
+    "/{job_id}/stream",
+    summary="Server-Sent Events (SSE) stream for live job progress & render updates",
+)
+async def stream_job_progress(job_id: str) -> Any:
+    """Streams real-time job execution and render progress via SSE."""
+    import asyncio
+    import json
+    from fastapi.responses import StreamingResponse
+    from backend.models.db import get_session_factory
+
+    async def event_generator():
+        session_factory = get_session_factory()
+        last_progress_pct = -1
+        last_status = None
+        consecutive_same_count = 0
+
+        while True:
+            session = session_factory()
+            try:
+                job = get_job(session=session, job_id=job_id)
+                if not job:
+                    yield f"event: error\ndata: {json.dumps({'error': 'Job not found'})}\n\n"
+                    break
+
+                current_progress = job.progress or {}
+                pct = current_progress.get("percent", 0)
+                is_rendering = current_progress.get("is_rendering", False)
+                current_status = job.status.value if hasattr(job.status, "value") else str(job.status)
+                current_stage = job.stage.value if hasattr(job.stage, "value") else str(job.stage)
+
+                event_data = {
+                    "job_id": job.id,
+                    "stage": current_stage,
+                    "status": current_status,
+                    "progress": current_progress,
+                    "video_url": job.video_url,
+                    "error_message": job.error_message,
+                }
+
+                # Yield update
+                yield f"data: {json.dumps(event_data)}\n\n"
+
+                # Check termination states only when NOT in active render progression
+                if not is_rendering and current_status == "complete" and (pct >= 100 or job.video_url):
+                    yield f"event: complete\ndata: {json.dumps(event_data)}\n\n"
+                    break
+                elif not is_rendering and (current_status == "failed" or current_progress.get("error")):
+                    yield f"event: failed\ndata: {json.dumps(event_data)}\n\n"
+                    break
+
+                # Heartbeat keep-alive check
+                if pct == last_progress_pct and current_status == last_status:
+                    consecutive_same_count += 1
+                else:
+                    consecutive_same_count = 0
+                    last_progress_pct = pct
+                    last_status = current_status
+
+            finally:
+                session.close()
+
+            await asyncio.sleep(0.5)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 

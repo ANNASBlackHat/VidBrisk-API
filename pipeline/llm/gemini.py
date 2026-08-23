@@ -45,12 +45,23 @@ class GeminiLLMClient:
         )
         return response.text.strip() if response.text else ""
 
-    def generate_json(self, prompt: str, system_instruction: Optional[str] = None) -> Any:
+    def generate_json(
+        self,
+        prompt: str,
+        system_instruction: Optional[str] = None,
+        schema: Optional[Any] = None,
+    ) -> Any:
         """Generates JSON and parses into Python dict/list."""
-        config = types.GenerateContentConfig(
-            response_mime_type="application/json",
-            temperature=0.1,
-        )
+        config_kwargs: dict[str, Any] = {
+            "response_mime_type": "application/json",
+            "temperature": 0.1,
+        }
+        if schema:
+            config_kwargs["response_schema"] = schema
+        if system_instruction:
+            config_kwargs["system_instruction"] = system_instruction
+
+        config = types.GenerateContentConfig(**config_kwargs)
         if system_instruction:
             config.system_instruction = system_instruction
 

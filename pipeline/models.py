@@ -6,8 +6,29 @@ from pydantic import BaseModel, Field
 
 
 BeatType = Literal["narrative", "stat", "abstract"]
-StrategyType = Literal["single_clip", "concat_clips", "image_kenburns", "motion_text"]
+StrategyType = Literal[
+    "single_clip",
+    "concat_clips",
+    "image_kenburns",
+    "motion_text",
+    "split_screen",
+    "stat_over_footage",
+    "quote_over_footage",
+    "pip_takeover",
+]
 TrackType = Literal["video", "text", "audio"]
+LayerRole = Literal["background", "midground", "overlay", "caption"]
+LayoutRole = Literal[
+    "full",
+    "overlay-lower-third",
+    "takeover",
+    "split-left",
+    "split-right",
+    "corner-tl",
+    "corner-tr",
+    "corner-bl",
+    "corner-br",
+]
 
 
 class Beat(BaseModel):
@@ -36,7 +57,7 @@ class WordTiming(BaseModel):
 
 
 class AssetItem(BaseModel):
-    """Specific asset chunk or visual card component used in an AssetPlan."""
+    """Specific asset chunk or visual card component used in an AssetPlan (legacy)."""
     type: Literal["video", "image", "text_card", "motion"]
     chunk_id: Optional[str] = None
     source_in: Optional[float] = None
@@ -49,10 +70,30 @@ class AssetItem(BaseModel):
     props: Optional[dict[str, Any]] = None
 
 
+class Layer(BaseModel):
+    """A single z-ordered visual layer within a beat's composition."""
+    role: LayerRole
+    z: int
+    type: Literal["video", "image", "motion", "text"]
+    layout: LayoutRole = "full"
+    # footage/image fields
+    chunk_id: Optional[str] = None
+    source_in: Optional[float] = None
+    source_out: Optional[float] = None
+    storage_path: Optional[str] = None
+    storage_url: Optional[str] = None
+    # motion/text fields
+    component_id: Optional[str] = None
+    content: Optional[str] = None
+    props: Optional[dict[str, Any]] = None
+    style: Optional[str] = None
+
+
 class AssetPlan(BaseModel):
     """Plan for how visual assets are mapped and scheduled for a beat."""
     strategy: StrategyType
-    items: list[AssetItem] = Field(default_factory=list)
+    items: list[AssetItem] = Field(default_factory=list)   # legacy, kept during transition
+    layers: list[Layer] = Field(default_factory=list)       # NEW multi-layer source of truth
 
 
 class CandidateChunk(BaseModel):
@@ -91,6 +132,11 @@ class TrackItem(BaseModel):
     id: str
     trackStart: float
     trackEnd: float
+
+    # Multi-layer tagging
+    zIndex: Optional[int] = None
+    layerRole: Optional[LayerRole] = None
+    layout: Optional[LayoutRole] = None
 
     # Video & Motion track specific fields
     assetId: Optional[str] = None

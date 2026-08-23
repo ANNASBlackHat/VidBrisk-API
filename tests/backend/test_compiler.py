@@ -2,7 +2,13 @@
 
 import pytest
 from backend.compiler.timeline_compiler import compile_timeline
-from backend.components.props import extract_quote_props, extract_stat_props, extract_title_props
+from backend.components.props import (
+    extract_chat_props,
+    extract_list_props,
+    extract_quote_props,
+    extract_stat_props,
+    extract_title_props,
+)
 from backend.components.registry import ComponentRegistry, resolve_component
 from backend.models.job import JobStage, JobStatus, VideoJob
 
@@ -22,6 +28,14 @@ def test_component_registry_resolution():
     title_comp = reg.get("kinetic-title")
     assert title_comp.id == "TextAnimations/Typewriter"
     assert title_comp.requires_duration is True
+
+    swipe_comp = reg.get("swipe-deck")
+    assert swipe_comp.id == "ListAnimations/SwipeDeck"
+    assert swipe_comp.requires_duration is True
+
+    chat_comp = reg.get("chat-reveal")
+    assert chat_comp.id == "ListAnimations/ChatBubbles"
+    assert chat_comp.requires_duration is True
 
     # Test unregistered fallback
     unknown_comp = reg.get("non-existent-style")
@@ -65,6 +79,18 @@ def test_prop_extractors_fallback():
     title_props = extract_title_props("Humanity's Greatest Journey")
     assert title_props["text"] == "Humanity's Greatest Journey"
     assert title_props["variant"] == "kinetic"
+
+    # Test list extraction fallback
+    list_props = extract_list_props("First milestone reached. Second milestone achieved.", client=None)
+    assert "items" in list_props
+    assert len(list_props["items"]) == 2
+
+    # Test chat extraction fallback
+    chat_props = extract_chat_props("Question one? Answer two.", client=None)
+    assert "messages" in chat_props
+    assert len(chat_props["messages"]) == 2
+    assert chat_props["messages"][0]["sender"] == "system"
+    assert chat_props["messages"][1]["sender"] == "user"
 
 
 def test_compile_timeline_full_job():
@@ -198,3 +224,71 @@ def test_qa_thumbnails_hook():
     assert qa_results[0]["checkpoints"][0]["percent"] == 20
     assert qa_results[0]["checkpoints"][1]["percent"] == 50
     assert qa_results[0]["checkpoints"][2]["percent"] == 80
+
+
+def test_compile_timeline_with_multilayer_plans():
+    job_data = {
+        "id": "job_multi_123",
+        "beats": [
+            {
+                "id": "b1",
+                "text": "Apollo budget peak.",
+                "visual_intent": "mission control",
+                "beat_type": "stat",
+            }
+        ],
+        "voice_clips": [
+            {"beat_id": "b1", "audio_path": "output/audio/b1.wav", "duration_sec": 4.0}
+        ],
+        "timings": {
+            "b1": {"start": 0.0, "end": 4.0, "duration": 4.0}
+        },
+        "asset_plan": [
+            {
+                "strategy": "stat_over_footage",
+                "layers": [
+                    {
+                        "role": "background",
+                        "z": 0,
+                        "type": "video",
+                        "layout": "full",
+                        "chunk_id": "chk_bg",
+                        "storage_path": "vids/control.mp4",
+                        "source_in": 0.0,
+                        "source_out": 4.0,
+                    },
+                    {
+                        "role": "overlay",
+                        "z": 1,
+                        "type": "motion",
+                        "layout": "overlay-lower-third",
+                        "component_id": "DataAnimations/StatCard",
+                        "style": "stat-callout",
+                        "props": {"value": "$25.4B", "kicker": "PEAK BUDGET"},
+                    },
+                ],
+            }
+        ],
+    }
+
+    timeline = compile_timeline(job_data, fps=30)
+    assert "tracks" in timeline
+    video_items = timeline["tracks"][0]["items"]
+    assert len(video_items) == 2
+
+    # Layer 0: Background
+    bg_item = video_items[0]
+    assert bg_item["zIndex"] == 0
+    assert bg_item["layerRole"] == "background"
+    assert bg_item["layout"] == "full"
+    assert bg_item["assetId"] == "chk_bg"
+
+    # Layer 1: Overlay
+    overlay_item = video_items[1]
+    assert overlay_item["zIndex"] == 1
+    assert overlay_item["layerRole"] == "overlay"
+    assert overlay_item["layout"] == "overlay-lower-third"
+    assert overlay_item["componentId"] == "DataAnimations/StatCard"
+    assert overlay_item["props"]["value"] == "$25.4B"
+    assert overlay_item["props"]["durationInFrames"] == 120
+

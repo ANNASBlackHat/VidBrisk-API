@@ -1,11 +1,15 @@
-"""Duration matching and asset scheduling rules for timeline assembly."""
-
 from typing import Optional
+from pipeline.assembly.recipes import (
+    plan_quote_over_footage,
+    plan_split_screen,
+    plan_stat_over_footage,
+)
 from pipeline.models import (
     AssetItem,
     AssetPlan,
     Beat,
     CandidateChunk,
+    Layer,
     StrategyType,
     TrackItem,
     VoiceClip,
@@ -28,6 +32,23 @@ def plan_beat_assets(
     beat_start = round(track_cursor, 2)
     beat_end = round(track_cursor + vo_duration, 2)
 
+    motion_props = beat.motion_props or {}
+    layout_recipe = motion_props.get("layout_recipe")
+
+    # --------------------------------------------------------------------------
+    # Case 0: Explicit Multi-Layer Layout Recipes or Overlay Modes
+    # --------------------------------------------------------------------------
+    if layout_recipe == "split_screen":
+        return plan_split_screen(beat, voice_clip, candidates, track_cursor)
+    elif layout_recipe == "stat_over_footage" or (
+        beat.beat_type == "stat" and candidates and motion_props.get("display_mode") == "overlay"
+    ):
+        return plan_stat_over_footage(beat, voice_clip, candidates, track_cursor)
+    elif layout_recipe == "quote_over_footage" or (
+        beat.beat_type == "abstract" and candidates and motion_props.get("display_mode") == "overlay"
+    ):
+        return plan_quote_over_footage(beat, voice_clip, candidates, track_cursor)
+
     # --------------------------------------------------------------------------
     # Case 1: 'stat' or 'abstract' beats -> motion_text strategy
     # --------------------------------------------------------------------------
@@ -45,11 +66,26 @@ def plan_beat_assets(
                     props=motion_props,
                 )
             ],
+            layers=[
+                Layer(
+                    role="overlay",
+                    z=0,
+                    type="motion",
+                    layout="takeover",
+                    component_id=comp_id,
+                    content=beat.text,
+                    style="stat-callout",
+                    props=motion_props,
+                )
+            ],
         )
         text_item = TrackItem(
             id=f"txt_{beat.id}",
             trackStart=beat_start,
             trackEnd=beat_end,
+            zIndex=0,
+            layerRole="overlay",
+            layout="takeover",
             content=beat.text,
             style="stat-callout",
             componentId=comp_id,
@@ -71,11 +107,26 @@ def plan_beat_assets(
                     props=motion_props,
                 )
             ],
+            layers=[
+                Layer(
+                    role="overlay",
+                    z=0,
+                    type="motion",
+                    layout="takeover",
+                    component_id=comp_id,
+                    content=beat.text,
+                    style="abstract-card",
+                    props=motion_props,
+                )
+            ],
         )
         text_item = TrackItem(
             id=f"txt_{beat.id}",
             trackStart=beat_start,
             trackEnd=beat_end,
+            zIndex=0,
+            layerRole="overlay",
+            layout="takeover",
             content=beat.text,
             style="abstract-card",
             componentId=comp_id,
@@ -100,12 +151,28 @@ def plan_beat_assets(
                     storage_url=top_cand.storage_url,
                 )
             ],
+            layers=[
+                Layer(
+                    role="background",
+                    z=0,
+                    type="image",
+                    layout="full",
+                    chunk_id=top_cand.chunk_id,
+                    source_in=0.0,
+                    source_out=vo_duration,
+                    storage_path=top_cand.storage_path,
+                    storage_url=top_cand.storage_url,
+                )
+            ],
         )
         video_item = TrackItem(
             id=f"clip_{beat.id}_img",
             assetId=top_cand.chunk_id,
             trackStart=beat_start,
             trackEnd=beat_end,
+            zIndex=0,
+            layerRole="background",
+            layout="full",
             sourceIn=0.0,
             sourceOut=vo_duration,
             assetType="image",
@@ -140,12 +207,28 @@ def plan_beat_assets(
                     storage_url=top_cand.storage_url,
                 )
             ],
+            layers=[
+                Layer(
+                    role="background",
+                    z=0,
+                    type="video",
+                    layout="full",
+                    chunk_id=top_cand.chunk_id,
+                    source_in=source_in,
+                    source_out=source_out,
+                    storage_path=top_cand.storage_path,
+                    storage_url=top_cand.storage_url,
+                )
+            ],
         )
         video_item = TrackItem(
             id=f"clip_{beat.id}",
             assetId=top_cand.chunk_id,
             trackStart=beat_start,
             trackEnd=beat_end,
+            zIndex=0,
+            layerRole="background",
+            layout="full",
             sourceIn=source_in,
             sourceOut=source_out,
             assetType="video",
@@ -159,6 +242,7 @@ def plan_beat_assets(
     # --------------------------------------------------------------------------
     video_items: list[TrackItem] = []
     plan_items: list[AssetItem] = []
+    plan_layers: list[Layer] = []
     remaining_duration = vo_duration
     current_track_pos = beat_start
 
@@ -181,6 +265,9 @@ def plan_beat_assets(
                 assetId=cand.chunk_id,
                 trackStart=t_start,
                 trackEnd=t_end,
+                zIndex=0,
+                layerRole="background",
+                layout="full",
                 sourceIn=s_in,
                 sourceOut=s_out,
                 assetType=asset_type,
@@ -191,6 +278,19 @@ def plan_beat_assets(
         plan_items.append(
             AssetItem(
                 type=asset_type,
+                chunk_id=cand.chunk_id,
+                source_in=s_in,
+                source_out=s_out,
+                storage_path=cand.storage_path,
+                storage_url=cand.storage_url,
+            )
+        )
+        plan_layers.append(
+            Layer(
+                role="background",
+                z=0,
+                type=asset_type,
+                layout="full",
                 chunk_id=cand.chunk_id,
                 source_in=s_in,
                 source_out=s_out,
@@ -209,6 +309,10 @@ def plan_beat_assets(
             plan_items[-1].source_out = round(
                 (plan_items[-1].source_out or 0.0) + remaining_duration, 2
             )
+        if plan_layers:
+            plan_layers[-1].source_out = round(
+                (plan_layers[-1].source_out or 0.0) + remaining_duration, 2
+            )
 
-    plan = AssetPlan(strategy="concat_clips", items=plan_items)
+    plan = AssetPlan(strategy="concat_clips", items=plan_items, layers=plan_layers)
     return plan, video_items, []
