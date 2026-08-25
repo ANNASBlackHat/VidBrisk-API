@@ -10,7 +10,7 @@ Segments clean narration prose into atomic beats and tags each with:
 
 from typing import Any, Optional
 from pipeline.llm.gemini import GeminiLLMClient
-from pipeline.models import Beat, BeatType
+from pipeline.models import Beat, BeatType, MoodTag
 from pipeline.stages.clean_script import clean_script
 
 
@@ -74,6 +74,7 @@ For each beat:
      - `leftContent`: Left entity summary.
      - `rightTitle`: Right entity title.
      - `rightContent`: Right entity summary.
+6. `mood` (optional): one of "tense", "hopeful", "triumphant", "somber", "urgent", "neutral" — only set when the beat has a clear emotional register; omit for beats with no strong tone.
 
 Output JSON format:
 {
@@ -83,7 +84,8 @@ Output JSON format:
       "text": "...",
       "visual_intent": "...",
       "beat_type": "narrative",
-      "motion_props": null
+      "motion_props": null,
+      "mood": "hopeful"
     },
     {
       "id": "b2",
@@ -98,7 +100,8 @@ Output JSON format:
         "visual_type": "chart",
         "subtext": "Represented 4% of the entire federal budget at its peak.",
         "display_mode": "overlay"
-      }
+      },
+      "mood": "triumphant"
     },
     {
       "id": "b3",
@@ -110,7 +113,8 @@ Output JSON format:
         "title": "KEY PHASES",
         "items": ["1. Saturn V Ignition", "2. Translunar Injection", "3. Lunar Descent"],
         "display_mode": "takeover"
-      }
+      },
+      "mood": "neutral"
     }
   ]
 }
@@ -128,6 +132,7 @@ Rules:
    - `visual_intent`: Detailed semantic footage search prompt.
    - `beat_type`: "narrative" | "stat" | "abstract" | "swipe_deck" | "chat_bubbles" | "kinetic" | "typewriter" | "split_screen".
    - `motion_props`: Structured visual properties if a motion component or layout recipe applies (component, items, messages, primary_value, kicker, visual_type, quote, emphasis, author, display_mode).
+   - `mood`: Optional emotional tone tag ("tense" | "hopeful" | "triumphant" | "somber" | "urgent" | "neutral").
 
 Output JSON format:
 {
@@ -137,7 +142,8 @@ Output JSON format:
       "text": "...",
       "visual_intent": "...",
       "beat_type": "narrative",
-      "motion_props": null
+      "motion_props": null,
+      "mood": "hopeful"
     }
   ]
 }
@@ -153,6 +159,15 @@ VALID_BEAT_TYPES = {
     "swipe_deck",
     "chat_bubbles",
     "split_screen",
+}
+
+VALID_MOODS = {
+    "tense",
+    "hopeful",
+    "triumphant",
+    "somber",
+    "urgent",
+    "neutral",
 }
 
 
@@ -172,6 +187,9 @@ def _parse_beat_json(raw_beats: list[dict[str, Any]]) -> list[Beat]:
         else:
             motion_props = None
 
+        raw_mood = b.get("mood")
+        mood: Optional[MoodTag] = raw_mood if raw_mood in VALID_MOODS else None
+
         if text:
             beats.append(
                 Beat(
@@ -180,6 +198,7 @@ def _parse_beat_json(raw_beats: list[dict[str, Any]]) -> list[Beat]:
                     visual_intent=visual_intent or text,
                     beat_type=beat_type,
                     motion_props=motion_props,
+                    mood=mood,
                 )
             )
     return beats

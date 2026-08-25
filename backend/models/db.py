@@ -75,6 +75,11 @@ def _migrate_columns(engine) -> None:
                         conn.execute(text("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS video_url VARCHAR(500);"))
                     else:
                         conn.execute(text("ALTER TABLE video_jobs ADD COLUMN video_url VARCHAR(500);"))
+                if "custom_audio_path" not in columns:
+                    if engine.dialect.name == "postgresql":
+                        conn.execute(text("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS custom_audio_path VARCHAR(500);"))
+                    else:
+                        conn.execute(text("ALTER TABLE video_jobs ADD COLUMN custom_audio_path VARCHAR(500);"))
     except Exception as e:
         # Non-fatal if table not created yet or permission restricted
         pass

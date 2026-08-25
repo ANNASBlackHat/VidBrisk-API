@@ -292,3 +292,33 @@ def test_compile_timeline_with_multilayer_plans():
     assert overlay_item["props"]["value"] == "$25.4B"
     assert overlay_item["props"]["durationInFrames"] == 120
 
+
+def test_compile_timeline_preserves_video_layer_props():
+    job_data = {
+        "id": "job-effects-1",
+        "beats": [{"id": "b1", "text": "Cold waters", "mood": "tense"}],
+        "voice_clips": [{"beat_id": "b1", "audio_path": "b1.wav", "duration_sec": 3.0}],
+        "timings": {"b1": {"start": 0.0, "end": 3.0, "duration": 3.0}},
+        "asset_plan": [
+            {
+                "strategy": "single_clip",
+                "layers": [
+                    {
+                        "role": "background",
+                        "z": 0,
+                        "type": "video",
+                        "layout": "full",
+                        "chunk_id": "chk_ocean",
+                        "source_in": 0.0,
+                        "source_out": 3.0,
+                        "props": {"effects": {"colorTreatment": "duotone-cool"}},
+                    }
+                ],
+            }
+        ],
+    }
+    timeline = compile_timeline(job_data)
+    video_item = timeline["tracks"][0]["items"][0]
+    assert "props" in video_item
+    assert video_item["props"] == {"effects": {"colorTreatment": "duotone-cool"}}
+

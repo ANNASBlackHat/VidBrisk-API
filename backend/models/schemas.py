@@ -24,11 +24,16 @@ class JobCreateRequest(BaseModel):
         default=False,
         description="Use single combined LLM prompt for Stage 1 + 2",
     )
+    custom_audio_path: Optional[str] = Field(
+        default=None,
+        description="Optional path to uploaded pre-recorded voiceover audio file",
+    )
 
 
 class JobUpdateRequest(BaseModel):
     """Payload for updating job metadata."""
     title: Optional[str] = Field(default=None, max_length=255, description="New title for the video")
+    custom_audio_path: Optional[str] = Field(default=None, description="Path to custom audio file")
 
 
 class JobApprovalRequest(BaseModel):
@@ -56,6 +61,7 @@ class JobSummaryResponse(BaseModel):
     aligner_provider: str
     target_orientation: str
     auto_approve: bool
+    custom_audio_path: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     error_message: Optional[str] = None
@@ -77,6 +83,7 @@ class JobResponse(BaseModel):
     target_orientation: str
     auto_approve: bool
     single_pass_llm: bool
+    custom_audio_path: Optional[str] = None
     
     clean_script: Optional[str] = None
     beats: Optional[list[dict[str, Any]]] = None

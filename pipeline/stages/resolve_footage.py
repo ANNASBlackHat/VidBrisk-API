@@ -23,7 +23,7 @@ def resolve_footage(
         or display_mode == "overlay"
     )
 
-    if not is_multilayer_or_overlay and beat.beat_type in ("abstract", "stat") and display_mode == "takeover":
+    if not is_multilayer_or_overlay and beat.beat_type in ("abstract", "stat"):
         return []
 
     footage_engine = resolver or FootageResolver()

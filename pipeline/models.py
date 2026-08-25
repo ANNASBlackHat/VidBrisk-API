@@ -16,6 +16,7 @@ BeatType = Literal[
     "chat_bubbles",
     "split_screen",
 ]
+MoodTag = Literal["tense", "hopeful", "triumphant", "somber", "urgent", "neutral"]
 StrategyType = Literal[
     "single_clip",
     "concat_clips",
@@ -48,6 +49,7 @@ class Beat(BaseModel):
     visual_intent: str
     beat_type: BeatType = "narrative"
     motion_props: Optional[dict[str, Any]] = None
+    mood: Optional[MoodTag] = None
 
 
 class VoiceClip(BaseModel):

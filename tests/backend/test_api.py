@@ -183,3 +183,36 @@ def test_retry_and_cancel_endpoints(client_and_db):
     res_retry = client.post(f"/jobs/{job_id}/retry")
     assert res_retry.status_code == 200
     assert res_retry.json()["status"] == "pending"
+
+
+def test_create_job_with_custom_audio_json(client_and_db):
+    client, _ = client_and_db
+
+    payload = {
+        "raw_input": "Narration text for custom audio job",
+        "custom_audio_path": "/data/custom/test.wav",
+    }
+    res = client.post("/jobs", json=payload)
+    assert res.status_code == 201
+    data = res.json()
+    assert data["custom_audio_path"] == "/data/custom/test.wav"
+
+
+def test_create_job_with_multipart_audio_upload(client_and_db):
+    client, _ = client_and_db
+
+    files = {
+        "audio_file": ("my_voiceover.wav", b"RIFF....dummywavcontent", "audio/wav"),
+    }
+    form_data = {
+        "raw_input": "This is spoken in the uploaded audio.",
+        "title": "Uploaded VO Video",
+        "tts_provider": "kokoro",
+    }
+
+    res = client.post("/jobs", data=form_data, files=files)
+    assert res.status_code == 201
+    data = res.json()
+    assert data["title"] == "Uploaded VO Video"
+    assert data["custom_audio_path"] is not None
+    assert data["custom_audio_path"].endswith(".wav")

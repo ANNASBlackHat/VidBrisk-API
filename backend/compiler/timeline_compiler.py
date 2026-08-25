@@ -118,7 +118,7 @@ def compile_timeline(
                     storage_path = layer_info.get("storage_path") or layer_info.get("storagePath") or ""
                     storage_url = layer_info.get("storage_url") or layer_info.get("storageUrl") or storage_path
 
-                    video_items.append({
+                    v_item = {
                         "id": f"clip_{beat_id}_l{l_idx}" if len(plan_layers) > 1 else f"clip_{beat_id}",
                         "trackStart": round(c_start, 3),
                         "trackEnd": round(c_end, 3),
@@ -131,7 +131,10 @@ def compile_timeline(
                         "zIndex": l_z,
                         "layerRole": l_role,
                         "layout": l_layout,
-                    })
+                    }
+                    if layer_info.get("props"):
+                        v_item["props"] = layer_info.get("props")
+                    video_items.append(v_item)
         elif strategy in ("motion_text", "abstract-card", "stat-callout") or (plan_items and plan_items[0].get("style")):
             # Motion graphics component (Legacy items fallback)
             item_info = plan_items[0] if plan_items else {}

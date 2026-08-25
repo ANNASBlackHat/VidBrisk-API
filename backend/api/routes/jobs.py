@@ -1,7 +1,7 @@
-"""FastAPI Router for Video Generation Jobs."""
-
+import os
+import uuid
 from typing import Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from backend.api.dependencies import get_db
@@ -33,12 +33,71 @@ router = APIRouter(prefix="/jobs", tags=["Jobs"])
     status_code=status.HTTP_201_CREATED,
     summary="Create a new video generation job",
 )
-def create_new_job(
-    payload: JobCreateRequest,
+async def create_new_job(
+    request: Request,
     db: Session = Depends(get_db),
 ) -> Any:
-    """Submits a new raw script to be processed asynchronously by the pipeline worker."""
-    job = create_job(session=db, req=payload)
+    """Submits a new raw script or audio file to be processed asynchronously by the pipeline worker."""
+    content_type = request.headers.get("content-type", "")
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        raw_input = form.get("raw_input") or form.get("script") or form.get("prompt")
+        if not raw_input or not str(raw_input).strip():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Script or raw_input text is required.",
+            )
+
+        title = form.get("title")
+        tts_provider = form.get("tts_provider") or form.get("voice_type") or "kokoro"
+        aligner_provider = form.get("aligner_provider") or "mock"
+        target_orientation = form.get("target_orientation") or "horizontal"
+
+        auto_approve_raw = form.get("auto_approve")
+        auto_approve = (
+            auto_approve_raw in (True, "true", "True", "1", 1)
+            if auto_approve_raw is not None
+            else True
+        )
+
+        single_pass_llm_raw = form.get("single_pass_llm")
+        single_pass_llm = single_pass_llm_raw in (True, "true", "True", "1", 1)
+
+        custom_audio_path = None
+        audio_file = form.get("audio_file")
+        if audio_file and hasattr(audio_file, "filename") and audio_file.filename:
+            os.makedirs("data/uploads", exist_ok=True)
+            file_ext = os.path.splitext(audio_file.filename)[1] or ".wav"
+            upload_id = str(uuid.uuid4())
+            saved_filename = f"{upload_id}_raw_audio{file_ext}"
+            saved_path = os.path.join("data/uploads", saved_filename)
+
+            with open(saved_path, "wb") as f:
+                content = await audio_file.read()
+                f.write(content)
+            custom_audio_path = os.path.abspath(saved_path)
+
+        req = JobCreateRequest(
+            title=str(title) if title else None,
+            raw_input=str(raw_input).strip(),
+            tts_provider=str(tts_provider),
+            aligner_provider=str(aligner_provider),
+            target_orientation=target_orientation,
+            auto_approve=auto_approve,
+            single_pass_llm=single_pass_llm,
+            custom_audio_path=custom_audio_path,
+        )
+    else:
+        try:
+            body = await request.json()
+            req = JobCreateRequest.model_validate(body)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid JSON payload: {e}",
+            )
+
+    job = create_job(session=db, req=req)
     return job
 
 

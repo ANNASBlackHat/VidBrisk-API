@@ -110,3 +110,40 @@ def test_structure_beats_with_layout_recipe(mock_gemini_client):
     assert beats[0].motion_props["layout_recipe"] == "stat_over_footage"
     assert beats[0].motion_props["primary_value"] == "$25.4B"
 
+
+def test_structure_beats_with_mood(mock_gemini_client):
+    clean_text = "The storm approached with ferocious winds."
+    mock_gemini_client.generate_json.return_value = {
+        "beats": [
+            {
+                "id": "b1",
+                "text": clean_text,
+                "visual_intent": "approaching storm dark clouds",
+                "beat_type": "narrative",
+                "mood": "tense",
+            }
+        ]
+    }
+    beats = structure_beats(clean_text, client=mock_gemini_client)
+    assert len(beats) == 1
+    assert beats[0].mood == "tense"
+
+
+def test_structure_beats_invalid_mood_degradation(mock_gemini_client):
+    clean_text = "Calm waters under a morning sky."
+    mock_gemini_client.generate_json.return_value = {
+        "beats": [
+            {
+                "id": "b1",
+                "text": clean_text,
+                "visual_intent": "calm ocean morning",
+                "beat_type": "narrative",
+                "mood": "extremely_peaceful_and_happy_invalid_tag",
+            }
+        ]
+    }
+    beats = structure_beats(clean_text, client=mock_gemini_client)
+    assert len(beats) == 1
+    # Invalid mood tag gracefully degrades to None
+    assert beats[0].mood is None
+

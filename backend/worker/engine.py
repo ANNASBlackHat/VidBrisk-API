@@ -14,6 +14,7 @@ from pipeline.alignment.easytranscriber import EasyTranscriberAligner
 from pipeline.alignment.mock import MockAligner
 from pipeline.alignment.whisperx import WhisperXAligner
 from pipeline.assembly.duration_matcher import plan_beat_assets
+from pipeline.audio import slice_audio_for_beats
 from pipeline.footage.resolver import FootageResolver
 from pipeline.models import Beat, CandidateChunk, VoiceClip, WordTiming
 from pipeline.stages.clean_script import clean_script
@@ -148,57 +149,98 @@ def worker_tick(
                 )
 
         elif job.stage == JobStage.VOICING:
-            tts_engine = tts_override or resolve_tts_provider(job.tts_provider)
             job_audio_dir = os.path.join(audio_output_dir, str(job.id))
             os.makedirs(job_audio_dir, exist_ok=True)
-            voice_clips_data = []
-            total_beats = len(job.beats or [])
+            beats_list = [Beat(**b) for b in (job.beats or [])]
+            total_beats = len(beats_list)
 
-            logger.info(
-                f"[{job_prefix}] [VOICING] Starting TTS synthesis for {total_beats} beats using provider='{job.tts_provider}' (dir={job_audio_dir})..."
-            )
-
-            for idx, raw_b in enumerate(job.beats or [], start=1):
-                beat = Beat(**raw_b)
+            if job.custom_audio_path and os.path.exists(job.custom_audio_path):
+                logger.info(
+                    f"[{job_prefix}] [VOICING] Custom audio detected at '{job.custom_audio_path}'. "
+                    f"Running full-audio alignment & beat slicing for {total_beats} beats..."
+                )
                 _update_job_progress(
                     session=session,
                     job=job,
                     stage="voicing",
-                    current=idx - 1,
+                    current=0,
                     total=total_beats,
-                    message=f"Synthesizing audio for beat {idx}/{total_beats} ({beat.id})...",
+                    message=f"Aligning & slicing custom voiceover audio for {total_beats} beats...",
                 )
-
-                t0 = time.time()
-                vc = synthesize_voice(
-                    beat=beat,
-                    provider=tts_engine,
+                aligner_engine = aligner_override or resolve_aligner_provider(job.aligner_provider)
+                voice_clips, timings_map = slice_audio_for_beats(
+                    audio_path=job.custom_audio_path,
+                    beats=beats_list,
+                    aligner=aligner_engine,
                     output_dir=job_audio_dir,
                 )
-                duration_synth = time.time() - t0
-                voice_clips_data.append(vc.model_dump())
+                voice_clips_data = [vc.model_dump() for vc in voice_clips]
 
-                logger.info(
-                    f"[{job_prefix}] [VOICING] Beat {idx}/{total_beats} ({beat.id}) "
-                    f"synthesized in {duration_synth:.2f}s -> {vc.duration_sec:.2f}s audio"
+                _update_job_progress(
+                    session=session,
+                    job=job,
+                    stage="voicing",
+                    current=total_beats,
+                    total=total_beats,
+                    message=f"Custom audio sliced: {len(voice_clips_data)} clips ready.",
                 )
 
-            _update_job_progress(
-                session=session,
-                job=job,
-                stage="voicing",
-                current=total_beats,
-                total=total_beats,
-                message=f"Voicing complete: {total_beats} clips generated.",
-            )
+                advance_job_stage(
+                    session=session,
+                    job=job,
+                    next_stage=JobStage.RESOLVING_FOOTAGE,
+                    next_status=JobStatus.PENDING,
+                    voice_clips=voice_clips_data,
+                    timings=timings_map,
+                )
+            else:
+                tts_engine = tts_override or resolve_tts_provider(job.tts_provider)
+                voice_clips_data = []
 
-            advance_job_stage(
-                session=session,
-                job=job,
-                next_stage=JobStage.ALIGNING,
-                next_status=JobStatus.PENDING,
-                voice_clips=voice_clips_data,
-            )
+                logger.info(
+                    f"[{job_prefix}] [VOICING] Starting TTS synthesis for {total_beats} beats using provider='{job.tts_provider}' (dir={job_audio_dir})..."
+                )
+
+                for idx, beat in enumerate(beats_list, start=1):
+                    _update_job_progress(
+                        session=session,
+                        job=job,
+                        stage="voicing",
+                        current=idx - 1,
+                        total=total_beats,
+                        message=f"Synthesizing audio for beat {idx}/{total_beats} ({beat.id})...",
+                    )
+
+                    t0 = time.time()
+                    vc = synthesize_voice(
+                        beat=beat,
+                        provider=tts_engine,
+                        output_dir=job_audio_dir,
+                    )
+                    duration_synth = time.time() - t0
+                    voice_clips_data.append(vc.model_dump())
+
+                    logger.info(
+                        f"[{job_prefix}] [VOICING] Beat {idx}/{total_beats} ({beat.id}) "
+                        f"synthesized in {duration_synth:.2f}s -> {vc.duration_sec:.2f}s audio"
+                    )
+
+                _update_job_progress(
+                    session=session,
+                    job=job,
+                    stage="voicing",
+                    current=total_beats,
+                    total=total_beats,
+                    message=f"Voicing complete: {total_beats} clips generated.",
+                )
+
+                advance_job_stage(
+                    session=session,
+                    job=job,
+                    next_stage=JobStage.ALIGNING,
+                    next_status=JobStatus.PENDING,
+                    voice_clips=voice_clips_data,
+                )
 
         elif job.stage == JobStage.ALIGNING:
             aligner_engine = aligner_override or resolve_aligner_provider(job.aligner_provider)

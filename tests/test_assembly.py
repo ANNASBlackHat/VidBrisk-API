@@ -313,3 +313,133 @@ def test_plan_quote_over_footage_recipe():
     assert len(text_items) == 1
     assert text_items[0].layerRole == "overlay"
 
+
+def test_mood_to_color_treatment_mapping():
+    from pipeline.assembly.effects_mapping import mood_to_color_treatment
+
+    assert mood_to_color_treatment("tense") == "duotone-cool"
+    assert mood_to_color_treatment("urgent") == "duotone-cool"
+    assert mood_to_color_treatment("somber") == "duotone-mono"
+    assert mood_to_color_treatment("hopeful") == "duotone-warm"
+    assert mood_to_color_treatment("triumphant") == "duotone-warm"
+    assert mood_to_color_treatment("neutral") == "none"
+    assert mood_to_color_treatment(None) is None
+    assert mood_to_color_treatment("unrecognized_mood") is None
+
+
+def test_single_clip_mood_color_grade():
+    beat = Beat(
+        id="b_sc",
+        text="The submarine plunged into icy depths.",
+        visual_intent="deep sea submarine",
+        beat_type="narrative",
+        mood="tense",
+    )
+    clip = VoiceClip(beat_id="b_sc", audio_path="audio/b_sc.wav", duration_sec=4.0)
+    cand = CandidateChunk(
+        chunk_id="chk_sub",
+        media_item_id="item_sub",
+        score=0.9,
+        start_ts=0.0,
+        duration_sec=10.0,
+        media_type="video",
+    )
+
+    plan, video_items, _ = plan_beat_assets(beat, clip, [cand], 0.0)
+
+    assert plan.strategy == "single_clip"
+    assert plan.layers[0].props == {"effects": {"colorTreatment": "duotone-cool"}}
+    assert video_items[0].props == {"effects": {"colorTreatment": "duotone-cool"}}
+
+
+def test_split_screen_mood_color_grade():
+    beat = Beat(
+        id="b_split",
+        text="Comparing the old ruins with modern skyscrapers.",
+        visual_intent="ruins vs skyscrapers",
+        beat_type="narrative",
+        motion_props={"layout_recipe": "split_screen"},
+        mood="somber",
+    )
+    clip = VoiceClip(beat_id="b_split", audio_path="audio/b_split.wav", duration_sec=4.0)
+    cand1 = CandidateChunk(chunk_id="c1", media_item_id="m1", score=0.9, start_ts=0.0, duration_sec=5.0)
+    cand2 = CandidateChunk(chunk_id="c2", media_item_id="m2", score=0.9, start_ts=0.0, duration_sec=5.0)
+
+    plan, video_items, _ = plan_beat_assets(beat, clip, [cand1, cand2], 0.0)
+
+    assert plan.strategy == "split_screen"
+    assert len(plan.layers) == 2
+    assert plan.layers[0].props == {"effects": {"colorTreatment": "duotone-mono"}}
+    assert plan.layers[1].props == {"effects": {"colorTreatment": "duotone-mono"}}
+    assert video_items[0].props == {"effects": {"colorTreatment": "duotone-mono"}}
+    assert video_items[1].props == {"effects": {"colorTreatment": "duotone-mono"}}
+
+
+def test_stat_over_footage_mood_color_grade():
+    beat = Beat(
+        id="b_stat",
+        text="A record 99.8% mission success rate was reached.",
+        visual_intent="mission launch success crowd cheering",
+        beat_type="stat",
+        motion_props={
+            "layout_recipe": "stat_over_footage",
+            "component": "DataAnimations/StatCard",
+            "primary_value": "99.8%",
+        },
+        mood="triumphant",
+    )
+    clip = VoiceClip(beat_id="b_stat", audio_path="audio/b_stat.wav", duration_sec=3.0)
+    cand = CandidateChunk(chunk_id="c_launch", media_item_id="m_l", score=0.95, start_ts=0.0, duration_sec=6.0)
+
+    plan, video_items, text_items = plan_beat_assets(beat, clip, [cand], 0.0)
+
+    assert plan.strategy == "stat_over_footage"
+    # Background layer (layer 0) should have duotone-warm
+    assert plan.layers[0].props == {"effects": {"colorTreatment": "duotone-warm"}}
+    assert video_items[0].props == {"effects": {"colorTreatment": "duotone-warm"}}
+
+
+def test_quote_over_footage_mood_color_grade():
+    beat = Beat(
+        id="b_quote",
+        text="We choose to go to the moon.",
+        visual_intent="jfk speech podium footage",
+        beat_type="abstract",
+        motion_props={
+            "layout_recipe": "quote_over_footage",
+            "quote": "We choose to go to the moon",
+        },
+        mood="hopeful",
+    )
+    clip = VoiceClip(beat_id="b_quote", audio_path="audio/b_quote.wav", duration_sec=3.5)
+    cand = CandidateChunk(chunk_id="c_jfk", media_item_id="m_jfk", score=0.9, start_ts=0.0, duration_sec=5.0)
+
+    plan, video_items, text_items = plan_beat_assets(beat, clip, [cand], 0.0)
+
+    assert plan.strategy == "quote_over_footage"
+    assert plan.layers[0].props == {"effects": {"colorTreatment": "duotone-warm"}}
+    assert video_items[0].props == {"effects": {"colorTreatment": "duotone-warm"}}
+
+
+def test_explicit_effects_override_not_clobbered_by_mood():
+    # If explicit colorTreatment is provided in motion_props or effects, mood must not overwrite it
+    beat = Beat(
+        id="b_override",
+        text="Emergency alarms sounded.",
+        visual_intent="emergency flashing red lights",
+        beat_type="narrative",
+        motion_props={
+            "effects": {"colorTreatment": "duotone-mono"},
+        },
+        mood="tense",  # tense normally maps to duotone-cool
+    )
+    clip = VoiceClip(beat_id="b_override", audio_path="audio/b_ov.wav", duration_sec=4.0)
+    cand = CandidateChunk(chunk_id="c_alarm", media_item_id="m_a", score=0.9, start_ts=0.0, duration_sec=10.0)
+
+    plan, video_items, _ = plan_beat_assets(beat, clip, [cand], 0.0)
+
+    assert plan.strategy == "single_clip"
+    # Should keep manual override "duotone-mono" rather than mood "duotone-cool"
+    assert plan.layers[0].props == {"effects": {"colorTreatment": "duotone-mono"}}
+    assert video_items[0].props == {"effects": {"colorTreatment": "duotone-mono"}}
+

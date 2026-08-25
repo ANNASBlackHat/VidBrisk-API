@@ -184,3 +184,22 @@ def test_track_item_multilayer_fields():
     assert data["layerRole"] == "overlay"
     assert data["layout"] == "overlay-lower-third"
 
+
+def test_beat_mood_field():
+    beat = Beat(
+        id="b_tense",
+        text="The ship plunged into the darkness.",
+        visual_intent="dark ocean shipwreck",
+        mood="tense",
+    )
+    assert beat.mood == "tense"
+    dumped = beat.model_dump(exclude_none=True)
+    assert dumped["mood"] == "tense"
+
+    beat_default = Beat(
+        id="b_def",
+        text="Normal narration.",
+        visual_intent="normal visual",
+    )
+    assert beat_default.mood is None
+

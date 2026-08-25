@@ -201,3 +201,54 @@ def test_worker_stage_failure_handling(test_db):
         assert "LLM rate limit exceeded" in res.error_message
     finally:
         engine_module.clean_script = orig_clean
+
+
+def test_worker_with_custom_audio(test_db, mock_resolver, monkeypatch, tmp_path):
+    import wave
+    from pipeline.models import Beat
+
+    # Create temporary dummy audio
+    audio_file = str(tmp_path / "custom_vo.wav")
+    num_frames = int(4.0 * 16000)
+    with wave.open(audio_file, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(16000)
+        wf.writeframes(b"\x00\x00" * num_frames)
+
+    monkeypatch.setattr("backend.worker.engine.clean_script", lambda raw_input: "First line of speech. Second line.")
+    monkeypatch.setattr(
+        "backend.worker.engine.structure_beats",
+        lambda script_text: [
+            Beat(id="b1", text="First line of speech.", visual_intent="scene one", beat_type="narrative"),
+            Beat(id="b2", text="Second line.", visual_intent="scene two", beat_type="narrative"),
+        ],
+    )
+
+    req = JobCreateRequest(
+        raw_input="First line of speech. Second line.",
+        custom_audio_path=audio_file,
+        aligner_provider="mock",
+        auto_approve=True,
+    )
+    job = create_job(test_db, req)
+
+    # 1. Clean
+    res_clean = worker_tick(test_db, aligner_override=MockAligner(), resolver_override=mock_resolver)
+    assert res_clean.stage == JobStage.STRUCTURING
+
+    # 2. Structure
+    res_struct = worker_tick(test_db, aligner_override=MockAligner(), resolver_override=mock_resolver)
+    assert res_struct.stage == JobStage.VOICING
+
+    # 3. Voice (should slice custom audio & compute timings directly, advancing to RESOLVING_FOOTAGE)
+    res_voice = worker_tick(
+        test_db,
+        aligner_override=MockAligner(),
+        resolver_override=mock_resolver,
+        audio_output_dir=str(tmp_path / "audio"),
+    )
+    assert res_voice.stage == JobStage.RESOLVING_FOOTAGE
+    assert len(res_voice.voice_clips) == 2
+    assert "b1" in res_voice.timings
+    assert "b2" in res_voice.timings

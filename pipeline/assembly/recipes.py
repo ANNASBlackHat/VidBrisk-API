@@ -1,6 +1,7 @@
 """Multi-layer visual composition recipes for timeline assembly."""
 
 from typing import Optional
+from pipeline.assembly.effects_mapping import apply_mood_effects_to_props
 from pipeline.models import (
     AssetItem,
     AssetPlan,
@@ -53,6 +54,7 @@ def plan_split_screen(
     left_type = "image" if cand_left.media_type in ("image", "photo") else "video"
     left_s_in = round(cand_left.start_ts, 2)
     left_s_out = round(left_s_in + vo_duration, 2)
+    left_props = apply_mood_effects_to_props(None, beat)
 
     layer_left = Layer(
         role="background",
@@ -64,6 +66,7 @@ def plan_split_screen(
         source_out=left_s_out,
         storage_path=cand_left.storage_path,
         storage_url=cand_left.storage_url,
+        props=left_props,
     )
     item_left = TrackItem(
         id=f"clip_{beat.id}_split_l",
@@ -78,12 +81,14 @@ def plan_split_screen(
         assetType=left_type,
         storagePath=cand_left.storage_path,
         storageUrl=cand_left.storage_url,
+        props=left_props,
     )
 
     # 2. Right layer (z=1, layout="split-right")
     right_type = "image" if cand_right.media_type in ("image", "photo") else "video"
     right_s_in = round(cand_right.start_ts, 2)
     right_s_out = round(right_s_in + vo_duration, 2)
+    right_props = apply_mood_effects_to_props(None, beat)
 
     layer_right = Layer(
         role="background",
@@ -95,6 +100,7 @@ def plan_split_screen(
         source_out=right_s_out,
         storage_path=cand_right.storage_path,
         storage_url=cand_right.storage_url,
+        props=right_props,
     )
     item_right = TrackItem(
         id=f"clip_{beat.id}_split_r",
@@ -109,6 +115,7 @@ def plan_split_screen(
         assetType=right_type,
         storagePath=cand_right.storage_path,
         storageUrl=cand_right.storage_url,
+        props=right_props,
     )
 
     plan = AssetPlan(
@@ -121,6 +128,7 @@ def plan_split_screen(
                 source_out=left_s_out,
                 storage_path=cand_left.storage_path,
                 storage_url=cand_left.storage_url,
+                props=left_props,
             ),
             AssetItem(
                 type=right_type,
@@ -129,6 +137,7 @@ def plan_split_screen(
                 source_out=right_s_out,
                 storage_path=cand_right.storage_path,
                 storage_url=cand_right.storage_url,
+                props=right_props,
             ),
         ],
         layers=[layer_left, layer_right],
@@ -200,6 +209,7 @@ def plan_stat_over_footage(
     asset_type = "image" if top_cand.media_type in ("image", "photo") else "video"
     source_in = round(top_cand.start_ts, 2)
     source_out = round(source_in + vo_duration, 2)
+    bg_props = apply_mood_effects_to_props(None, beat)
 
     bg_layer = Layer(
         role="background",
@@ -211,6 +221,7 @@ def plan_stat_over_footage(
         source_out=source_out,
         storage_path=top_cand.storage_path,
         storage_url=top_cand.storage_url,
+        props=bg_props,
     )
     video_item = TrackItem(
         id=f"clip_{beat.id}_bg",
@@ -225,6 +236,7 @@ def plan_stat_over_footage(
         assetType=asset_type,
         storagePath=top_cand.storage_path,
         storageUrl=top_cand.storage_url,
+        props=bg_props,
     )
 
     plan = AssetPlan(
@@ -237,6 +249,7 @@ def plan_stat_over_footage(
                 source_out=source_out,
                 storage_path=top_cand.storage_path,
                 storage_url=top_cand.storage_url,
+                props=bg_props,
             ),
             AssetItem(
                 type="motion",
@@ -312,6 +325,7 @@ def plan_quote_over_footage(
     asset_type = "image" if top_cand.media_type in ("image", "photo") else "video"
     source_in = round(top_cand.start_ts, 2)
     source_out = round(source_in + vo_duration, 2)
+    bg_props = apply_mood_effects_to_props(None, beat)
 
     bg_layer = Layer(
         role="background",
@@ -323,6 +337,7 @@ def plan_quote_over_footage(
         source_out=source_out,
         storage_path=top_cand.storage_path,
         storage_url=top_cand.storage_url,
+        props=bg_props,
     )
     video_item = TrackItem(
         id=f"clip_{beat.id}_bg",
@@ -337,6 +352,7 @@ def plan_quote_over_footage(
         assetType=asset_type,
         storagePath=top_cand.storage_path,
         storageUrl=top_cand.storage_url,
+        props=bg_props,
     )
 
     plan = AssetPlan(
@@ -349,6 +365,7 @@ def plan_quote_over_footage(
                 source_out=source_out,
                 storage_path=top_cand.storage_path,
                 storage_url=top_cand.storage_url,
+                props=bg_props,
             ),
             AssetItem(
                 type="motion",

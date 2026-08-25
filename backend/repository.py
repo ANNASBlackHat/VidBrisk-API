@@ -26,6 +26,7 @@ def create_job(session: Session, req: JobCreateRequest) -> VideoJob:
         target_orientation=req.target_orientation,
         auto_approve=req.auto_approve,
         single_pass_llm=req.single_pass_llm,
+        custom_audio_path=req.custom_audio_path,
         stage=JobStage.CLEANING,
         status=JobStatus.PENDING,
     )

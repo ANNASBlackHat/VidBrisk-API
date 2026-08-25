@@ -65,6 +65,7 @@ class VideoJob(Base):
     target_orientation: Mapped[str] = mapped_column(String(20), default="horizontal", nullable=False)
     auto_approve: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     single_pass_llm: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    custom_audio_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # Intermediate Stage Outputs (Durable state persistence)
     clean_script: Mapped[str | None] = mapped_column(Text, nullable=True)

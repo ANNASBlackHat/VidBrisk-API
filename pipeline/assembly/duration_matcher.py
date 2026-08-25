@@ -1,4 +1,5 @@
 from typing import Optional
+from pipeline.assembly.effects_mapping import apply_mood_effects_to_props
 from pipeline.assembly.recipes import (
     plan_quote_over_footage,
     plan_split_screen,
@@ -178,6 +179,7 @@ def plan_beat_assets(
     # --------------------------------------------------------------------------
     top_cand = candidates[0]
     if top_cand.media_type in ("image", "photo"):
+        bg_props = apply_mood_effects_to_props(None, beat)
         plan = AssetPlan(
             strategy="image_kenburns",
             items=[
@@ -188,6 +190,7 @@ def plan_beat_assets(
                     source_out=vo_duration,
                     storage_path=top_cand.storage_path,
                     storage_url=top_cand.storage_url,
+                    props=bg_props,
                 )
             ],
             layers=[
@@ -201,6 +204,7 @@ def plan_beat_assets(
                     source_out=vo_duration,
                     storage_path=top_cand.storage_path,
                     storage_url=top_cand.storage_url,
+                    props=bg_props,
                 )
             ],
         )
@@ -217,6 +221,7 @@ def plan_beat_assets(
             assetType="image",
             storagePath=top_cand.storage_path,
             storageUrl=top_cand.storage_url,
+            props=bg_props,
         )
         return plan, [video_item], []
 
@@ -233,6 +238,7 @@ def plan_beat_assets(
         offset = surplus / 2.0
         source_in = round(top_cand.start_ts + offset, 2)
         source_out = round(source_in + vo_duration, 2)
+        bg_props = apply_mood_effects_to_props(None, beat)
 
         plan = AssetPlan(
             strategy="single_clip",
@@ -244,6 +250,7 @@ def plan_beat_assets(
                     source_out=source_out,
                     storage_path=top_cand.storage_path,
                     storage_url=top_cand.storage_url,
+                    props=bg_props,
                 )
             ],
             layers=[
@@ -257,6 +264,7 @@ def plan_beat_assets(
                     source_out=source_out,
                     storage_path=top_cand.storage_path,
                     storage_url=top_cand.storage_url,
+                    props=bg_props,
                 )
             ],
         )
@@ -273,6 +281,7 @@ def plan_beat_assets(
             assetType="video",
             storagePath=top_cand.storage_path,
             storageUrl=top_cand.storage_url,
+            props=bg_props,
         )
         return plan, [video_item], []
 
@@ -284,6 +293,7 @@ def plan_beat_assets(
     plan_layers: list[Layer] = []
     remaining_duration = vo_duration
     current_track_pos = beat_start
+    bg_props = apply_mood_effects_to_props(None, beat)
 
     for idx, cand in enumerate(candidates):
         if remaining_duration <= 0.05:
@@ -312,6 +322,7 @@ def plan_beat_assets(
                 assetType=asset_type,
                 storagePath=cand.storage_path,
                 storageUrl=cand.storage_url,
+                props=bg_props,
             )
         )
         plan_items.append(
@@ -322,6 +333,7 @@ def plan_beat_assets(
                 source_out=s_out,
                 storage_path=cand.storage_path,
                 storage_url=cand.storage_url,
+                props=bg_props,
             )
         )
         plan_layers.append(
@@ -335,6 +347,7 @@ def plan_beat_assets(
                 source_out=s_out,
                 storage_path=cand.storage_path,
                 storage_url=cand.storage_url,
+                props=bg_props,
             )
         )
 
