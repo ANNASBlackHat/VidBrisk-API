@@ -63,6 +63,9 @@ async def create_new_job(
         single_pass_llm_raw = form.get("single_pass_llm")
         single_pass_llm = single_pass_llm_raw in (True, "true", "True", "1", 1)
 
+        channel = form.get("channel")
+        genre = form.get("genre")
+
         custom_audio_path = None
         audio_file = form.get("audio_file")
         if audio_file and hasattr(audio_file, "filename") and audio_file.filename:
@@ -86,6 +89,8 @@ async def create_new_job(
             auto_approve=auto_approve,
             single_pass_llm=single_pass_llm,
             custom_audio_path=custom_audio_path,
+            channel=str(channel).strip() if channel else None,
+            genre=str(genre).strip() if genre else None,
         )
     else:
         try:

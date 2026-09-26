@@ -6,11 +6,21 @@ Segments clean narration prose into atomic beats and tags each with:
 - visual_intent: rich semantic query optimized for footage search
 - beat_type: 'narrative' | 'stat' | 'abstract'
 - motion_props: structured properties for motion graphics (numbers, kickers, charts)
+
+The system prompt is composed of three additive layers:
+1. BASE_PROMPT  — fixed schema/beat-type rules (always present)
+2. Style skill  — per-genre creative direction loaded from pipeline/style_skills/
+3. RAG exemplars — few-shot narration↔visual pairs retrieved from beat_exemplars DB
+
+Layers 2 and 3 are optional and fail-safe: if missing or unavailable, the base
+prompt is used as-is and the job continues without interruption.
 """
 
 from typing import Any, Optional
 from pipeline.llm.gemini import GeminiLLMClient
 from pipeline.models import Beat, BeatType, MoodTag
+from pipeline.skills import load_style_skill
+from pipeline.rag.exemplars import format_exemplars_block, retrieve_exemplars
 from pipeline.stages.clean_script import clean_script
 
 
@@ -221,21 +231,90 @@ def _parse_beat_json(raw_beats: list[dict[str, Any]]) -> list[Beat]:
     return beats
 
 
-def structure_beats(clean_text: str, client: Optional[GeminiLLMClient] = None) -> list[Beat]:
-    """Segments cleaned narration text into a structured list of Beat objects."""
+def _build_system_instruction(
+    genre: Optional[str],
+    channel: Optional[str],
+    rag_session: Any,
+    clean_text: str,
+) -> str:
+    """Composes the three-layer system instruction for beat structuring.
+
+    Layer 1 (always):   STRUCTURE_BEATS_SYSTEM_PROMPT (base schema + beat types)
+    Layer 2 (if found): Style skill file for the genre/channel
+    Layer 3 (if avail): RAG exemplar block from beat_exemplars table
+
+    All optional layers degrade silently — never raises.
+    """
+    system_instruction = STRUCTURE_BEATS_SYSTEM_PROMPT
+
+    # Layer 2: style skill
+    try:
+        skill_genre = genre or channel
+        style_skill = load_style_skill(skill_genre)
+        if style_skill:
+            system_instruction += f"\n\n{style_skill}"
+    except Exception:
+        pass  # skill load failure is silent
+
+    # Layer 3: RAG exemplar block
+    try:
+        if rag_session is not None:
+            exemplars = retrieve_exemplars(rag_session, clean_text, genre=genre, top_k=5)
+            exemplar_block = format_exemplars_block(exemplars)
+            if exemplar_block:
+                system_instruction += f"\n\n{exemplar_block}"
+    except Exception:
+        pass  # RAG failure is silent
+
+    return system_instruction
+
+
+def structure_beats(
+    clean_text: str,
+    channel: Optional[str] = None,
+    genre: Optional[str] = None,
+    client: Optional[GeminiLLMClient] = None,
+    rag_session: Any = None,
+) -> list[Beat]:
+    """Segments cleaned narration text into a structured list of Beat objects.
+
+    Args:
+        clean_text: Cleaned narration text to segment.
+        channel: Optional channel/show name (maps to a style skill file).
+        genre: Optional genre slug for style skill + RAG retrieval. Takes
+               priority over channel when both are supplied.
+        client: Optional pre-initialised GeminiLLMClient.
+        rag_session: Optional SQLAlchemy Session for RAG exemplar retrieval.
+                     Pass None (default) to skip RAG entirely.
+
+    Returns:
+        List of Beat objects. Returns [] for empty input.
+    """
     if not clean_text or not clean_text.strip():
         return []
 
     llm = client or GeminiLLMClient()
     prompt = f"Segment this cleaned narration into beats:\n\n{clean_text}"
-    data = llm.generate_json(prompt=prompt, system_instruction=STRUCTURE_BEATS_SYSTEM_PROMPT)
+    system_instruction = _build_system_instruction(genre, channel, rag_session, clean_text)
+    data = llm.generate_json(prompt=prompt, system_instruction=system_instruction)
 
     raw_beats: list[dict[str, Any]] = data.get("beats", [])
     return _parse_beat_json(raw_beats)
 
 
-def clean_and_structure_beats(raw_text: str, client: Optional[GeminiLLMClient] = None) -> list[Beat]:
-    """Single-pass LLM call that cleans a raw script and structures it into beats."""
+def clean_and_structure_beats(
+    raw_text: str,
+    channel: Optional[str] = None,
+    genre: Optional[str] = None,
+    client: Optional[GeminiLLMClient] = None,
+    rag_session: Any = None,
+) -> list[Beat]:
+    """Single-pass LLM call that cleans a raw script and structures it into beats.
+
+    Falls back to a two-stage clean→structure pass if the combined pass fails.
+    Accepts the same channel/genre/rag_session args as structure_beats and
+    threads them through the fallback path.
+    """
     if not raw_text or not raw_text.strip():
         return []
 
@@ -255,4 +334,10 @@ def clean_and_structure_beats(raw_text: str, client: Optional[GeminiLLMClient] =
         pass
 
     cleaned = clean_script(raw_text, client=llm)
-    return structure_beats(cleaned, client=llm)
+    return structure_beats(
+        cleaned,
+        channel=channel,
+        genre=genre,
+        client=llm,
+        rag_session=rag_session,
+    )

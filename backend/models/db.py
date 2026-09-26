@@ -80,6 +80,16 @@ def _migrate_columns(engine) -> None:
                         conn.execute(text("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS custom_audio_path VARCHAR(500);"))
                     else:
                         conn.execute(text("ALTER TABLE video_jobs ADD COLUMN custom_audio_path VARCHAR(500);"))
+                if "channel" not in columns:
+                    if engine.dialect.name == "postgresql":
+                        conn.execute(text("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS channel VARCHAR(100);"))
+                    else:
+                        conn.execute(text("ALTER TABLE video_jobs ADD COLUMN channel VARCHAR(100);"))
+                if "genre" not in columns:
+                    if engine.dialect.name == "postgresql":
+                        conn.execute(text("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS genre VARCHAR(100);"))
+                    else:
+                        conn.execute(text("ALTER TABLE video_jobs ADD COLUMN genre VARCHAR(100);"))
     except Exception as e:
         # Non-fatal if table not created yet or permission restricted
         pass
@@ -87,6 +97,12 @@ def _migrate_columns(engine) -> None:
 
 def init_db(database_url: str | None = None) -> None:
     """Creates all database tables defined on Base and applies safe lightweight migrations."""
+    # Register all ORM models on Base.metadata before calling create_all.
+    # This ensures beat_exemplars and any future tables are created automatically.
+    try:
+        import pipeline.rag.models  # noqa: F401
+    except Exception:
+        pass  # RAG model unavailable — proceed without it
     try:
         engine = get_engine(database_url)
         Base.metadata.create_all(bind=engine)

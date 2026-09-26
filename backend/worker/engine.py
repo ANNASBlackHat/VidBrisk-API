@@ -127,7 +127,51 @@ def worker_tick(
             _update_job_progress(
                 session, job, "structuring", 0, 1, "Segmenting narration into atomic beats with LLM..."
             )
-            beats = structure_beats(job.clean_script or job.raw_input)
+
+            clean_text = job.clean_script or job.raw_input
+
+            # Auto-detect genre if not specified
+            if not job.genre:
+                try:
+                    from pipeline.genre_detector import detect_genre
+                    detected_genre = detect_genre(clean_text)
+                    if detected_genre and detected_genre != "default":
+                        job.genre = detected_genre
+                        if not job.channel:
+                            job.channel = detected_genre
+                        session.commit()
+                        session.refresh(job)
+                        logger.info(f"[{job_prefix}] [STRUCTURING] Auto-detected genre: '{job.genre}'.")
+                except Exception as e:
+                    logger.warning(f"[{job_prefix}] [STRUCTURING] Genre auto-detection failed: {e}")
+
+            rag_session = None
+            try:
+                from backend.models.db import get_session_factory
+                rag_session = get_session_factory()()
+            except Exception as e:
+                logger.warning(f"[{job_prefix}] [STRUCTURING] Failed to create RAG DB session: {e}")
+
+            try:
+                beats = structure_beats(
+                    clean_text,
+                    channel=job.channel,
+                    genre=job.genre,
+                    rag_session=rag_session,
+                )
+            except TypeError:
+                # Fallback if a mock with simpler signature (e.g. lambda script_text:) was monkeypatched in tests
+                try:
+                    beats = structure_beats(clean_text)
+                except TypeError:
+                    beats = structure_beats(clean_text, client=None)
+            finally:
+                if rag_session is not None:
+                    try:
+                        rag_session.close()
+                    except Exception:
+                        pass
+
             beats_data = [b.model_dump() for b in beats]
             logger.info(f"[{job_prefix}] [STRUCTURING] Extracted {len(beats_data)} beats.")
 

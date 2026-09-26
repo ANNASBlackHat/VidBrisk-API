@@ -66,6 +66,10 @@ class VideoJob(Base):
     auto_approve: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     single_pass_llm: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     custom_audio_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Creative direction: maps to style_skills/<genre>.md and RAG exemplar retrieval.
+    # Auto-detected by genre_detector.py during STRUCTURING if not supplied.
+    channel: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    genre: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Intermediate Stage Outputs (Durable state persistence)
     clean_script: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -28,6 +28,21 @@ class JobCreateRequest(BaseModel):
         default=None,
         description="Optional path to uploaded pre-recorded voiceover audio file",
     )
+    channel: Optional[str] = Field(
+        default=None,
+        description=(
+            "Channel or show name that maps to a style skill file "
+            "(e.g. 'deep_sea_documentary'). Auto-detected from the script if omitted."
+        ),
+    )
+    genre: Optional[str] = Field(
+        default=None,
+        description=(
+            "Content genre slug for style guidance + RAG exemplar retrieval "
+            "(e.g. 'deep_sea_documentary'). Auto-detected from the script if omitted. "
+            "Takes priority over channel when both are supplied."
+        ),
+    )
 
 
 class JobUpdateRequest(BaseModel):
@@ -62,6 +77,8 @@ class JobSummaryResponse(BaseModel):
     target_orientation: str
     auto_approve: bool
     custom_audio_path: Optional[str] = None
+    channel: Optional[str] = None
+    genre: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     error_message: Optional[str] = None
@@ -84,7 +101,9 @@ class JobResponse(BaseModel):
     auto_approve: bool
     single_pass_llm: bool
     custom_audio_path: Optional[str] = None
-    
+    channel: Optional[str] = None
+    genre: Optional[str] = None
+
     clean_script: Optional[str] = None
     beats: Optional[list[dict[str, Any]]] = None
     voice_clips: Optional[list[dict[str, Any]]] = None

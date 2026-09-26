@@ -147,3 +147,73 @@ def test_structure_beats_invalid_mood_degradation(mock_gemini_client):
     # Invalid mood tag gracefully degrades to None
     assert beats[0].mood is None
 
+
+def test_structure_beats_with_genre_skill_injection(mock_gemini_client):
+    clean_text = "Megalodon hunted in open seas millions of years ago."
+    mock_gemini_client.generate_json.return_value = {
+        "beats": [
+            {
+                "id": "b1",
+                "text": clean_text,
+                "visual_intent": "great white shark swimming in deep ocean — analog for megalodon",
+                "beat_type": "narrative",
+                "mood": "somber",
+            }
+        ]
+    }
+    beats = structure_beats(
+        clean_text=clean_text,
+        genre="deep_sea_documentary",
+        client=mock_gemini_client,
+    )
+    assert len(beats) == 1
+    # Verify system_instruction passed to Gemini contains the style skill guidance
+    called_kwargs = mock_gemini_client.generate_json.call_args[1]
+    system_instruction = called_kwargs.get("system_instruction", "")
+    assert "Deep Sea" in system_instruction
+    assert "great white shark" in system_instruction.lower() or "analog" in system_instruction.lower()
+
+
+def test_structure_beats_with_rag_exemplar_injection(mock_gemini_client):
+    clean_text = "Sharks have cartilaginous skeletons that rarely fossilize."
+    mock_gemini_client.generate_json.return_value = {
+        "beats": [
+            {
+                "id": "b1",
+                "text": clean_text,
+                "visual_intent": "shark skeleton animation",
+                "beat_type": "narrative",
+            }
+        ]
+    }
+
+    mock_rag_session = MagicMock()
+    fake_exemplar = MagicMock()
+    fake_exemplar.narration_text = "Sharks don't have bones."
+    fake_exemplar.visual_description = "CGI animation showing x-ray skeleton."
+    fake_exemplar.beat_type_guess = "narrative"
+    fake_exemplar.embedding = [1.0, 0.0]
+
+    mock_query = MagicMock()
+    mock_filter1 = MagicMock()
+    mock_filter2 = MagicMock()
+    mock_rag_session.query.return_value = mock_query
+    mock_query.filter.return_value = mock_filter1
+    mock_filter1.filter.return_value = mock_filter2
+    mock_filter2.all.return_value = [fake_exemplar]
+
+    from unittest.mock import patch
+    with patch("pipeline.rag.exemplars.embed_text", return_value=[1.0, 0.0]):
+        beats = structure_beats(
+            clean_text=clean_text,
+            genre="deep_sea_documentary",
+            client=mock_gemini_client,
+            rag_session=mock_rag_session,
+        )
+
+    assert len(beats) == 1
+    called_kwargs = mock_gemini_client.generate_json.call_args[1]
+    system_instruction = called_kwargs.get("system_instruction", "")
+    assert "# Reference Examples" in system_instruction
+    assert "Sharks don't have bones." in system_instruction
+

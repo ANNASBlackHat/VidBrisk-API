@@ -2,6 +2,8 @@
 
 An automated, durable backend service and pipeline that turns raw, messy script texts or articles into structured, voiceover-synchronized video timelines and MP4 files with semantic footage matching and motion-graphics component compilation.
 
+> 📖 **Deep Dive**: For a complete, step-by-step breakdown of every stage from raw script to Remotion rendering, see [PIPELINE_ARCHITECTURE.md](file:///Users/annasblackhat/Documents/Experiment/video-generation-pipeline/PIPELINE_ARCHITECTURE.md).
+
 ---
 
 ## 🏗️ System Architecture

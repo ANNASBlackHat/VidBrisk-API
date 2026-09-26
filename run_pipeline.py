@@ -78,6 +78,18 @@ def main():
         help="Directory to save generated audio clips (default: auto-derived from output path)",
     )
     parser.add_argument(
+        "--genre",
+        type=str,
+        default=None,
+        help="Optional genre slug matching style_skills/<genre>.md (e.g. deep_sea_documentary)",
+    )
+    parser.add_argument(
+        "--channel",
+        type=str,
+        default=None,
+        help="Optional channel name matching style_skills/<channel>.md",
+    )
+    parser.add_argument(
         "--render",
         "-r",
         type=str,
@@ -116,6 +128,8 @@ def main():
             single_pass_llm=args.single_pass,
             target_orientation=args.orientation,
             footage_provider=args.provider,
+            channel=args.channel,
+            genre=args.genre,
         )
 
         print(f"\n✨ Pipeline execution complete! Timeline saved to '{args.output}'.")

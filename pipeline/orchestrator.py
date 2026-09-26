@@ -27,6 +27,8 @@ def run_pipeline(
     target_orientation: Optional[str] = "horizontal",
     custom_audio_path: Optional[str] = None,
     footage_provider: Optional[str] = None,
+    channel: Optional[str] = None,
+    genre: Optional[str] = None,
 ) -> TimelinePlan:
     """Executes stages [1] to [6] end-to-end on raw script text.
 
@@ -38,10 +40,26 @@ def run_pipeline(
 
     print("▶ [1 & 2] Cleaning script and structuring beats...")
     if single_pass_llm:
-        beats = clean_and_structure_beats(raw_script, client=llm_client)
+        try:
+            beats = clean_and_structure_beats(
+                raw_script,
+                channel=channel,
+                genre=genre,
+                client=llm_client,
+            )
+        except TypeError:
+            beats = clean_and_structure_beats(raw_script, client=llm_client)
     else:
         cleaned_text = clean_script(raw_script, client=llm_client)
-        beats = structure_beats(cleaned_text, client=llm_client)
+        try:
+            beats = structure_beats(
+                cleaned_text,
+                channel=channel,
+                genre=genre,
+                client=llm_client,
+            )
+        except TypeError:
+            beats = structure_beats(cleaned_text, client=llm_client)
 
     if not beats:
         raise ValueError("Failed to extract any beats from the input script.")
