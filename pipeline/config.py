@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     ZILLIZ_TOKEN: Optional[str] = None
     ZILLIZ_COLLECTION_NAME: str = "footage_chunks"
     FOOTAGE_ENGINE_PATH: str = "/Users/annasblackhat/Documents/Experiment/footage-engine"
+    FOOTAGE_WORKER_ENABLED: bool = True
+    FOOTAGE_WORKER_TIMEOUT_SEC: float = 15.0
+    FOOTAGE_WORKER_BACKEND: Optional[str] = None
+    FOOTAGE_PROVIDER: Optional[str] = None
 
     # Storage & Outputs
     STORAGE_BACKEND: Literal["local", "imagekit"] = "local"

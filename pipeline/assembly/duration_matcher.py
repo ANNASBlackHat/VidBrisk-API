@@ -133,7 +133,9 @@ def plan_beat_assets(
             style = "quote-card"
 
         layout_role = motion_props.get("display_mode", "takeover")
-        if layout_role not in ("full", "takeover", "overlay", "overlay-lower-third"):
+        if layout_role == "overlay":
+            layout_role = "overlay-lower-third"
+        elif layout_role not in ("full", "takeover", "overlay-lower-third"):
             layout_role = "takeover"
 
         plan = AssetPlan(

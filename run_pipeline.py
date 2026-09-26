@@ -54,6 +54,12 @@ def main():
         help="Target video orientation for footage search: horizontal (default), vertical, square, or any",
     )
     parser.add_argument(
+        "--provider",
+        type=str,
+        default=None,
+        help="Optional footage provider filter (e.g. youtube, pexels, pixabay, coverr)",
+    )
+    parser.add_argument(
         "--fit-mode",
         type=str,
         choices=["blur_bg", "pad", "crop"],
@@ -109,6 +115,7 @@ def main():
             audio_output_dir=audio_dir,
             single_pass_llm=args.single_pass,
             target_orientation=args.orientation,
+            footage_provider=args.provider,
         )
 
         print(f"\n✨ Pipeline execution complete! Timeline saved to '{args.output}'.")

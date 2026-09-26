@@ -26,6 +26,7 @@ def run_pipeline(
     single_pass_llm: bool = False,
     target_orientation: Optional[str] = "horizontal",
     custom_audio_path: Optional[str] = None,
+    footage_provider: Optional[str] = None,
 ) -> TimelinePlan:
     """Executes stages [1] to [6] end-to-end on raw script text.
 
@@ -80,6 +81,7 @@ def run_pipeline(
                     resolver=resolver,
                     top_k=5,
                     target_orientation=target_orientation,
+                    provider=footage_provider,
                 )
             except Exception as e:
                 print(f"    - Footage resolution note: {e} (using fallback)")
@@ -117,6 +119,7 @@ def run_pipeline(
                     resolver=resolver,
                     top_k=5,
                     target_orientation=target_orientation,
+                    provider=footage_provider,
                 )
             except Exception as e:
                 print(f"    - Footage resolution note: {e} (using fallback)")

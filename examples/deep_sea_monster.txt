@@ -1,0 +1,69 @@
+Testing the evidence-rated angle makes sense — it's the one that passed the expertise gate. I'll write it in the Dead Reckoning voice and rating system, applied to creatures instead of ships, so you can compare it against the format later if you want a real "Deep Sea Files" sibling series.
+
+**Topic:** Rate several deep-sea "monster" claims — from confirmed to debunked — using the same evidence scale. This lets one video test the whole format instead of just one case.
+
+---
+
+**TITLE: Deep Sea Monsters: Which Ones Are Real? (An Evidence Investigation)**
+
+**Outline**
+1. Cold open — the premise: not every deep-sea monster story is equal, so we're rating them
+2. Case 1 — the Giant Squid (Kraken legend) — CONFIRMED
+3. Case 2 — the Bloop — DISPROVEN
+4. Case 3 — Megalodon still alive — DISPROVEN
+5. Case 4 — the Oarfish "sea serpent" sightings — PROBABLE
+6. Outro — next case teaser
+
+---
+
+For centuries, sailors came back with stories of monsters in the deep. Tentacled horrors that pulled ships under. Screams from the abyss that no one could explain. Giant sharks thought to have died out millions of years ago.
+
+Some of those stories turned out to be true. Most didn't. Tonight, we're not telling you which is which based on what sounds scariest. We're rating each case on the evidence, using five tiers: CONFIRMED, PROBABLE, POSSIBLE, UNSUPPORTED, and DISPROVEN. No dramatization stands in for a source. If the evidence doesn't hold up, we say so.
+
+Four cases. Let's start with the one everyone gets wrong, in the opposite direction people expect.
+
+**Case one: the Kraken.**
+
+For over 300 years, the Kraken was European sailors' name for a ship-destroying sea monster, first written down by Norwegian bishop Erik Pontoppidan in 1755. For most of that time, naturalists treated it as folklore, filed next to mermaids and sea serpents.
+
+Here's the rating: CONFIRMED, but not for the reason the legend claims.
+
+The giant squid, Architeuthis dux, is real. It grows up to around 13 meters long, counting its two long feeding tentacles, and it lives in the deep ocean worldwide. For most of history, the only evidence anyone had was carcasses that washed ashore and scars on sperm whales, whales that hunt giant squid at depth. The first photographs of a live giant squid in its natural habitat came in 2004, from Japanese researchers Tsunemi Kubodera and Kyoichi Mori. The first video of a live giant squid came in 2012, filmed by a joint Japanese and American team off the Ogasawara Islands.
+
+So the animal is confirmed. What's not confirmed is the ship-sinking part. There's no verified case of a giant squid sinking or seriously damaging a ship. The legend likely grew from real encounters, a genuinely enormous, alien-looking animal, stretched by storytelling into something it was never observed doing. That's a common pattern in this investigation: the creature is real, the myth exaggerates.
+
+**Case two: the Bloop.**
+
+In 1997, hydrophones run by the American National Oceanic and Atmospheric Administration, NOAA, picked up an extremely loud, low-frequency sound from somewhere in the South Pacific. It was picked up by sensors over 5,000 kilometers apart, which meant whatever made it was either enormous or extremely loud. For years, the leading public theory, fueled by NOAA's own website at the time, was that it might be biological. Something bigger than any known animal.
+
+The rating: DISPROVEN.
+
+By 2005, NOAA scientists matched the Bloop's acoustic signature to icequakes, the sound of large Antarctic ice sheets cracking and fracturing. It's a well-documented sound in ocean acoustic monitoring. NOAA has since stated plainly that the Bloop was consistent with these ice-quake events, not an animal. The mystery got more attention than the resolution did, which happens a lot with ocean sound stories. We're rating the current evidence, not the version of the story people remember.
+
+**Case three: Megalodon is still alive somewhere in the deep.**
+
+This one shows up constantly, boosted by documentaries, some of them deliberately fictional, that blur the line between speculation and claim. The pitch is always the same: the ocean is unexplored, so who's to say a 15-meter shark isn't still out there?
+
+The rating: DISPROVEN.
+
+Otodus megalodon went extinct around 3.6 million years ago, based on the fossil record, and current research points to ocean cooling and the decline of the marine mammals it depended on as the likely causes. Here's the evidence problem with "it's still out there": megalodon was a warm-water surface predator, not a deep-sea animal. It needed huge amounts of prey to sustain its size, prey that leaves a trail. No carcass, no verified sighting, no DNA, no unexplained bite marks on modern whales at the right scale, nothing in 3.6 million years of ocean exploration. "We haven't found it" is not evidence it's there. It's evidence it's very unlikely to be there, which is a different thing, and the distinction matters for every case in this series.
+
+**Case four: sea serpent sightings.**
+
+Long, snake-like creatures reported by sailors for centuries, undulating at the surface, sometimes many meters long.
+
+The rating: PROBABLE, with a real explanation.
+
+The oarfish, Regalecus glesne, is the longest bony fish in the world, reliably measured at over 8 meters and reported at up to around 11. It's silver, ribbon-shaped, and swims with an undulating vertical motion near the surface when sick or dying, which is usually when humans see it. It normally lives far below the surface, in the mesopelagic zone, which is why sightings are rare and dramatic when they happen. Given the shape, the size, the motion, and the fact that oarfish sightings cluster in the same regions as historical sea serpent reports, most marine biologists treat the oarfish as the most likely source for a large share of classic sea serpent accounts. Not certain for every single report across 300 years of folklore. But probable, and testable, which is more than the Kraken's ship-sinking claim ever had.
+
+So: one CONFIRMED creature behind an exaggerated myth, two DISPROVEN claims still repeated as if they're open questions, and one PROBABLE explanation for centuries of "monster" reports. That's the pattern with deep-sea mysteries more often than not — not that the ocean is empty of monsters, but that the real monsters are stranger, and the fake ones are usually just marketing.
+
+If you want the full case file on the Bloop, or how researchers finally got that giant squid on camera, that's a video I can go deeper on. For now, that's four cases, rated on the record.
+
+---
+
+[FILL IN: exact CTA line — you didn't give me one, so I left it out rather than invent one]
+[FILL IN: sign-off style — Dead Reckoning's restrained forensic tone doesn't usually ask for likes/subscribes mid-script; confirm whether you want that here or want it kept out]
+[FILL IN: sources to pin in the description — NOAA's Bloop page, the 2004/2012 giant squid papers, a megalodon extinction study]
+
+This is a v1 draft, about 950 words at a 130-140 wpm read, so roughly 7 minutes — sits below Dead Reckoning's ~2,950-word format. Tell me if you want it built out to full length with more cases, or kept short to test faster.

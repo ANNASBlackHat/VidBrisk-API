@@ -164,3 +164,107 @@ def extract_chat_props(text: str, client: Optional[GeminiLLMClient] = None) -> d
     ]
     return {"messages": messages}
 
+
+class MapExplainerProps(BaseModel):
+    """Structured props for GeoAnimations/MapExplainer."""
+    origin: str = Field(..., description="Origin location or city name")
+    destination: Optional[str] = Field(default=None, description="Destination location or city name if route")
+    title: Optional[str] = Field(default=None, description="Short title header")
+    subtext: Optional[str] = Field(default=None, description="Short telemetry category")
+    mode: str = Field(default="route", description="'route' for travel between 2 locations, 'pin' for single location")
+
+
+def extract_map_props(text: str, client: Optional[GeminiLLMClient] = None) -> dict[str, Any]:
+    """Extracts geographic route or pin properties from narrative text."""
+    if not text or not text.strip():
+        return {"origin": "Cape Canaveral", "destination": "Pacific Ocean", "mode": "route"}
+
+    # Common location detection heuristics
+    locs = [
+        "Cape Canaveral", "Houston", "New York", "Washington DC",
+        "London", "Paris", "Berlin", "Moscow", "Baikonur",
+        "Tokyo", "Beijing", "Sydney", "Cairo", "Pacific Ocean", "Atlantic Ocean"
+    ]
+    found = [loc for loc in locs if re.search(r"\b" + re.escape(loc) + r"\b", text, re.IGNORECASE)]
+
+    if len(found) >= 2:
+        return {
+            "origin": found[0],
+            "destination": found[1],
+            "mode": "route",
+            "title": f"{found[0]} → {found[1]}",
+            "subtext": "TRAJECTORY ROUTE",
+        }
+    elif len(found) == 1:
+        return {
+            "origin": found[0],
+            "destination": None,
+            "mode": "pin",
+            "title": found[0].upper(),
+            "subtext": "COORDINATE LOCK",
+        }
+
+    # Default fallback
+    return {
+        "origin": "Cape Canaveral",
+        "destination": "Pacific Ocean",
+        "mode": "route",
+        "title": "MISSION TRAJECTORY",
+        "subtext": "FLIGHT PATH",
+    }
+
+
+class AudioWaveformProps(BaseModel):
+    """Structured props for AudioAnimations/AudioWaveform."""
+    speaker: str = Field(default="VOICE COMM", description="Speaker name or callsign")
+    title: Optional[str] = Field(default="AUDIO FEED", description="Header stream title")
+    subtext: Optional[str] = Field(default="LIVE TELEMETRY", description="Category tag")
+    quote: Optional[str] = Field(default=None, description="Spoken transcript or quotation")
+
+
+def extract_waveform_props(text: str, client: Optional[GeminiLLMClient] = None) -> dict[str, Any]:
+    """Extracts speaker attribution and quote for an audio waveform visualizer."""
+    if not text or not text.strip():
+        return {
+            "speaker": "VOICE COMM",
+            "title": "TRANSMISSION FEED",
+            "subtext": "AUDIO STREAM",
+            "quote": None,
+        }
+
+    clean = text.strip()
+    # Check for speaker prefix like "Speaker Name: Quote" or "Name (Title): Quote"
+    m = re.match(r"^([A-Za-z0-9\s\.\(\)\-]+):\s*[\"']?(.*?)[\"']?$", clean)
+    if m:
+        speaker = m.group(1).strip().upper()
+        quote = m.group(2).strip()
+        return {
+            "speaker": speaker,
+            "title": "TRANSMISSION LOG",
+            "subtext": "VOICE COMM",
+            "quote": quote if quote else None,
+        }
+
+    return {
+        "speaker": "AUDIO LOG",
+        "title": "VOICE RECORDING",
+        "subtext": "TELEMETRY FEED",
+        "quote": clean if len(clean) < 140 else clean[:137] + "...",
+    }
+
+
+class KineticCaptionsProps(BaseModel):
+    """Structured props for TextAnimations/KineticCaptions."""
+    text: str = Field(..., description="Full spoken transcript to animate word-by-word")
+    themeColor: Optional[str] = Field(default="#facc15", description="Accent highlight color")
+    styleVariant: Optional[str] = Field(default="bouncy", description="Animation style variant ('bouncy' | 'karaoke')")
+
+
+def extract_captions_props(text: str, client: Optional[GeminiLLMClient] = None) -> dict[str, Any]:
+    """Extracts caption props for word-by-word kinetic text animation."""
+    return {
+        "text": text.strip() if text else "",
+        "themeColor": "#facc15",
+        "styleVariant": "bouncy",
+    }
+

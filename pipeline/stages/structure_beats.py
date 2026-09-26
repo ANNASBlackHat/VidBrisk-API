@@ -30,6 +30,8 @@ For each beat:
    - "kinetic": High-energy, rhythmic keywords or slogans where synchronized word-by-word kinetic typography excels.
    - "typewriter": Terminal, retro narrative, or mechanical character-by-character typewriter exposition.
    - "split_screen": Comparative concepts, dual perspectives, or before/after entities shown side-by-side.
+   - "map_route": Geographic journeys, travel trajectories between 2 locations, flight paths, or city/landmark locator pins.
+   - "audio_waveform": Direct speech quotes, podcast radio comms, or significant transmissions where a reactive equalizer visualizer excels.
 5. `motion_props`: (Required if beat_type is not "narrative", or when a multi-layer composition recipe applies; null otherwise):
    - Optional `layout_recipe`:
      - "stat_over_footage": Pairs standout stat motion typography with background footage or photography.
@@ -74,6 +76,19 @@ For each beat:
      - `leftContent`: Left entity summary.
      - `rightTitle`: Right entity title.
      - `rightContent`: Right entity summary.
+   - If "map_route":
+     - `component`: "GeoAnimations/MapExplainer"
+     - `origin`: Starting city or site (e.g. "Cape Canaveral")
+     - `destination`: Ending city or site (e.g. "Pacific Ocean")
+     - `mode`: "route" (for 2 locations) or "pin" (for single location)
+     - `title`: Header label (e.g. "FLIGHT TRAJECTORY")
+     - `display_mode`: "takeover" | "overlay"
+   - If "audio_waveform":
+     - `component`: "AudioAnimations/AudioWaveform"
+     - `speaker`: Speaker name or callsign (e.g. "NEIL ARMSTRONG")
+     - `quote`: Key quote phrase
+     - `title`: Category header (e.g. "MISSION VOICE FEED")
+     - `display_mode`: "takeover" | "overlay"
 6. `mood` (optional): one of "tense", "hopeful", "triumphant", "somber", "urgent", "neutral" — only set when the beat has a clear emotional register; omit for beats with no strong tone.
 
 Output JSON format:
@@ -130,8 +145,8 @@ Rules:
    - `id`: "b1", "b2", ...
    - `text`: Pure spoken narration for this beat.
    - `visual_intent`: Detailed semantic footage search prompt.
-   - `beat_type`: "narrative" | "stat" | "abstract" | "swipe_deck" | "chat_bubbles" | "kinetic" | "typewriter" | "split_screen".
-   - `motion_props`: Structured visual properties if a motion component or layout recipe applies (component, items, messages, primary_value, kicker, visual_type, quote, emphasis, author, display_mode).
+   - `beat_type`: "narrative" | "stat" | "abstract" | "swipe_deck" | "chat_bubbles" | "kinetic" | "typewriter" | "split_screen" | "map_route" | "audio_waveform".
+   - `motion_props`: Structured visual properties if a motion component or layout recipe applies (component, items, messages, primary_value, kicker, visual_type, quote, emphasis, author, origin, destination, speaker, display_mode).
    - `mood`: Optional emotional tone tag ("tense" | "hopeful" | "triumphant" | "somber" | "urgent" | "neutral").
 
 Output JSON format:
@@ -159,6 +174,8 @@ VALID_BEAT_TYPES = {
     "swipe_deck",
     "chat_bubbles",
     "split_screen",
+    "map_route",
+    "audio_waveform",
 }
 
 VALID_MOODS = {

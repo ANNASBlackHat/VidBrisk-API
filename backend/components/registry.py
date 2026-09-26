@@ -3,11 +3,14 @@
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 from backend.components.props import (
+    extract_captions_props,
     extract_chat_props,
     extract_list_props,
+    extract_map_props,
     extract_quote_props,
     extract_stat_props,
     extract_title_props,
+    extract_waveform_props,
 )
 
 
@@ -106,6 +109,41 @@ class ComponentRegistry:
             component_id="ListAnimations/ChatBubbles",
             extract_props=extract_chat_props,
             description="Conversational back-and-forth bubble reveal of short facts",
+            requires_duration=True,
+        )
+        self.register(
+            style="map-route",
+            component_id="GeoAnimations/MapExplainer",
+            extract_props=extract_map_props,
+            description="Animated geographic trajectory curve between two locations",
+            requires_duration=True,
+        )
+        self.register(
+            style="map-pin",
+            component_id="GeoAnimations/MapExplainer",
+            extract_props=extract_map_props,
+            description="Animated geographic radar locator pin for a specific landmark",
+            requires_duration=True,
+        )
+        self.register(
+            style="audio-waveform",
+            component_id="AudioAnimations/AudioWaveform",
+            extract_props=extract_waveform_props,
+            description="Animated multi-harmonic audio spectrum visualizer with speaker attribution",
+            requires_duration=True,
+        )
+        self.register(
+            style="voice-card",
+            component_id="AudioAnimations/AudioWaveform",
+            extract_props=extract_waveform_props,
+            description="Speech/podcast audiogram card with quote transcript",
+            requires_duration=True,
+        )
+        self.register(
+            style="kinetic-captions",
+            component_id="TextAnimations/KineticCaptions",
+            extract_props=extract_captions_props,
+            description="Word-by-word bouncing highlight subtitle captions",
             requires_duration=True,
         )
 

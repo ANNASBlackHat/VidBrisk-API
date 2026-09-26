@@ -10,6 +10,7 @@ def resolve_footage(
     resolver: Optional[FootageResolver] = None,
     top_k: int = 5,
     target_orientation: Optional[OrientationType] = "horizontal",
+    provider: Optional[str] = None,
 ) -> list[CandidateChunk]:
     """Resolves footage candidates for a single beat via Footage Engine search."""
     motion_props = beat.motion_props or {}
@@ -28,8 +29,11 @@ def resolve_footage(
 
     footage_engine = resolver or FootageResolver()
     query = beat.visual_intent or beat.text
-    return footage_engine.search_candidates(
-        query=query,
-        top_k=top_k,
-        target_orientation=target_orientation,
-    )
+    kwargs = {
+        "query": query,
+        "top_k": top_k,
+        "target_orientation": target_orientation,
+    }
+    if provider is not None:
+        kwargs["provider"] = provider
+    return footage_engine.search_candidates(**kwargs)
