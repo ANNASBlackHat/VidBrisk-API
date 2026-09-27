@@ -13,7 +13,7 @@ from typing import Any, Optional
 # ---------------------------------------------------------------------------
 
 def embed_text(text: str) -> list[float]:
-    """Embeds text using Gemini text-embedding-004.
+    """Embeds text using Gemini embedding model.
 
     Raises on failure — callers are expected to wrap this in try/except.
 
@@ -29,10 +29,26 @@ def embed_text(text: str) -> list[float]:
     settings = get_settings()
     client = genai.Client(api_key=settings.GEMINI_API_KEY)
     result = client.models.embed_content(
-        model="models/text-embedding-004",
+        model="models/gemini-embedding-001",
         contents=text,
     )
     return result.embeddings[0].values
+
+
+def embed_texts_batch(texts: list[str]) -> list[list[float]]:
+    """Embeds a batch of texts using Gemini embedding model."""
+    if not texts:
+        return []
+    from google import genai
+    from pipeline.config import get_settings
+
+    settings = get_settings()
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    result = client.models.embed_content(
+        model="models/gemini-embedding-001",
+        contents=texts,
+    )
+    return [e.values for e in result.embeddings]
 
 
 # ---------------------------------------------------------------------------

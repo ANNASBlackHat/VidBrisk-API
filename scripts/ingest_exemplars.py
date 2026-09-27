@@ -126,34 +126,61 @@ def main() -> None:
     session_factory = get_session_factory(args.db_url)
     session = session_factory()
 
+    from pipeline.rag.exemplars import embed_texts_batch
+
+    # Query existing texts for this video to avoid duplicate embeddings/inserts
+    existing_texts = {
+        r[0]
+        for r in session.query(BeatExemplar.narration_text)
+        .filter(BeatExemplar.source_video_id == args.video_id)
+        .all()
+    }
+    if existing_texts:
+        print(f"ℹ️ Found {len(existing_texts)} existing exemplars for video '{args.video_id}' — skipping them.")
+        pairs = [p for p in pairs if p["narration_text"] not in existing_texts]
+        print(f"Remaining pairs to ingest: {len(pairs)}.")
+
     inserted = 0
     skipped = 0
+    batch_size = 20
 
-    for i, pair in enumerate(pairs, 1):
-        narration_preview = pair["narration_text"][:60]
-        print(f"  [{i:>3}/{len(pairs)}] Embedding: \"{narration_preview}\"")
+    for idx in range(0, len(pairs), batch_size):
+        batch = pairs[idx : idx + batch_size]
+        texts = [p["narration_text"] for p in batch]
+        print(f"  Ingesting batch {idx + 1}-{min(idx + batch_size, len(pairs))} of {len(pairs)}...")
         try:
-            embedding = embed_text(pair["narration_text"])
+            embeddings = embed_texts_batch(texts)
         except Exception as exc:
-            print(f"           ⚠️  Skipped (embedding error: {exc})")
-            skipped += 1
-            continue
+            print(f"    ⚠️  Batch embedding error: {exc}. Trying fallback one-by-one...")
+            embeddings = []
+            for t in texts:
+                try:
+                    embeddings.append(embed_text(t))
+                except Exception:
+                    embeddings.append(None)
 
-        exemplar = BeatExemplar(
-            source_video_id=args.video_id,
-            source_title=args.title or None,
-            narration_text=pair["narration_text"],
-            visual_description=pair["visual_description"],
-            beat_type_guess=_guess_beat_type(
-                pair["narration_text"], pair["visual_description"]
-            ),
-            channel_genre=args.genre,
-            embedding=embedding,
-        )
-        session.add(exemplar)
-        inserted += 1
+        for p, emb in zip(batch, embeddings):
+            if not emb:
+                skipped += 1
+                continue
 
-    session.commit()
+            session.add(
+                BeatExemplar(
+                    source_video_id=args.video_id,
+                    source_title=args.title or None,
+                    narration_text=p["narration_text"],
+                    visual_description=p["visual_description"],
+                    beat_type_guess=_guess_beat_type(
+                        p["narration_text"], p["visual_description"]
+                    ),
+                    channel_genre=args.genre,
+                    embedding=emb,
+                )
+            )
+            inserted += 1
+
+        session.commit()
+
     session.close()
 
     print(
