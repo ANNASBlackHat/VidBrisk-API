@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     FOOTAGE_WORKER_TIMEOUT_SEC: float = 15.0
     FOOTAGE_WORKER_BACKEND: Optional[str] = None
     FOOTAGE_PROVIDER: Optional[str] = None
+    FOOTAGE_SEMANTIC_THRESHOLD: float = 0.50
+    FOOTAGE_MOTION_FLOOR: float = 5.0
+    FOOTAGE_MAX_REQUERIES: int = 2
 
     # Storage & Outputs
     STORAGE_BACKEND: Literal["local", "imagekit"] = "local"

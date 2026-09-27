@@ -103,8 +103,11 @@ def plan_beat_assets(
             "typewriter",
             "swipe_deck",
             "chat_bubbles",
+            "map_route",
+            "audio_waveform",
         )
         or not candidates
+        or getattr(beat, "footage_status", None) == "inadequate"
     ):
         motion_props = beat.motion_props or {}
         comp_id = motion_props.get("component")
@@ -117,6 +120,12 @@ def plan_beat_assets(
                 comp_id = "TextAnimations/KineticText"
             elif beat.beat_type == "typewriter":
                 comp_id = "TextAnimations/Typewriter"
+            elif beat.beat_type == "map_route":
+                comp_id = "GeoAnimations/MapExplainer"
+            elif beat.beat_type == "audio_waveform":
+                comp_id = "AudioAnimations/AudioWaveform"
+            elif beat.beat_type == "stat":
+                comp_id = "DataAnimations/StatCard"
             else:
                 comp_id = "TextAnimations/QuoteCard"
 
@@ -129,6 +138,10 @@ def plan_beat_assets(
             style = "kinetic-title"
         elif "StatCard" in comp_id:
             style = "stat-callout"
+        elif "MapExplainer" in comp_id:
+            style = "map-route"
+        elif "AudioWaveform" in comp_id:
+            style = "audio-waveform"
         else:
             style = "quote-card"
 

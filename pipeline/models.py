@@ -1,6 +1,7 @@
 """Core data models and schemas for Video Generation Pipeline."""
 
 from __future__ import annotations
+from enum import Enum
 from typing import Any, Literal, Optional
 from pydantic import BaseModel, Field
 
@@ -44,6 +45,25 @@ LayoutRole = Literal[
 ]
 
 
+class FootageStatus(str, Enum):
+    """Pipeline progression status for footage resolution."""
+    PENDING = "pending"
+    CANDIDATES_FOUND = "candidates_found"
+    ACCEPTED = "accepted"
+    REQUERIED = "requeried"
+    INADEQUATE = "inadequate"
+
+
+class FootageCandidate(BaseModel):
+    """Footage candidate tracked on a beat for downstream evaluation or fallback."""
+    clip_id: str
+    source: str = "unknown"
+    semantic_score: float
+    motion_mean: Optional[float] = None
+    motion_std: Optional[float] = None
+    sub_clip_window: Optional[tuple[float, float]] = None
+
+
 class Beat(BaseModel):
     """Represents a single atomic narrative beat segmented from clean narration."""
     id: str
@@ -52,6 +72,14 @@ class Beat(BaseModel):
     beat_type: BeatType = "narrative"
     motion_props: Optional[dict[str, Any]] = None
     mood: Optional[MoodTag] = None
+
+    # Staged pipeline state carried across search, assessment, and fallback
+    footage_status: FootageStatus = FootageStatus.PENDING
+    footage_candidates: list[FootageCandidate] = Field(default_factory=list)
+    selected_clip_id: Optional[str] = None
+    requery_count: int = 0
+    requery_reason: Optional[str] = None
+    fallback_reason: Optional[str] = None
 
 
 class VoiceClip(BaseModel):
@@ -126,6 +154,9 @@ class CandidateChunk(BaseModel):
     orientation: str = "unknown"
     caption: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
+    motion_mean: Optional[float] = None
+    motion_std: Optional[float] = None
+    sub_clip_window: Optional[tuple[float, float]] = None
 
 
 class ResolvedBeat(BaseModel):

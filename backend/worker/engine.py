@@ -353,11 +353,16 @@ def worker_tick(
             )
 
         elif job.stage == JobStage.RESOLVING_FOOTAGE:
+            from pipeline.config import get_settings
+            from pipeline.stages.resolve_footage import resolve_beat_visuals
+
+            settings = get_settings()
             resolver = resolver_override or FootageResolver()
             candidates_map = {}
+            updated_beats_data = []
             total_beats = len(job.beats or [])
 
-            logger.info(f"[{job_prefix}] [RESOLVING] Searching footage for {total_beats} beats...")
+            logger.info(f"[{job_prefix}] [RESOLVING] Resolving visuals & footage for {total_beats} beats...")
 
             for idx, raw_b in enumerate(job.beats or [], start=1):
                 beat = Beat(**raw_b)
@@ -367,26 +372,31 @@ def worker_tick(
                     stage="resolving_footage",
                     current=idx - 1,
                     total=total_beats,
-                    message=f"Searching footage for beat {idx}/{total_beats} ({beat.id})...",
+                    message=f"Resolving visuals for beat {idx}/{total_beats} ({beat.id})...",
                 )
 
                 t0 = time.time()
                 try:
-                    candidates = resolve_footage(
+                    updated_beat, candidates = resolve_beat_visuals(
                         beat=beat,
                         resolver=resolver,
                         top_k=5,
                         target_orientation=job.target_orientation,
+                        semantic_threshold=settings.FOOTAGE_SEMANTIC_THRESHOLD,
+                        motion_floor=settings.FOOTAGE_MOTION_FLOOR,
+                        max_requeries=settings.FOOTAGE_MAX_REQUERIES,
                     )
                 except Exception as ex:
                     logger.warning(f"[{job_prefix}] [RESOLVING] Footage error for {beat.id}: {ex}")
+                    updated_beat = beat
                     candidates = []
                 duration_res = time.time() - t0
 
                 candidates_map[beat.id] = [c.model_dump() for c in candidates]
+                updated_beats_data.append(updated_beat.model_dump())
                 logger.info(
                     f"[{job_prefix}] [RESOLVING] Beat {idx}/{total_beats} ({beat.id}) "
-                    f"matched {len(candidates)} candidates in {duration_res:.2f}s"
+                    f"status={getattr(updated_beat.footage_status, 'value', str(updated_beat.footage_status))} matched {len(candidates)} candidates in {duration_res:.2f}s"
                 )
 
             _update_job_progress(
@@ -395,7 +405,7 @@ def worker_tick(
                 stage="resolving_footage",
                 current=total_beats,
                 total=total_beats,
-                message=f"Footage resolution complete: {total_beats} beats resolved.",
+                message=f"Visual resolution complete: {total_beats} beats resolved.",
             )
 
             if should_pause_for_approval(job, JobStage.RESOLVING_FOOTAGE):
@@ -405,6 +415,7 @@ def worker_tick(
                     job=job,
                     stage=JobStage.RESOLVING_FOOTAGE,
                     footage_candidates=candidates_map,
+                    beats=updated_beats_data,
                 )
             else:
                 advance_job_stage(
@@ -413,6 +424,7 @@ def worker_tick(
                     next_stage=JobStage.ASSEMBLING,
                     next_status=JobStatus.PENDING,
                     footage_candidates=candidates_map,
+                    beats=updated_beats_data,
                 )
 
         elif job.stage == JobStage.ASSEMBLING:
