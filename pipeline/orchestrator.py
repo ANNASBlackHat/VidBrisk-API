@@ -10,7 +10,7 @@ from pipeline.models import Beat, CandidateChunk, TimelinePlan, VoiceClip, WordT
 from pipeline.stages.assemble_timeline import assemble_timeline
 from pipeline.stages.clean_script import clean_script
 from pipeline.stages.extract_timestamps import extract_timestamps
-from pipeline.stages.resolve_footage import resolve_footage
+from pipeline.stages.resolve_footage import resolve_beat_visuals, resolve_footage
 from pipeline.stages.structure_beats import clean_and_structure_beats, structure_beats
 from pipeline.tts import TTSProvider, get_tts_provider
 
@@ -94,18 +94,19 @@ def run_pipeline(
         for idx, beat in enumerate(beats, start=1):
             print(f"  • Beat {idx}/{len(beats)} [{beat.id}]:")
             try:
-                candidates = resolve_footage(
+                updated_beat, candidates = resolve_beat_visuals(
                     beat=beat,
                     resolver=resolver,
                     top_k=5,
                     target_orientation=target_orientation,
                     provider=footage_provider,
                 )
+                beats[idx - 1] = updated_beat
             except Exception as e:
                 print(f"    - Footage resolution note: {e} (using fallback)")
                 candidates = []
             candidates_map[beat.id] = candidates
-            print(f"    - Footage candidates resolved: {len(candidates)} match(es)")
+            print(f"    - Footage candidates resolved: {len(candidates)} match(es) (status: {getattr(beats[idx - 1].footage_status, 'value', str(beats[idx - 1].footage_status))})")
     else:
         print("\n▶ [3, 4, 5] Processing per-beat synthesis, alignment, and footage resolution...")
         for idx, beat in enumerate(beats, start=1):
@@ -132,18 +133,19 @@ def run_pipeline(
 
             # Stage 5: Resolve footage
             try:
-                candidates = resolve_footage(
+                updated_beat, candidates = resolve_beat_visuals(
                     beat=beat,
                     resolver=resolver,
                     top_k=5,
                     target_orientation=target_orientation,
                     provider=footage_provider,
                 )
+                beats[idx - 1] = updated_beat
             except Exception as e:
                 print(f"    - Footage resolution note: {e} (using fallback)")
                 candidates = []
             candidates_map[beat.id] = candidates
-            print(f"    - Footage candidates resolved: {len(candidates)} match(es)")
+            print(f"    - Footage candidates resolved: {len(candidates)} match(es) (status: {getattr(beats[idx - 1].footage_status, 'value', str(beats[idx - 1].footage_status))})")
 
     # Stage 6: Assemble timeline
     print("\n▶ [6] Assembling timeline plan and gap-filling...")

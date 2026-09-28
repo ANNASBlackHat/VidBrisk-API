@@ -1,8 +1,16 @@
-"""Tests for Stage 5: Motion Graphic Concepting engine."""
-
+import pytest
 from unittest.mock import MagicMock
 from pipeline.models import Beat
 from pipeline.stages.concept_motion_graphic import concept_motion_graphic
+
+
+@pytest.fixture(autouse=True)
+def mock_gemini_client(monkeypatch):
+    """Ensure tests run offline and fast without live Gemini API calls."""
+    monkeypatch.setattr(
+        "pipeline.stages.concept_motion_graphic.GeminiLLMClient",
+        lambda *args, **kwargs: MagicMock(generate_json=MagicMock(side_effect=RuntimeError("Offline test fallback")))
+    )
 
 
 def test_concept_motion_graphic_stat_fallback():
