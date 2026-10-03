@@ -56,15 +56,18 @@ def compile_timeline(
         beat_id = beat_data.get("id") if isinstance(beat_data, dict) else f"b{idx+1}"
         timing_info = raw_timings.get(beat_id, {}) if isinstance(raw_timings, dict) else {}
         
+        pause_dur = float(beat_data.get("pause_after", 0.0) or 0.0) if isinstance(beat_data, dict) else 0.0
         # Calculate start and end times
         if isinstance(timing_info, dict) and "start" in timing_info and "end" in timing_info:
             start_ts = float(timing_info["start"])
-            end_ts = float(timing_info["end"])
+            vo_end_ts = float(timing_info["end"])
+            end_ts = vo_end_ts + pause_dur
         else:
             # Fallback based on audio duration or cursor
             dur = float(timing_info.get("duration", 5.0)) if isinstance(timing_info, dict) else 5.0
             start_ts = current_cursor
-            end_ts = start_ts + dur
+            vo_end_ts = start_ts + dur
+            end_ts = vo_end_ts + pause_dur
 
         current_cursor = max(current_cursor, end_ts)
 
@@ -196,7 +199,7 @@ def compile_timeline(
             audio_items.append({
                 "id": f"vo_{beat_id}",
                 "trackStart": round(start_ts, 3),
-                "trackEnd": round(end_ts, 3),
+                "trackEnd": round(vo_end_ts, 3),
                 "assetId": audio_file,
             })
 

@@ -443,3 +443,111 @@ def test_explicit_effects_override_not_clobbered_by_mood():
     assert plan.layers[0].props == {"effects": {"colorTreatment": "duotone-mono"}}
     assert video_items[0].props == {"effects": {"colorTreatment": "duotone-mono"}}
 
+
+def test_plan_low_motion_clip_capped_and_triggers_concat():
+    # When top candidate has low motion (e.g. motion_mean=1.5 < 5.0), it should be capped to 2.0s
+    # and trigger concat_clips if voice duration > 2.0s
+    beat = Beat(id="b_low_mot", text="A calm ocean vista.", visual_intent="calm sea", beat_type="narrative")
+    clip = VoiceClip(beat_id="b_low_mot", audio_path="audio/b_low.wav", duration_sec=4.0)
+
+    cand1 = CandidateChunk(
+        chunk_id="c_static_sea",
+        media_item_id="m1",
+        score=0.9,
+        start_ts=0.0,
+        end_ts=10.0,
+        duration_sec=10.0,
+        motion_mean=1.5,  # Low motion!
+    )
+    cand2 = CandidateChunk(
+        chunk_id="c_active_sea",
+        media_item_id="m2",
+        score=0.88,
+        start_ts=0.0,
+        end_ts=10.0,
+        duration_sec=10.0,
+        motion_mean=12.0,  # Active motion
+    )
+
+    plan, video_items, _ = plan_beat_assets(beat, clip, [cand1, cand2], 0.0)
+
+    assert plan.strategy == "concat_clips"
+    assert len(video_items) == 2
+    # First item capped at 2.0 seconds
+    assert video_items[0].trackEnd == 2.0
+    # Second item plays for remaining 2.0 seconds (from 2.0 to 4.0)
+    assert video_items[1].trackStart == 2.0
+    assert video_items[1].trackEnd == 4.0
+
+
+def test_beat_with_pause_after_extends_visual_and_leaves_audio_gap():
+    # When beat has pause_after=1.5, audio stops at 3.0s, video plays until 4.5s
+    beat = Beat(id="b_pause", text="What they saw defied explanation.", visual_intent="dark deep sea", pause_after=1.5)
+    voice_clip = VoiceClip(beat_id="b_pause", audio_path="audio/b_p.wav", duration_sec=3.0)
+    cand = CandidateChunk(
+        chunk_id="c_deep",
+        media_item_id="m_deep",
+        score=0.9,
+        start_ts=0.0,
+        end_ts=10.0,
+        duration_sec=10.0,
+        motion_mean=8.0,
+    )
+
+    timeline = assemble_timeline(
+        beats=[beat],
+        voice_clips=[voice_clip],
+        footage_candidates={"b_pause": [cand]},
+    )
+
+    audio_track = next(t for t in timeline.tracks if t.type == "audio")
+    video_track = next(t for t in timeline.tracks if t.type == "video")
+
+    # Audio item ends when voice stops (leaving 1.5s silence for pause)
+    assert audio_track.items[0].trackStart == 0.0
+    assert audio_track.items[0].trackEnd == 3.0
+
+    # Video track spans full 4.5s (3.0s voice + 1.5s pause)
+    assert video_track.items[0].trackStart == 0.0
+    assert video_track.items[0].trackEnd == 4.5
+    assert timeline.total_duration == 4.5
+
+
+def test_low_motion_clip_with_pause_forces_multi_clip_concat():
+    # When top candidate has low motion, pause duration (1.5s) + voice (2.5s) = 4.0s
+    # Top clip is capped at 2.0s, so concat_clips must pull candidate #2 to cover the pause
+    beat = Beat(id="b_tense_pause", text="Silence descended.", visual_intent="ocean surface", pause_after=1.5)
+    clip = VoiceClip(beat_id="b_tense_pause", audio_path="audio/b_tp.wav", duration_sec=2.5)
+
+    cand1 = CandidateChunk(
+        chunk_id="c_calm",
+        media_item_id="m1",
+        score=0.92,
+        start_ts=0.0,
+        end_ts=10.0,
+        duration_sec=10.0,
+        motion_mean=1.2,  # Low motion: capped to 2.0s
+    )
+    cand2 = CandidateChunk(
+        chunk_id="c_wave",
+        media_item_id="m2",
+        score=0.89,
+        start_ts=0.0,
+        end_ts=10.0,
+        duration_sec=10.0,
+        motion_mean=10.0,  # Active motion
+    )
+
+    plan, video_items, _ = plan_beat_assets(beat, clip, [cand1, cand2], 0.0)
+
+    assert plan.strategy == "concat_clips"
+    assert len(video_items) == 2
+    # Clip 1 runs for 2.0s
+    assert video_items[0].trackStart == 0.0
+    assert video_items[0].trackEnd == 2.0
+    # Clip 2 runs for remaining 2.0s (from 2.0s to 4.0s, cutting during speech/pause)
+    assert video_items[1].trackStart == 2.0
+    assert video_items[1].trackEnd == 4.0
+
+
+

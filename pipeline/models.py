@@ -72,6 +72,7 @@ class Beat(BaseModel):
     beat_type: BeatType = "narrative"
     motion_props: Optional[dict[str, Any]] = None
     mood: Optional[MoodTag] = None
+    pause_after: float = Field(default=0.0, description="Pause/silence in seconds after narration to let footage/music breathe")
 
     # Staged pipeline state carried across search, assessment, and fallback
     footage_status: FootageStatus = FootageStatus.PENDING

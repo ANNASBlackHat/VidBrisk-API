@@ -15,16 +15,22 @@ def assess_candidate(
     candidate: CandidateChunk,
     semantic_threshold: float = 0.50,
     motion_floor: float = 5.0,
+    allow_low_motion_cap: bool = False,
+    low_motion_max_duration: float = 2.0,
 ) -> tuple[bool, Optional[str]]:
     """Evaluates whether an individual candidate clip passes the quality bar.
 
     Legacy clips without precomputed motion scores (motion_mean is None)
     are treated as neutral pass-through and pass the motion check unconditionally.
+    When allow_low_motion_cap is True and semantic score passes, low-motion clips
+    are accepted but their usable duration is capped at low_motion_max_duration (default 2.0s).
 
     Args:
         candidate: CandidateChunk result from footage search.
         semantic_threshold: Minimum semantic similarity score (default: 0.50).
         motion_floor: Minimum motion magnitude score (default: 5.0).
+        allow_low_motion_cap: If True, keep low-motion clips but cap their duration to max 2s.
+        low_motion_max_duration: Maximum allowed duration in seconds for low-motion clips (default: 2.0).
 
     Returns:
         tuple[bool, Optional[str]]: (passed, failure_reason)
@@ -37,6 +43,10 @@ def assess_candidate(
 
     # Legacy footage handling: if motion_mean is None, do not reject!
     if candidate.motion_mean is not None and candidate.motion_mean < motion_floor:
+        if allow_low_motion_cap:
+            # Keep clip, but cap its usable duration so it acts as a brief cut
+            candidate.duration_sec = min(candidate.duration_sec or low_motion_max_duration, low_motion_max_duration)
+            return True, None
         return (
             False,
             f"Motion score {candidate.motion_mean:.2f} is below dynamism floor {motion_floor:.2f} (likely static loop)",
@@ -51,6 +61,8 @@ def assess_beat_candidates(
     semantic_threshold: float = 0.50,
     motion_floor: float = 5.0,
     max_requeries: int = 2,
+    allow_low_motion_cap: bool = True,
+    low_motion_max_duration: float = 2.0,
 ) -> FootageStatus:
     """Assesses the candidate pool for a beat and updates its footage state.
 
@@ -86,12 +98,19 @@ def assess_beat_candidates(
             beat.fallback_reason = "No candidate clips found in footage library after maximum requeries."
         return beat.footage_status
 
+    if allow_low_motion_cap:
+        for c in candidates:
+            if c.motion_mean is not None and c.motion_mean < motion_floor:
+                c.duration_sec = min(c.duration_sec or low_motion_max_duration, low_motion_max_duration)
+
     # Check top candidate
     top = candidates[0]
     passed, reason = assess_candidate(
         top,
         semantic_threshold=semantic_threshold,
         motion_floor=motion_floor,
+        allow_low_motion_cap=allow_low_motion_cap,
+        low_motion_max_duration=low_motion_max_duration,
     )
 
     if passed:

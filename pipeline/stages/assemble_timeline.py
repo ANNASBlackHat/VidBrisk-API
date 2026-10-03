@@ -48,20 +48,24 @@ def assemble_timeline(
         beat_timings = timings_map.get(beat.id, [])
         beat_candidates = candidates_map.get(beat.id, [])
 
-        beat_start = round(current_time, 2)
-        beat_end = round(current_time + voice_clip.duration_sec, 2)
+        vo_duration = round(voice_clip.duration_sec, 2)
+        pause_duration = max(0.0, round(getattr(beat, "pause_after", 0.0) or 0.0, 2))
+        total_beat_duration = round(vo_duration + pause_duration, 2)
 
-        # 1. Voice audio track item
+        beat_start = round(current_time, 2)
+        vo_end = round(current_time + vo_duration, 2)
+
+        # 1. Voice audio track item (ends with spoken VO; silence during pause)
         audio_items.append(
             TrackItem(
                 id=f"vo_{beat.id}",
                 assetId=voice_clip.audio_path,
                 trackStart=beat_start,
-                trackEnd=beat_end,
+                trackEnd=vo_end,
             )
         )
 
-        # 2. Plan video & text assets
+        # 2. Plan video & text assets (spans full visual duration including pause)
         asset_plan, beat_video_items, beat_text_items = plan_beat_assets(
             beat=beat,
             voice_clip=voice_clip,
@@ -82,7 +86,7 @@ def assemble_timeline(
             )
         )
 
-        current_time += voice_clip.duration_sec
+        current_time += total_beat_duration
 
     total_duration = round(current_time, 2)
 

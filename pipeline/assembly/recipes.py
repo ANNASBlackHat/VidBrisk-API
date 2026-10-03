@@ -26,8 +26,10 @@ def plan_split_screen(
         (asset_plan, video_track_items, text_track_items)
     """
     vo_duration = max(0.1, round(voice_clip.duration_sec, 2))
+    pause_duration = max(0.0, round(getattr(beat, "pause_after", 0.0) or 0.0, 2))
+    visual_duration = round(vo_duration + pause_duration, 2)
     beat_start = round(track_cursor, 2)
-    beat_end = round(track_cursor + vo_duration, 2)
+    beat_end = round(track_cursor + visual_duration, 2)
 
     cand_left = candidates[0] if len(candidates) > 0 else None
     cand_right = candidates[1] if len(candidates) > 1 else cand_left
@@ -38,7 +40,7 @@ def plan_split_screen(
             media_item_id="placeholder_left",
             score=1.0,
             start_ts=0.0,
-            duration_sec=vo_duration,
+            duration_sec=visual_duration,
             media_type="video",
         )
         cand_right = CandidateChunk(
@@ -46,14 +48,14 @@ def plan_split_screen(
             media_item_id="placeholder_right",
             score=1.0,
             start_ts=0.0,
-            duration_sec=vo_duration,
+            duration_sec=visual_duration,
             media_type="video",
         )
 
     # 1. Left layer (z=0, layout="split-left")
     left_type = "image" if cand_left.media_type in ("image", "photo") else "video"
     left_s_in = round(cand_left.start_ts, 2)
-    left_s_out = round(left_s_in + vo_duration, 2)
+    left_s_out = round(left_s_in + visual_duration, 2)
     left_props = apply_mood_effects_to_props(None, beat)
 
     layer_left = Layer(
@@ -87,7 +89,7 @@ def plan_split_screen(
     # 2. Right layer (z=1, layout="split-right")
     right_type = "image" if cand_right.media_type in ("image", "photo") else "video"
     right_s_in = round(cand_right.start_ts, 2)
-    right_s_out = round(right_s_in + vo_duration, 2)
+    right_s_out = round(right_s_in + visual_duration, 2)
     right_props = apply_mood_effects_to_props(None, beat)
 
     layer_right = Layer(
@@ -154,8 +156,10 @@ def plan_stat_over_footage(
 ) -> tuple[AssetPlan, list[TrackItem], list[TrackItem]]:
     """Composes background footage (layer 0) with a motion StatCard overlay (layer 1)."""
     vo_duration = max(0.1, round(voice_clip.duration_sec, 2))
+    pause_duration = max(0.0, round(getattr(beat, "pause_after", 0.0) or 0.0, 2))
+    visual_duration = round(vo_duration + pause_duration, 2)
     beat_start = round(track_cursor, 2)
-    beat_end = round(track_cursor + vo_duration, 2)
+    beat_end = round(track_cursor + visual_duration, 2)
 
     motion_props = beat.motion_props or {}
     comp_id = motion_props.get("component", "DataAnimations/StatCard")
@@ -208,7 +212,7 @@ def plan_stat_over_footage(
     top_cand = candidates[0]
     asset_type = "image" if top_cand.media_type in ("image", "photo") else "video"
     source_in = round(top_cand.start_ts, 2)
-    source_out = round(source_in + vo_duration, 2)
+    source_out = round(source_in + visual_duration, 2)
     bg_props = apply_mood_effects_to_props(None, beat)
 
     bg_layer = Layer(
@@ -273,8 +277,10 @@ def plan_quote_over_footage(
 ) -> tuple[AssetPlan, list[TrackItem], list[TrackItem]]:
     """Composes background footage (layer 0) with a motion QuoteCard overlay (layer 1)."""
     vo_duration = max(0.1, round(voice_clip.duration_sec, 2))
+    pause_duration = max(0.0, round(getattr(beat, "pause_after", 0.0) or 0.0, 2))
+    visual_duration = round(vo_duration + pause_duration, 2)
     beat_start = round(track_cursor, 2)
-    beat_end = round(track_cursor + vo_duration, 2)
+    beat_end = round(track_cursor + visual_duration, 2)
 
     motion_props = beat.motion_props or {}
     comp_id = motion_props.get("component", "TextAnimations/QuoteCard")
@@ -324,7 +330,7 @@ def plan_quote_over_footage(
     top_cand = candidates[0]
     asset_type = "image" if top_cand.media_type in ("image", "photo") else "video"
     source_in = round(top_cand.start_ts, 2)
-    source_out = round(source_in + vo_duration, 2)
+    source_out = round(source_in + visual_duration, 2)
     bg_props = apply_mood_effects_to_props(None, beat)
 
     bg_layer = Layer(

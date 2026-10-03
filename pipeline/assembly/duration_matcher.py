@@ -30,8 +30,10 @@ def plan_beat_assets(
         (asset_plan, video_track_items, text_track_items)
     """
     vo_duration = max(0.1, round(voice_clip.duration_sec, 2))
+    pause_duration = max(0.0, round(getattr(beat, "pause_after", 0.0) or 0.0, 2))
+    visual_duration = round(vo_duration + pause_duration, 2)
     beat_start = round(track_cursor, 2)
-    beat_end = round(track_cursor + vo_duration, 2)
+    beat_end = round(track_cursor + visual_duration, 2)
 
     motion_props = beat.motion_props or {}
     layout_recipe = motion_props.get("layout_recipe")
@@ -202,7 +204,7 @@ def plan_beat_assets(
                     type="image",
                     chunk_id=top_cand.chunk_id,
                     source_in=0.0,
-                    source_out=vo_duration,
+                    source_out=visual_duration,
                     storage_path=top_cand.storage_path,
                     storage_url=top_cand.storage_url,
                     props=bg_props,
@@ -216,7 +218,7 @@ def plan_beat_assets(
                     layout="full",
                     chunk_id=top_cand.chunk_id,
                     source_in=0.0,
-                    source_out=vo_duration,
+                    source_out=visual_duration,
                     storage_path=top_cand.storage_path,
                     storage_url=top_cand.storage_url,
                     props=bg_props,
@@ -232,7 +234,7 @@ def plan_beat_assets(
             layerRole="background",
             layout="full",
             sourceIn=0.0,
-            sourceOut=vo_duration,
+            sourceOut=visual_duration,
             assetType="image",
             storagePath=top_cand.storage_path,
             storageUrl=top_cand.storage_url,
@@ -244,15 +246,18 @@ def plan_beat_assets(
     # Case 3: Video clip long enough -> single_clip (crop/center window)
     # --------------------------------------------------------------------------
     cand_duration = top_cand.duration_sec or (
-        top_cand.end_ts - top_cand.start_ts if top_cand.end_ts else vo_duration
+        top_cand.end_ts - top_cand.start_ts if top_cand.end_ts else visual_duration
     )
+    # Low-motion clips (likely static loops/slow pans) capped to max 2.0s so they don't drag
+    if top_cand.motion_mean is not None and top_cand.motion_mean < 5.0:
+        cand_duration = min(cand_duration, 2.0)
 
-    if cand_duration >= vo_duration:
+    if cand_duration >= visual_duration:
         # Center the window within candidate bounds if possible
-        surplus = cand_duration - vo_duration
+        surplus = cand_duration - visual_duration
         offset = surplus / 2.0
         source_in = round(top_cand.start_ts + offset, 2)
-        source_out = round(source_in + vo_duration, 2)
+        source_out = round(source_in + visual_duration, 2)
         bg_props = apply_mood_effects_to_props(None, beat)
 
         plan = AssetPlan(
@@ -301,12 +306,12 @@ def plan_beat_assets(
         return plan, [video_item], []
 
     # --------------------------------------------------------------------------
-    # Case 4: Video clip shorter than VO duration -> concat_clips fallback
+    # Case 4: Video clip shorter than required duration -> concat_clips fallback
     # --------------------------------------------------------------------------
     video_items: list[TrackItem] = []
     plan_items: list[AssetItem] = []
     plan_layers: list[Layer] = []
-    remaining_duration = vo_duration
+    remaining_duration = visual_duration
     current_track_pos = beat_start
     bg_props = apply_mood_effects_to_props(None, beat)
 
@@ -315,6 +320,8 @@ def plan_beat_assets(
             break
 
         c_dur = cand.duration_sec or (cand.end_ts - cand.start_ts if cand.end_ts else remaining_duration)
+        if cand.motion_mean is not None and cand.motion_mean < 5.0:
+            c_dur = min(c_dur, 2.0)
         use_dur = min(c_dur, remaining_duration)
         s_in = round(cand.start_ts, 2)
         s_out = round(s_in + use_dur, 2)

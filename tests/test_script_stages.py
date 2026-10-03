@@ -66,6 +66,34 @@ def test_structure_beats_with_mock(mock_gemini_client):
     assert beats[1].beat_type == "stat"
 
 
+def test_structure_beats_parses_pause_after(mock_gemini_client):
+    clean_text = "What they found was terrifying. Over 500 sailors were lost."
+    mock_gemini_client.generate_json.return_value = {
+        "beats": [
+            {
+                "id": "b1",
+                "text": "What they found was terrifying.",
+                "visual_intent": "dark ocean surface",
+                "beat_type": "narrative",
+                "pause_after": 1.5,
+            },
+            {
+                "id": "b2",
+                "text": "Over 500 sailors were lost.",
+                "visual_intent": "somber ocean wreckage",
+                "beat_type": "stat",
+                "pause_after": 2.0,
+            },
+        ]
+    }
+
+    beats = structure_beats(clean_text, client=mock_gemini_client)
+    assert len(beats) == 2
+    assert beats[0].pause_after == 1.5
+    assert beats[1].pause_after == 2.0
+
+
+
 def test_clean_and_structure_beats_single_pass(mock_gemini_client):
     raw_script = "[B-roll: ocean] Under the surface, darkness reigns."
     mock_gemini_client.generate_json.return_value = {

@@ -29,7 +29,7 @@ Your task is to take spoken narration prose and segment it into atomic visual be
 
 For each beat:
 1. `id`: A sequential identifier like "b1", "b2", "b3", etc.
-2. `text`: 1–2 sentences of spoken narration (roughly 3–7 seconds of speech).
+2. `text`: 1 short sentence or clause. STRICT LIMIT: 12–18 words maximum per beat (roughly 3–6 seconds of speech). If a sentence has multiple clauses or is longer than 18 words, YOU MUST SPLIT IT into multiple consecutive beats so the visuals can cut frequently.
 3. `visual_intent`: A vivid, concrete, semantic search prompt describing the ideal footage or visual to accompany this beat. Focus on physical actions, environments, lighting, and subjects.
 4. `beat_type`: Choose one of:
    - "narrative": Concrete storytelling, actions, physical subjects, or documentary footage scenes. (Default)
@@ -100,6 +100,11 @@ For each beat:
      - `title`: Category header (e.g. "MISSION VOICE FEED")
      - `display_mode`: "takeover" | "overlay"
 6. `mood` (optional): one of "tense", "hopeful", "triumphant", "somber", "urgent", "neutral" — only set when the beat has a clear emotional register; omit for beats with no strong tone.
+7. `pause_after` (float, default: 0.0): Add breathing room (silence on narration) after this beat when context demands it:
+   - 1.0–1.5s: Dramatic reveals or cliffhangers before the answer (e.g. "What they saw defied explanation...").
+   - 1.5–2.0s: Post-impact absorption after a heavy statistic, tragedy, or shocking twist.
+   - 1.5–2.5s: Chapter/scene transitions to reset narrative rhythm.
+   - 0.0s: Standard narrative flow (default).
 
 Output JSON format:
 {
@@ -110,7 +115,8 @@ Output JSON format:
       "visual_intent": "...",
       "beat_type": "narrative",
       "motion_props": null,
-      "mood": "hopeful"
+      "mood": "hopeful",
+      "pause_after": 1.5
     },
     {
       "id": "b2",
@@ -150,7 +156,7 @@ Your task is to take a raw, messy video script (which may contain visual cues, b
 
 Rules:
 1. Strip all visual notes (`[B-roll: ...]`), sound cues (`[SFX: ...]`), headers (`# Scene 1`), and speaker tags (`Narrator:`).
-2. Segment the remaining narration into sequential beats of 1–2 sentences each.
+2. Segment the remaining narration into sequential beats. STRICT LIMIT: 12–18 words maximum per beat (roughly 3–6 seconds of speech). Split compound sentences so visuals can change frequently.
 3. For each beat, provide:
    - `id`: "b1", "b2", ...
    - `text`: Pure spoken narration for this beat.
@@ -158,6 +164,7 @@ Rules:
    - `beat_type`: "narrative" | "stat" | "abstract" | "swipe_deck" | "chat_bubbles" | "kinetic" | "typewriter" | "split_screen" | "map_route" | "audio_waveform".
    - `motion_props`: Structured visual properties if a motion component or layout recipe applies (component, items, messages, primary_value, kicker, visual_type, quote, emphasis, author, origin, destination, speaker, display_mode).
    - `mood`: Optional emotional tone tag ("tense" | "hopeful" | "triumphant" | "somber" | "urgent" | "neutral").
+   - `pause_after`: Optional float in seconds (default 0.0, use 1.0–2.0s for dramatic reveals, post-shock silence, or chapter breaks).
 
 Output JSON format:
 {
@@ -217,6 +224,12 @@ def _parse_beat_json(raw_beats: list[dict[str, Any]]) -> list[Beat]:
         raw_mood = b.get("mood")
         mood: Optional[MoodTag] = raw_mood if raw_mood in VALID_MOODS else None
 
+        raw_pause = b.get("pause_after")
+        try:
+            pause_after = max(0.0, float(raw_pause)) if raw_pause is not None else 0.0
+        except (ValueError, TypeError):
+            pause_after = 0.0
+
         if text:
             beats.append(
                 Beat(
@@ -226,6 +239,7 @@ def _parse_beat_json(raw_beats: list[dict[str, Any]]) -> list[Beat]:
                     beat_type=beat_type,
                     motion_props=motion_props,
                     mood=mood,
+                    pause_after=pause_after,
                 )
             )
     return beats

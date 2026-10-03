@@ -95,3 +95,14 @@ def test_reformulate_query_with_mock():
     beat = Beat(id="b1", text="Megalodon swam fast.", visual_intent="megalodon", requery_reason="low score")
     new_query = reformulate_query(beat, client=mock_llm)
     assert new_query == "great white shark swimming open water"
+
+
+def test_assess_beat_candidates_low_motion_capped_at_2s():
+    beat = Beat(id="b1", text="Submarine deep dive.", visual_intent="submarine")
+    candidates = [_make_candidate(chunk_id="c_low_motion", score=0.85, motion_mean=1.5)]
+    candidates[0].duration_sec = 6.0
+    status = assess_beat_candidates(beat, candidates, semantic_threshold=0.50, motion_floor=5.0)
+    assert status == FootageStatus.ACCEPTED
+    assert beat.footage_status == FootageStatus.ACCEPTED
+    assert candidates[0].duration_sec == 2.0
+
