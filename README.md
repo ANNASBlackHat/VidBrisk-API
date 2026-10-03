@@ -170,6 +170,55 @@ python run_pipeline.py \
 
 ---
 
+## 🎙️ Remote GPU TTS Worker (Colab & Local Fallback)
+
+For heavy voice-cloning models (e.g. OmniVoice, CosyVoice, XTTS, Chatterbox on GPU), the pipeline supports running a dedicated remote worker on a **Google Colab GPU instance** with clean `AudioTransport` abstractions and **automatic, zero-error fallback to local engines** (Kokoro/Supertonic) if the worker is offline or times out.
+
+### Audio Transports
+- **`base64` (Default)**: Directly embeds generated `.wav` audio into the PostgreSQL job payload/result. Zero external storage or third-party accounts required.
+- **`ngrok`**: Direct audio streaming and download over an ngrok HTTP tunnel.
+- **`imagekit` / `storage`**: Worker uploads audio to cloud storage and passes a public URL.
+
+### 1. Configure `.env`
+```env
+# Enable the remote TTS worker
+TTS_WORKER_ENABLED=True
+TTS_WORKER_TRANSPORT=base64       # base64 (default), ngrok, or imagekit
+TTS_WORKER_BACKEND=omni           # omni, kokoro, chatterbox, etc.
+TTS_FALLBACK_PROVIDER=kokoro      # Local provider to use if worker is offline (never fails)
+TTS_WORKER_TIMEOUT_SEC=30.0
+
+# Optional: If using ngrok HTTP streaming transport
+# TTS_WORKER_TRANSPORT=ngrok
+# TTS_NGROK_URL=https://your-tunnel.ngrok-free.app
+```
+
+### 2. Launch Worker on Google Colab
+Run the CLI driver from your local machine using the `colab` CLI:
+
+```bash
+# Mode A: PostgreSQL Queue Worker (Pulls jobs, returns base64 audio, exits after 15m idle)
+uv run python scripts/colab_tts_worker.py --backend omni --idle-exit 900
+
+# Mode B: FastAPI + ngrok HTTP Server (Direct audio streaming)
+uv run python scripts/colab_tts_worker.py --backend omni --ngrok --ngrok-token <YOUR_TOKEN>
+
+# Test bundle packaging locally without launching Colab
+uv run python scripts/colab_tts_worker.py --bundle-only
+```
+
+### 3. Local Standalone Runner (Testing)
+You can also run the worker runner locally to process queue jobs or test the HTTP server:
+```bash
+# Queue mode
+uv run python scripts/run_tts_worker.py --backend kokoro
+
+# HTTP mode on port 8005
+uv run python scripts/run_tts_worker.py --http --port 8005
+```
+
+---
+
 ## 🐳 Docker Deployment
 
 ### Start with Docker Compose

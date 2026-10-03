@@ -37,12 +37,21 @@ class Settings(BaseSettings):
 
     # TTS Settings
     DEFAULT_TTS_PROVIDER: Literal[
-        "kokoro", "chatterbox", "mock", "supersonic", "supersonic3", "supertonic", "supertonic3"
+        "kokoro", "chatterbox", "mock", "supersonic", "supersonic3", "supertonic", "supertonic3", "worker"
     ] = "kokoro"
     KOKORO_VOICE: str = "af_sarah"
     KOKORO_LANG: str = "en-us"
     SUPERSONIC_VOICE: str = "M1"
     SUPERSONIC_LANG: str = "en"
+
+    # TTS Worker & Remote GPU settings
+    TTS_WORKER_ENABLED: bool = False
+    TTS_WORKER_TRANSPORT: Literal["base64", "ngrok", "imagekit", "storage"] = "base64"
+    TTS_WORKER_TIMEOUT_SEC: float = 30.0
+    TTS_WORKER_BACKEND: str = "omni"
+    TTS_FALLBACK_PROVIDER: str = "kokoro"
+    TTS_NGROK_URL: Optional[str] = None
+    TTS_NGROK_AUTHTOKEN: Optional[str] = None
 
     # Timestamp Alignment Settings
     DEFAULT_ALIGNER_PROVIDER: Literal["easytranscriber", "whisperx", "mock"] = "mock"

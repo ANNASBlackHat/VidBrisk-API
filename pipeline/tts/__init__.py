@@ -7,14 +7,22 @@ from pipeline.tts.kokoro import KokoroTTSProvider
 from pipeline.tts.chatterbox import ChatterboxTTSProvider
 from pipeline.tts.mock import MockTTSProvider
 from pipeline.tts.supersonic import SuperSonicTTSProvider, SupertonicTTSProvider
+from pipeline.tts.worker_provider import WorkerTTSProvider
 
 
 def get_tts_provider(provider_name: Optional[str] = None) -> TTSProvider:
     """Factory to instantiate TTS provider by name."""
     settings = get_settings()
+
+    # If caller did not explicitly request a specific engine and worker is enabled, route to worker
+    if provider_name is None and settings.TTS_WORKER_ENABLED:
+        return WorkerTTSProvider()
+
     name = (provider_name or settings.DEFAULT_TTS_PROVIDER or "kokoro").lower()
 
-    if name == "kokoro":
+    if name == "worker":
+        return WorkerTTSProvider()
+    elif name == "kokoro":
         return KokoroTTSProvider()
     elif name == "chatterbox":
         return ChatterboxTTSProvider()
@@ -24,7 +32,7 @@ def get_tts_provider(provider_name: Optional[str] = None) -> TTSProvider:
         return MockTTSProvider()
     else:
         raise ValueError(
-            f"Unknown TTS provider '{name}'. Supported: kokoro, chatterbox, supersonic, mock"
+            f"Unknown TTS provider '{name}'. Supported: kokoro, chatterbox, supersonic, worker, mock"
         )
 
 
@@ -36,6 +44,7 @@ __all__ = [
     "SuperSonicTTSProvider",
     "SupertonicTTSProvider",
     "MockTTSProvider",
+    "WorkerTTSProvider",
     "get_tts_provider",
 ]
 
