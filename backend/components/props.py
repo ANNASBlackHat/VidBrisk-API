@@ -268,3 +268,247 @@ def extract_captions_props(text: str, client: Optional[GeminiLLMClient] = None) 
         "styleVariant": "bouncy",
     }
 
+
+# =========================================================================
+# Documentary & Archival Components ("Dead Reckoning" style)
+# =========================================================================
+
+class DocumentViewerProps(BaseModel):
+    """Structured props for Archival/DocumentViewer."""
+    imageUrl: Optional[str] = Field(default=None, description="Path or URL to archival document scan")
+    title: str = Field(default="ARCHIVAL DOCUMENT", description="Document label or archive record title")
+    subtext: Optional[str] = Field(default="CONTEMPORARY SOURCE", description="Subtext or date")
+    highlightText: Optional[str] = Field(default=None, description="Key phrase highlighted in document")
+    zoom: float = Field(default=1.15, description="Ken Burns zoom scale factor")
+
+
+def extract_document_props(text: str, client: Optional[GeminiLLMClient] = None) -> dict[str, Any]:
+    """Extracts archival document inspection props, including highlight phrases."""
+    clean = text.strip() if text else ""
+    # Extract highlight phrase if in quotes
+    highlight = None
+    m_quote = re.search(r"['\"]([^'\"]+)['\"]", clean)
+    if m_quote:
+        highlight = m_quote.group(1).strip()
+    elif "highlight" in clean.lower():
+        parts = re.split(r"highlight\s*(?:phrase|text|on)?\s*[:\-]?\s*", clean, flags=re.IGNORECASE)
+        if len(parts) > 1:
+            highlight = parts[1].split(".")[0].strip()
+
+    # Extract title
+    title = "ARCHIVAL RECORD"
+    for keyword in ["Homeward Mail", "Times", "Lloyd's Register", "Lloyd's", "Sacramento Daily Union", "News of the World", "Verne"]:
+        if keyword.lower() in clean.lower():
+            title = keyword.upper()
+            break
+
+    return {
+        "imageUrl": None,
+        "title": title,
+        "subtext": "19TH-CENTURY RECORD",
+        "highlightText": highlight,
+        "zoom": 1.2,
+    }
+
+
+class RatingCardProps(BaseModel):
+    """Structured props for Evidence/RatingCard."""
+    rating: str = Field(..., description="Locked rating: CONFIRMED | PROBABLE | POSSIBLE | UNSUPPORTED | DISPROVEN")
+    claim: str = Field(..., description="Specific claim statement")
+    test: str = Field(..., description="The evidentiary test applied to this claim")
+    chapter: Optional[str] = Field(default=None, description="Chapter context")
+
+
+def extract_rating_props(text: str, client: Optional[GeminiLLMClient] = None) -> dict[str, Any]:
+    """Extracts forensic evidence rating props from narration/cue text."""
+    clean = text.strip() if text else ""
+    rating = "UNSUPPORTED"
+
+    # Prioritize Rating: PREFIX
+    m_prefix = re.search(r"Rating:\s*(CONFIRMED|PROBABLE|POSSIBLE|UNSUPPORTED|DISPROVEN)\b", clean, re.IGNORECASE)
+    if m_prefix:
+        rating = m_prefix.group(1).upper()
+    else:
+        m_any = re.search(r"\b(CONFIRMED|PROBABLE|POSSIBLE|UNSUPPORTED|DISPROVEN)\b", clean, re.IGNORECASE)
+        if m_any:
+            rating = m_any.group(1).upper()
+
+    # Extract claim and test
+    claim = clean
+    test = "Primary sources document it and do not contradict each other"
+    if "Test:" in clean:
+        parts = clean.split("Test:")
+        claim_part = parts[0]
+        test = parts[1].strip()
+        # strip Rating: XXX -
+        claim = re.sub(r"Rating:\s*[A-Z]+\s*[-:]?\s*", "", claim_part, flags=re.IGNORECASE).strip()
+    else:
+        claim = re.sub(r"Rating:\s*[A-Z]+\s*[-:]?\s*", "", clean, flags=re.IGNORECASE).strip()
+
+    return {
+        "rating": rating,
+        "claim": claim if claim else "Claim under investigation",
+        "test": test,
+        "chapter": None,
+    }
+
+
+class SourcingCardProps(BaseModel):
+    """Structured props for Evidence/SourcingCard."""
+    tier: int = Field(default=1, description="Tier level 1 to 4")
+    tierName: str = Field(default="PRIMARY", description="PRIMARY | SCIENTIFIC | SECONDARY | REPRINT")
+    source: str = Field(..., description="Name of source, author, archive, or publication")
+    date: Optional[str] = Field(default=None, description="Publication date or year")
+    isIndependent: bool = Field(default=True, description="False for REPRINT tier which is not independent")
+
+
+def extract_sourcing_props(text: str, client: Optional[GeminiLLMClient] = None) -> dict[str, Any]:
+    """Extracts sourcing tier and provenance details."""
+    clean = text.strip() if text else ""
+    tier = 1
+    tier_name = "PRIMARY"
+    is_independent = True
+
+    if "REPRINT" in clean.upper() or "TIER 4" in clean.upper() or "TIER: 4" in clean.upper():
+        tier = 4
+        tier_name = "REPRINT"
+        is_independent = False
+    elif "SECONDARY" in clean.upper() or "TIER 3" in clean.upper() or "TIER: 3" in clean.upper():
+        tier = 3
+        tier_name = "SECONDARY"
+    elif "SCIENTIFIC" in clean.upper() or "TIER 2" in clean.upper() or "TIER: 2" in clean.upper():
+        tier = 2
+        tier_name = "SCIENTIFIC"
+
+    source = clean
+    m_src = re.search(r"Source:\s*([^\|]+)", clean, re.IGNORECASE)
+    if m_src:
+        source = m_src.group(1).strip()
+
+    return {
+        "tier": tier,
+        "tierName": tier_name,
+        "source": source,
+        "date": None,
+        "isIndependent": is_independent,
+    }
+
+
+class MeasurementCompareProps(BaseModel):
+    """Structured props for DataAnimations/MeasurementCompare."""
+    title: str = Field(default="FORENSIC MEASUREMENT COMPARISON", description="Comparison title")
+    steps: list[dict[str, str]] = Field(default_factory=list, description="List of measurement step dicts with 'label' and 'value'")
+    comparisonType: str = Field(default="shrinkage", description="shrinkage | dispute | scale")
+
+
+def extract_measurement_props(text: str, client: Optional[GeminiLLMClient] = None) -> dict[str, Any]:
+    """Extracts multi-step measurement collapse or comparative size figures."""
+    clean = text.strip() if text else ""
+    steps = []
+
+    # Check for arrow sequence e.g. 19 ft -> 17 ft -> 13 ft 1 in
+    if "->" in clean or "→" in clean:
+        delimiter = "->" if "->" in clean else "→"
+        raw_parts = [p.strip() for p in clean.split(delimiter)]
+        for i, part in enumerate(raw_parts):
+            # Extract measurement value like 19 ft, 13 ft 1 in
+            val_match = re.search(r"(\d+(?:\s*(?:ft|m|in|kg|tons?|m\b))+.*)", part, re.IGNORECASE)
+            val = val_match.group(1).strip() if val_match else part
+            steps.append({
+                "label": f"Stage {i+1}",
+                "value": val,
+            })
+    elif "vs" in clean.lower():
+        parts = re.split(r"\s+vs\.?\s+", clean, flags=re.IGNORECASE)
+        for i, part in enumerate(parts):
+            steps.append({
+                "label": f"Estimate {i+1}",
+                "value": part.strip(),
+            })
+    else:
+        steps = [
+            {"label": "Documented", "value": clean[:30]},
+        ]
+
+    return {
+        "title": "SPECIMEN MEASUREMENT COLLAPSE",
+        "steps": steps,
+        "comparisonType": "shrinkage" if "shrinkage" in clean.lower() else "dispute",
+    }
+
+
+class ReprintChainProps(BaseModel):
+    """Structured props for Evidence/ReprintChain."""
+    title: str = Field(default="REPRINT TRANSMISSION CHAIN", description="Chart header")
+    nodes: list[dict[str, str]] = Field(default_factory=list, description="Sequential newspaper nodes")
+
+
+def extract_reprint_props(text: str, client: Optional[GeminiLLMClient] = None) -> dict[str, Any]:
+    """Extracts newspaper reprint progression nodes."""
+    clean = text.strip() if text else ""
+    nodes = []
+
+    # Strip prefix
+    clean_chain = re.sub(r"^.*?chain\s*(?:building)?\s*[:\-]?\s*", "", clean, flags=re.IGNORECASE)
+    delimiter = "->" if "->" in clean_chain else ("→" if "→" in clean_chain else None)
+
+    if delimiter:
+        parts = [p.strip() for p in clean_chain.split(delimiter)]
+        for part in parts:
+            nodes.append({
+                "outlet": part,
+                "date": "1874",
+                "location": "Archive",
+            })
+    else:
+        default_papers = ["Homeward Mail", "The Times", "News of the World", "Sacramento Daily Union"]
+        for p in default_papers:
+            nodes.append({"outlet": p, "date": "1874", "location": "London / US"})
+
+    return {
+        "title": "FIVE-PAPER REPRINT TRANSMISSION",
+        "nodes": nodes,
+    }
+
+
+class VerdictTableProps(BaseModel):
+    """Structured props for Evidence/VerdictTable."""
+    title: str = Field(default="FINAL INVESTIGATIVE VERDICT", description="Header title")
+    claims: list[dict[str, str]] = Field(default_factory=list, description="List of claim dicts with 'claim' and 'rating'")
+
+
+def extract_verdict_props(text: str, client: Optional[GeminiLLMClient] = None) -> dict[str, Any]:
+    """Extracts claim-by-claim verdict table items."""
+    clean = text.strip() if text else ""
+    claims = []
+
+    # Parse items like Claim [RATING] or Claim: RATING
+    matches = re.findall(r"([A-Za-z0-9\s\.\-,'\"—]+?)(?:\[(CONFIRMED|PROBABLE|POSSIBLE|UNSUPPORTED|DISPROVEN)\]|:\s*(CONFIRMED|PROBABLE|POSSIBLE|UNSUPPORTED|DISPROVEN))", clean)
+    if matches:
+        for m in matches:
+            claim_text = m[0].replace("Verdict:", "").strip(" ,;")
+            rating = m[1] or m[2]
+            if claim_text:
+                claims.append({
+                    "claim": claim_text,
+                    "rating": rating,
+                })
+    else:
+        # Default 8 claims from episode_outline
+        claims = [
+            {"claim": "Giant squid exists", "rating": "CONFIRMED"},
+            {"claim": "Ship encountered a giant squid (Alecton)", "rating": "CONFIRMED"},
+            {"claim": "Squid attacked the ship (Alecton)", "rating": "UNSUPPORTED"},
+            {"claim": "Squid attacked a boat (Portugal Cove, 1873)", "rating": "PROBABLE"},
+            {"claim": "Large squid in the Bay of Bengal (1874)", "rating": "POSSIBLE"},
+            {"claim": "Schooner Pearl sunk by a squid", "rating": "UNSUPPORTED"},
+            {"claim": "Pearl account fabricated from scratch", "rating": "POSSIBLE"},
+            {"claim": "Pearl is a garbled transmission of Alecton", "rating": "POSSIBLE"},
+        ]
+
+    return {
+        "title": "DEAD RECKONING — INVESTIGATIVE VERDICT",
+        "claims": claims,
+    }
+
+

@@ -5,11 +5,17 @@ from typing import Any, Callable, Optional
 from backend.components.props import (
     extract_captions_props,
     extract_chat_props,
+    extract_document_props,
     extract_list_props,
     extract_map_props,
+    extract_measurement_props,
     extract_quote_props,
+    extract_rating_props,
+    extract_reprint_props,
+    extract_sourcing_props,
     extract_stat_props,
     extract_title_props,
+    extract_verdict_props,
     extract_waveform_props,
 )
 
@@ -144,6 +150,48 @@ class ComponentRegistry:
             component_id="TextAnimations/KineticCaptions",
             extract_props=extract_captions_props,
             description="Word-by-word bouncing highlight subtitle captions",
+            requires_duration=True,
+        )
+        self.register(
+            style="document-viewer",
+            component_id="Archival/DocumentViewer",
+            extract_props=extract_document_props,
+            description="Archival document inspection with Ken Burns camera drift and keyword highlighter",
+            requires_duration=True,
+        )
+        self.register(
+            style="rating-card",
+            component_id="Evidence/RatingCard",
+            extract_props=extract_rating_props,
+            description="Forensic evidence evaluation card with locked 5-tier rating badge",
+            requires_duration=True,
+        )
+        self.register(
+            style="sourcing-card",
+            component_id="Evidence/SourcingCard",
+            extract_props=extract_sourcing_props,
+            description="4-tier sourcing hierarchy card with non-independent reprint hatching",
+            requires_duration=True,
+        )
+        self.register(
+            style="measurement-compare",
+            component_id="DataAnimations/MeasurementCompare",
+            extract_props=extract_measurement_props,
+            description="Forensic size collapse and comparative measurement visualizer",
+            requires_duration=True,
+        )
+        self.register(
+            style="reprint-chain",
+            component_id="Evidence/ReprintChain",
+            extract_props=extract_reprint_props,
+            description="Chronological newspaper reprint propagation tree",
+            requires_duration=True,
+        )
+        self.register(
+            style="verdict-table",
+            component_id="Evidence/VerdictTable",
+            extract_props=extract_verdict_props,
+            description="Episode finale multi-row claim verdict tally table",
             requires_duration=True,
         )
 
