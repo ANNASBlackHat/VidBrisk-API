@@ -186,7 +186,13 @@ class OmniTTSProvider(TTSProvider):
         output_path: Optional[str] = None,
     ) -> AudioResult:
         """Synthesizes text into an audio file using either voice cloning or voice design."""
-        model = self._init_model()
+        try:
+            model = self._init_model()
+        except (ImportError, ModuleNotFoundError) as err:
+            logger.info(f"Local OmniVoice engine not available ({err}). Delegating to WorkerTTSProvider(backend='omni')...")
+            from pipeline.tts.worker_provider import WorkerTTSProvider
+            return WorkerTTSProvider(backend="omni").synthesize(text=text, voice=voice, output_path=output_path)
+
         ref_audio, ref_text, instruct = resolve_voice_reference(voice)
         dest_path = output_path or f"synthesized_omni_{int(time.time() * 1000)}.wav"
         os.makedirs(os.path.dirname(os.path.abspath(dest_path)), exist_ok=True)

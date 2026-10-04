@@ -30,9 +30,10 @@ def get_tts_provider(provider_name: Optional[str] = None) -> TTSProvider:
         return SuperSonicTTSProvider()
     elif name in ("omni", "omnivoice"):
         try:
+            import omnivoice  # noqa: F401
             from pipeline.tts.omni import OmniTTSProvider
             return OmniTTSProvider()
-        except Exception:
+        except (ImportError, Exception):
             return WorkerTTSProvider(backend="omni")
     elif name == "mock":
         return MockTTSProvider()

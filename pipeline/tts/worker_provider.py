@@ -32,7 +32,29 @@ class WorkerTTSProvider:
     ):
         settings = get_settings()
         self.transport_name = transport or settings.TTS_WORKER_TRANSPORT or "base64"
-        self.ngrok_url = (ngrok_url or settings.TTS_NGROK_URL or "").rstrip("/")
+        self.ngrok_url = (
+            ngrok_url
+            or os.environ.get("TTS_NGROK_URL")
+            or settings.TTS_NGROK_URL
+            or ""
+        ).rstrip("/")
+
+        if not self.ngrok_url:
+            cache_file = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                "data",
+                "cache",
+                "tts_worker_ngrok.txt",
+            )
+            if os.path.exists(cache_file):
+                try:
+                    with open(cache_file, "r") as f:
+                        cached = f.read().strip()
+                        if cached.startswith("http"):
+                            self.ngrok_url = cached.rstrip("/")
+                except Exception:
+                    pass
+
         self.backend = backend or settings.TTS_WORKER_BACKEND or "omni"
         self.timeout_sec = (
             timeout_sec if timeout_sec is not None else settings.TTS_WORKER_TIMEOUT_SEC
