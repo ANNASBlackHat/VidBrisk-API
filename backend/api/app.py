@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
     )
     if not disable_worker:
         from backend.worker.runner import WorkerRunner
-        worker_runner = WorkerRunner(interval_sec=1.0)
+        worker_runner = WorkerRunner(interval_sec=1.0, setup_signals=False)
         worker_thread = threading.Thread(target=worker_runner.start, daemon=True)
         worker_thread.start()
 

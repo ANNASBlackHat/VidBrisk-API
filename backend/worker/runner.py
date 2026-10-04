@@ -12,11 +12,17 @@ from backend.worker.engine import worker_tick
 class WorkerRunner:
     """Manages worker loop lifecycle and graceful termination."""
 
-    def __init__(self, database_url: Optional[str] = None, interval_sec: float = 1.0):
+    def __init__(
+        self,
+        database_url: Optional[str] = None,
+        interval_sec: float = 1.0,
+        setup_signals: bool = True,
+    ):
         self.database_url = database_url
         self.interval_sec = interval_sec
         self.running = False
-        self._setup_signals()
+        if setup_signals:
+            self._setup_signals()
 
     def _setup_signals(self) -> None:
         try:
