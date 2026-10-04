@@ -36,15 +36,21 @@ def _get_engine(backend: str):
     elif b in ("supersonic", "supertonic"):
         from pipeline.tts.supersonic import SuperSonicTTSProvider
         return SuperSonicTTSProvider()
-    elif b in ("omni", "omnivoice", "xtts", "cosyvoice"):
-        # When running in Colab with GPU, attempt loading heavy model or fallback
+    elif b in ("omni", "omnivoice"):
         try:
-            # Placeholder/loader for OmniVoice model when installed in Colab
-            from pipeline.tts.kokoro import KokoroTTSProvider
-            logger.info(f"Loading '{b}' backend on GPU (using Kokoro fallback if OmniVoice library uninstalled)...")
-            return KokoroTTSProvider()
+            from pipeline.tts.omni import OmniTTSProvider
+            logger.info("Initializing OmniVoice engine on GPU...")
+            return OmniTTSProvider()
         except Exception as e:
-            raise RuntimeError(f"Failed to initialize backend '{backend}': {e}")
+            if not allow_fallback:
+                raise
+            logger.warning(f"OmniVoice failed to initialize ({e}). Using Kokoro fallback.")
+            from pipeline.tts.kokoro import KokoroTTSProvider
+            return KokoroTTSProvider()
+    elif b in ("xtts", "cosyvoice"):
+        # Placeholder for other experimental engines
+        from pipeline.tts.kokoro import KokoroTTSProvider
+        return KokoroTTSProvider()
     else:
         raise ValueError(f"Unknown or unsupported TTS backend: '{backend}'")
 
@@ -61,38 +67,66 @@ def handle_tts_synthesize_task(
     voice = payload.get("voice")
     backend = payload.get("backend", "kokoro")
     transport_name = payload.get("transport", "base64")
+    ref_audio_b64 = payload.get("ref_audio_b64")
+    ref_text = payload.get("ref_text")
+    voice_prompt = payload.get("voice_prompt")
 
     work_dir = tmp_dir or tempfile.gettempdir()
     os.makedirs(work_dir, exist_ok=True)
     temp_wav_path = os.path.join(work_dir, f"tts_clip_{int(time.time() * 1000)}.wav")
+    temp_ref_path = None
+
+    # Handle incoming base64 reference audio for voice cloning
+    if ref_audio_b64:
+        import base64
+        temp_ref_path = os.path.join(work_dir, f"ref_audio_{int(time.time() * 1000)}.mp3")
+        with open(temp_ref_path, "wb") as rf:
+            rf.write(base64.b64decode(ref_audio_b64.encode("ascii")))
+        if ref_text:
+            txt_path = os.path.splitext(temp_ref_path)[0] + ".txt"
+            with open(txt_path, "w", encoding="utf-8") as tf:
+                tf.write(ref_text)
+        voice = temp_ref_path
+    elif voice_prompt:
+        voice = voice_prompt
 
     try:
-        engine = _get_engine(backend)
-    except Exception as e:
-        if not allow_fallback:
-            raise
-        logger.warning(f"Backend '{backend}' failed to load ({e}). Using Kokoro fallback.")
-        from pipeline.tts.kokoro import KokoroTTSProvider
-        engine = KokoroTTSProvider()
-
-    audio_res = engine.synthesize(text=text, voice=voice, output_path=temp_wav_path)
-
-    transport = get_audio_transport(transport_name)
-    result_data = transport.package_result(
-        audio_path=audio_res.audio_path,
-        duration_sec=audio_res.duration_sec,
-        sample_rate=audio_res.sample_rate,
-        backend=backend,
-    )
-
-    # Clean up local temporary file if encoded in base64
-    if transport_name == "base64" and os.path.exists(temp_wav_path):
         try:
-            os.remove(temp_wav_path)
-        except OSError:
-            pass
+            engine = _get_engine(backend)
+        except Exception as e:
+            if not allow_fallback:
+                raise
+            logger.warning(f"Backend '{backend}' failed to load ({e}). Using Kokoro fallback.")
+            from pipeline.tts.kokoro import KokoroTTSProvider
+            engine = KokoroTTSProvider()
 
-    return result_data
+        audio_res = engine.synthesize(text=text, voice=voice, output_path=temp_wav_path)
+
+        transport = get_audio_transport(transport_name)
+        result_data = transport.package_result(
+            audio_path=audio_res.audio_path,
+            duration_sec=audio_res.duration_sec,
+            sample_rate=audio_res.sample_rate,
+            backend=backend,
+        )
+
+        # Clean up local temporary file if encoded in base64
+        if transport_name == "base64" and os.path.exists(temp_wav_path):
+            try:
+                os.remove(temp_wav_path)
+            except OSError:
+                pass
+
+        return result_data
+    finally:
+        if temp_ref_path and os.path.exists(temp_ref_path):
+            try:
+                os.remove(temp_ref_path)
+                txt_path = os.path.splitext(temp_ref_path)[0] + ".txt"
+                if os.path.exists(txt_path):
+                    os.remove(txt_path)
+            except OSError:
+                pass
 
 
 def run_queue_worker(database_url: str, backend: str, poll_interval: float = 1.0, idle_exit: int = 0) -> None:
@@ -174,6 +208,9 @@ def run_http_server(port: int = 8000, ngrok: bool = False, ngrok_token: Optional
         text: str
         voice: Optional[str] = None
         backend: Optional[str] = None
+        ref_audio_b64: Optional[str] = None
+        ref_text: Optional[str] = None
+        voice_prompt: Optional[str] = None
 
     @app.get("/health")
     def health():
@@ -183,7 +220,15 @@ def run_http_server(port: int = 8000, ngrok: bool = False, ngrok_token: Optional
     def synthesize(req: SynthRequest):
         tmp_dir = tempfile.mkdtemp(prefix="tts_http_")
         res = handle_tts_synthesize_task(
-            payload={"text": req.text, "voice": req.voice, "backend": req.backend or backend, "transport": "base64"},
+            payload={
+                "text": req.text,
+                "voice": req.voice,
+                "backend": req.backend or backend,
+                "transport": "base64",
+                "ref_audio_b64": req.ref_audio_b64,
+                "ref_text": req.ref_text,
+                "voice_prompt": req.voice_prompt,
+            },
             tmp_dir=tmp_dir,
         )
         import base64

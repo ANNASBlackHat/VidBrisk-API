@@ -101,11 +101,31 @@ class WorkerTTSProvider:
                 )
                 return None
 
+            # Resolve reference audio or prompt if provided
+            ref_audio_b64 = None
+            ref_text = None
+            voice_prompt = None
+            try:
+                from pipeline.tts.omni import resolve_voice_reference
+                ref_audio, r_text, v_prompt = resolve_voice_reference(voice)
+                if ref_audio and os.path.isfile(ref_audio):
+                    import base64
+                    with open(ref_audio, "rb") as rf:
+                        ref_audio_b64 = base64.b64encode(rf.read()).decode("ascii")
+                    ref_text = r_text
+                elif v_prompt:
+                    voice_prompt = v_prompt
+            except Exception as ex:
+                logger.debug(f"[WorkerTTSProvider] Error resolving voice reference: {ex}")
+
             # 2. Dispatch synthesis request
             req_data = {
                 "text": text,
                 "voice": voice,
                 "backend": self.backend,
+                "ref_audio_b64": ref_audio_b64,
+                "ref_text": ref_text,
+                "voice_prompt": voice_prompt,
             }
             logger.info(f"[WorkerTTSProvider] Sending direct HTTP request to {synth_url}...")
             s_resp = requests.post(synth_url, json=req_data, headers=headers, timeout=self.timeout_sec)
@@ -220,8 +240,8 @@ class WorkerTTSProvider:
 
         remote_result: Optional[AudioResult] = None
 
-        # 1. Try Direct HTTP / ngrok if transport is ngrok and URL is present
-        if self.transport_name in ("ngrok", "http") and self.ngrok_url:
+        # 1. Try Direct HTTP / ngrok if ngrok URL is present
+        if self.ngrok_url:
             remote_result = self._synthesize_via_direct_http(
                 text=text, voice=voice, output_path=dest_path
             )

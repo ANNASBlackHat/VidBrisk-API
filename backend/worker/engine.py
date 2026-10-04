@@ -44,11 +44,11 @@ def resolve_tts_provider(provider_name: Optional[str]) -> TTSProvider:
         return KokoroTTSProvider()
     elif p_name == "chatterbox":
         return ChatterboxTTSProvider()
-    elif p_name in ("supersonic", "supersonic3", "supertonic", "supertonic3", "supertonic-3", "supersonic-3"):
-        return SuperSonicTTSProvider()
+    elif p_name in ("omni", "omnivoice", "worker"):
+        return get_tts_provider(p_name)
     elif p_name == "mock":
         return MockTTSProvider()
-    return KokoroTTSProvider()
+    return get_tts_provider(p_name)
 
 
 def resolve_aligner_provider(provider_name: Optional[str]) -> AlignerProvider:
@@ -260,6 +260,7 @@ def worker_tick(
                         beat=beat,
                         provider=tts_engine,
                         output_dir=job_audio_dir,
+                        voice=job.voice,
                     )
                     duration_synth = time.time() - t0
                     voice_clips_data.append(vc.model_dump())

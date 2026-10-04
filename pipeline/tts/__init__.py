@@ -28,11 +28,17 @@ def get_tts_provider(provider_name: Optional[str] = None) -> TTSProvider:
         return ChatterboxTTSProvider()
     elif name in ("supersonic", "supersonic3", "supertonic", "supertonic3", "supertonic-3", "supersonic-3"):
         return SuperSonicTTSProvider()
+    elif name in ("omni", "omnivoice"):
+        try:
+            from pipeline.tts.omni import OmniTTSProvider
+            return OmniTTSProvider()
+        except Exception:
+            return WorkerTTSProvider(backend="omni")
     elif name == "mock":
         return MockTTSProvider()
     else:
         raise ValueError(
-            f"Unknown TTS provider '{name}'. Supported: kokoro, chatterbox, supersonic, worker, mock"
+            f"Unknown TTS provider '{name}'. Supported: kokoro, omni, chatterbox, supersonic, worker, mock"
         )
 
 

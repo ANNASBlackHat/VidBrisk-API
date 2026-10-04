@@ -37,12 +37,13 @@ class Settings(BaseSettings):
 
     # TTS Settings
     DEFAULT_TTS_PROVIDER: Literal[
-        "kokoro", "chatterbox", "mock", "supersonic", "supersonic3", "supertonic", "supertonic3", "worker"
+        "kokoro", "omni", "omnivoice", "chatterbox", "mock", "supersonic", "supersonic3", "supertonic", "supertonic3", "worker"
     ] = "kokoro"
     KOKORO_VOICE: str = "af_sarah"
     KOKORO_LANG: str = "en-us"
     SUPERSONIC_VOICE: str = "M1"
     SUPERSONIC_LANG: str = "en"
+    OMNI_VOICE_INSTRUCT: str = "calm, clear, natural documentary narration"
 
     # TTS Worker & Remote GPU settings
     TTS_WORKER_ENABLED: bool = False

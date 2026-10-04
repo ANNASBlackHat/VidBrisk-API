@@ -35,6 +35,7 @@ def main():
     parser.add_argument("--genre", "-g", type=str, default=None, help="Genre/style skill (e.g. deep_sea_documentary, tech_explainer)")
     parser.add_argument("--channel", "-c", type=str, default=None, help="Channel profile name")
     parser.add_argument("--resolve", "-r", action="store_true", help="Also run Stage 5 footage search & assess/requery loop")
+    parser.add_argument("--threshold", "-t", type=float, default=0.25, help="Semantic similarity threshold for footage acceptance (default: 0.25)")
     parser.add_argument("--json", action="store_true", help="Output raw JSON instead of formatted text")
 
     args = parser.parse_args()
@@ -132,12 +133,17 @@ def main():
                 beat=b,
                 resolver=resolver,
                 top_k=3,
+                semantic_threshold=args.threshold,
             )
             status_val = getattr(updated_beat.footage_status, "value", str(updated_beat.footage_status))
             print(f"│  Footage Status: \033[1;33m{status_val}\033[0m (Requeries: {updated_beat.requery_count})")
             if candidates:
                 top = candidates[0]
-                print(f"│  Top Candidate: id={top.chunk_id} | score={top.score:.2f} | motion={top.motion_mean}")
+                motion_str = f"{top.motion_mean:.2f}" if top.motion_mean is not None else "None (legacy/static)"
+                cap_str = f" | \"{top.caption[:50]}...\"" if top.caption else ""
+                print(f"│  Top Candidate: id={top.chunk_id[:12]} | score={top.score:.2f} | motion={motion_str} | provider={top.provider}{cap_str}")
+                if len(candidates) > 1:
+                    print(f"│  Other Matches: {len(candidates)-1} other candidate(s) found (scores: {', '.join(f'{c.score:.2f}' for c in candidates[1:3])})")
             elif status_val == "inadequate":
                 print(f"│  Fallback: Overridden to Motion Graphic -> {updated_beat.motion_props.get('component')}")
 

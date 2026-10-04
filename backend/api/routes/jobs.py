@@ -49,7 +49,8 @@ async def create_new_job(
             )
 
         title = form.get("title")
-        tts_provider = form.get("tts_provider") or form.get("voice_type") or "kokoro"
+        tts_provider = form.get("tts_provider") or "kokoro"
+        voice = form.get("voice") or form.get("voice_prompt") or form.get("voice_type")
         aligner_provider = form.get("aligner_provider") or "mock"
         target_orientation = form.get("target_orientation") or "horizontal"
 
@@ -84,6 +85,7 @@ async def create_new_job(
             title=str(title) if title else None,
             raw_input=str(raw_input).strip(),
             tts_provider=str(tts_provider),
+            voice=str(voice).strip() if voice else None,
             aligner_provider=str(aligner_provider),
             target_orientation=target_orientation,
             auto_approve=auto_approve,

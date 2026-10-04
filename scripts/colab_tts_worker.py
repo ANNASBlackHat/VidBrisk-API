@@ -28,7 +28,7 @@ groups = [
     ["soundfile", "numpy", "pydantic", "pydantic-settings", "python-dotenv"],
     ["sqlalchemy", "psycopg2-binary", "requests"],
     ["fastapi", "uvicorn", "pyngrok"],
-    ["kokoro-onnx", "soundfile"],
+    ["kokoro-onnx", "soundfile", "omnivoice"],
 ]
 for group in groups:
     print(f"[setup] pip install {' '.join(group)} ...", flush=True)
@@ -40,19 +40,37 @@ REMOTE_RUN = '''
 """Unpack bundle, configure env, run the TTS worker."""
 import json
 import os
-import runpy
+import subprocess
 import sys
 import tarfile
 
 with tarfile.open("/content/tts_worker.tar.gz", "r:gz") as tf:
     tf.extractall("/content/tts_repo")
-sys.path.insert(0, "/content/tts_repo")
 
 with open("/content/tts_env.json") as f:
-    os.environ.update({k: str(v) for k, v in json.load(f).items()})
+    env_vars = {k: str(v) for k, v in json.load(f).items()}
 
-sys.argv = ["run_tts_worker.py", *EXTRA_ARGV]
-runpy.run_path("/content/tts_repo/scripts/run_tts_worker.py", run_name="__main__")
+env = os.environ.copy()
+env.update(env_vars)
+env["PYTHONPATH"] = f"/content/tts_repo:{env.get('PYTHONPATH', '')}"
+
+cmd = [sys.executable, "-u", "/content/tts_repo/scripts/run_tts_worker.py", *EXTRA_ARGV]
+proc = subprocess.Popen(
+    cmd,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.STDOUT,
+    text=True,
+    env=env,
+    bufsize=1,
+)
+
+for line in iter(proc.stdout.readline, ""):
+    sys.stdout.write(line)
+    sys.stdout.flush()
+
+proc.wait()
+if proc.returncode != 0:
+    raise RuntimeError(f"Worker exited with code {proc.returncode}")
 print("[run] done", flush=True)
 '''
 
@@ -127,7 +145,12 @@ def main() -> int:
         print(f"[dry-run] Remote argv: {extra_argv}")
         return 0
 
-    sh("colab", "new", "-s", args.session, "--gpu", args.gpu)
+    # Check if session already exists
+    session_exists = subprocess.run(["colab", "status", "-s", args.session], capture_output=True).returncode == 0
+    if not session_exists:
+        sh("colab", "new", "-s", args.session, "--gpu", args.gpu)
+    else:
+        print(f"[session] Reusing existing session '{args.session}'", flush=True)
     try:
         if not args.skip_setup:
             sh("colab", "exec", "--timeout", "3600", "-s", args.session, "-f", setup_path)

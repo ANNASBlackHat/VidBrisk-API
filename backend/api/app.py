@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from backend.api.routes.jobs import router as jobs_router
+from backend.api.routes.voices import router as voices_router
 from backend.models.db import init_db
 
 
@@ -78,8 +79,9 @@ def create_app() -> FastAPI:
     def get_health() -> dict[str, str]:
         return {"status": "ok", "service": "video-generation-pipeline"}
 
-    # Include Job routes
+    # Include API routes
     app.include_router(jobs_router)
+    app.include_router(voices_router)
 
     return app
 

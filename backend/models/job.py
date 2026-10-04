@@ -61,6 +61,7 @@ class VideoJob(Base):
 
     # Execution Options
     tts_provider: Mapped[str] = mapped_column(String(50), default="kokoro", nullable=False)
+    voice: Mapped[str | None] = mapped_column(String(255), nullable=True)
     aligner_provider: Mapped[str] = mapped_column(String(50), default="mock", nullable=False)
     target_orientation: Mapped[str] = mapped_column(String(20), default="horizontal", nullable=False)
     auto_approve: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

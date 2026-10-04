@@ -22,6 +22,7 @@ def create_job(session: Session, req: JobCreateRequest) -> VideoJob:
         title=title,
         raw_input=req.raw_input,
         tts_provider=req.tts_provider,
+        voice=req.voice,
         aligner_provider=req.aligner_provider,
         target_orientation=req.target_orientation,
         auto_approve=req.auto_approve,

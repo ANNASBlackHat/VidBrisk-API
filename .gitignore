@@ -78,6 +78,8 @@ models/*.json
 *.mov
 *.wav
 *.mp3
+!data/voices/*.mp3
+!data/voices/*.wav
 timeline.json
 
 # Operating System & IDE Files

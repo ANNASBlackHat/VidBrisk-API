@@ -10,7 +10,8 @@ class JobCreateRequest(BaseModel):
     """Payload for submitting a new video generation run."""
     title: Optional[str] = Field(default=None, max_length=255, description="Optional title or label for the video")
     raw_input: str = Field(..., min_length=5, description="Raw messy script or article text to generate a video from")
-    tts_provider: str = Field(default="kokoro", description="Voice synthesis provider: kokoro, supersonic, chatterbox, or mock")
+    tts_provider: str = Field(default="kokoro", description="Voice synthesis provider: kokoro, omni, supersonic, chatterbox, or mock")
+    voice: Optional[str] = Field(default=None, description="Voice preset ID, reference audio file, or voice design prompt")
     aligner_provider: str = Field(default="mock", description="Alignment provider: mock, easytranscriber, or whisperx")
     target_orientation: Literal["horizontal", "vertical", "square", "any"] = Field(
         default="horizontal",
@@ -73,6 +74,7 @@ class JobSummaryResponse(BaseModel):
     stage: JobStage
     status: JobStatus
     tts_provider: str
+    voice: Optional[str] = None
     aligner_provider: str
     target_orientation: str
     auto_approve: bool
