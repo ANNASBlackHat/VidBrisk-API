@@ -1,8 +1,11 @@
-"""Configuration management for Video Generation Pipeline."""
-
+import os
 from functools import lru_cache
 from typing import Literal, Optional
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Ensure .env is explicitly loaded into process environment
+load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -11,6 +14,12 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    # Proxy settings (automatically propagated to requests / urllib / sub-processes)
+    HTTP_PROXY: Optional[str] = None
+    HTTPS_PROXY: Optional[str] = None
+    ALL_PROXY: Optional[str] = None
+    NO_PROXY: Optional[str] = None
 
     # Gemini LLM settings
     GEMINI_API_KEY: Optional[str] = None
@@ -60,4 +69,17 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
-    return Settings()
+    s = Settings()
+    if s.HTTP_PROXY and "HTTP_PROXY" not in os.environ:
+        os.environ["HTTP_PROXY"] = s.HTTP_PROXY
+        os.environ["http_proxy"] = s.HTTP_PROXY
+    if s.HTTPS_PROXY and "HTTPS_PROXY" not in os.environ:
+        os.environ["HTTPS_PROXY"] = s.HTTPS_PROXY
+        os.environ["https_proxy"] = s.HTTPS_PROXY
+    if s.ALL_PROXY and "ALL_PROXY" not in os.environ:
+        os.environ["ALL_PROXY"] = s.ALL_PROXY
+        os.environ["all_proxy"] = s.ALL_PROXY
+    if s.NO_PROXY and "NO_PROXY" not in os.environ:
+        os.environ["NO_PROXY"] = s.NO_PROXY
+        os.environ["no_proxy"] = s.NO_PROXY
+    return s
