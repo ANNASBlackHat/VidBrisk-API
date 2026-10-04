@@ -5,7 +5,7 @@ from typing import Any, Optional
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/api/voices", tags=["Voices"])
+router = APIRouter(prefix="/voices", tags=["Voices"])
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 VOICES_DIR = os.path.join(ROOT_DIR, "data", "voices")

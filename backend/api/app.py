@@ -79,9 +79,11 @@ def create_app() -> FastAPI:
     def get_health() -> dict[str, str]:
         return {"status": "ok", "service": "video-generation-pipeline"}
 
-    # Include API routes
+    # Include API routes (both root and /api prefix for frontend compatibility)
     app.include_router(jobs_router)
+    app.include_router(jobs_router, prefix="/api")
     app.include_router(voices_router)
+    app.include_router(voices_router, prefix="/api")
 
     return app
 
