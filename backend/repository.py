@@ -130,6 +130,22 @@ def approve_job(
     elif job.stage == JobStage.RESOLVING_FOOTAGE:
         if candidates_override is not None:
             job.footage_candidates = candidates_override
+        # When human approves footage candidates, accept the top candidate for beats with footage
+        cands_map = job.footage_candidates or {}
+        if job.beats:
+            updated_beats = []
+            for b in job.beats:
+                beat_copy = dict(b)
+                cands = cands_map.get(b.get("id"), [])
+                if cands and (cands[0].get("storage_path") or cands[0].get("storage_url")):
+                    beat_copy["footage_status"] = "accepted"
+                    # If it was forced to motion fallback due to inadequate footage, restore narrative
+                    if beat_copy.get("beat_type") in ("typewriter", "kinetic", "swipe_deck", "quote", "chat_bubbles"):
+                        # only restore to narrative if the original intent was not explicitly a custom motion layout recipe
+                        if not (beat_copy.get("motion_props") and beat_copy["motion_props"].get("layout_recipe")):
+                            beat_copy["beat_type"] = "narrative"
+                updated_beats.append(beat_copy)
+            job.beats = updated_beats
         job.stage = JobStage.ASSEMBLING
         job.status = JobStatus.PENDING
     else:
