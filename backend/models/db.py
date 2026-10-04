@@ -1,11 +1,12 @@
-"""Database engine and session management for backend service."""
-
+import logging
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Generator
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from pipeline.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 def utc_now() -> datetime:
@@ -90,9 +91,13 @@ def _migrate_columns(engine) -> None:
                         conn.execute(text("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS genre VARCHAR(100);"))
                     else:
                         conn.execute(text("ALTER TABLE video_jobs ADD COLUMN genre VARCHAR(100);"))
+                if "voice" not in columns:
+                    if engine.dialect.name == "postgresql":
+                        conn.execute(text("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS voice VARCHAR(255);"))
+                    else:
+                        conn.execute(text("ALTER TABLE video_jobs ADD COLUMN voice VARCHAR(255);"))
     except Exception as e:
-        # Non-fatal if table not created yet or permission restricted
-        pass
+        logger.warning(f"Database column migration note: {e}")
 
 
 def init_db(database_url: str | None = None) -> None:
