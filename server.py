@@ -55,29 +55,23 @@ def main():
     # Initialize DB schemas
     init_db()
 
-    # Embedded worker thread
-    worker_thread = None
-    worker_runner = None
-    if not args.no_worker:
-        print("[Server] Starting embedded background worker thread...")
-        worker_runner = WorkerRunner(interval_sec=args.interval)
-        worker_thread = threading.Thread(target=worker_runner.start, daemon=True)
-        worker_thread.start()
+    if args.no_worker:
+        import os
+        os.environ["DISABLE_EMBEDDED_WORKER"] = "1"
 
     print(f"\n🚀 Video Generation Backend running at http://{args.host}:{args.port}")
     print(f"📖 Interactive API Docs available at http://{args.host}:{args.port}/docs\n")
 
-    try:
-        uvicorn.run(
-            "backend.api.app:app",
-            host=args.host,
-            port=args.port,
-            reload=args.reload,
-        )
-    finally:
-        if worker_runner:
-            print("[Server] Stopping embedded worker...")
-            worker_runner.running = False
+    import os
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+
+    uvicorn.run(
+        "backend.api.app:app",
+        host=args.host,
+        port=args.port,
+        reload=args.reload,
+        reload_dirs=[root_dir] if args.reload else None,
+    )
 
 
 if __name__ == "__main__":

@@ -1,8 +1,7 @@
-"""Voice Discovery and AI Prompt Recommendation API Routes."""
-
 import os
 from typing import Any, Optional
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/voices", tags=["Voices"])
@@ -17,6 +16,7 @@ class VoiceItem(BaseModel):
     filename: str
     has_text: bool
     transcript: Optional[str] = None
+    preview_url: Optional[str] = None
 
 
 class VoiceListResponse(BaseModel):
@@ -63,6 +63,7 @@ def list_available_voices():
                     filename=fname,
                     has_text=has_txt,
                     transcript=transcript,
+                    preview_url=f"/api/voices/{base}/audio",
                 )
             )
 
@@ -72,6 +73,31 @@ def list_available_voices():
         custom_voices=custom_voices,
         default_instruct=DEFAULT_VOICE_INSTRUCT,
         valid_tags=sorted(list(VALID_INSTRUCT_TAGS)),
+    )
+
+
+@router.api_route("/{voice_id}/audio", methods=["GET", "HEAD"])
+def get_voice_audio(voice_id: str):
+    """Streams the reference audio file for a voice profile."""
+    os.makedirs(VOICES_DIR, exist_ok=True)
+    safe_id = os.path.basename(voice_id).strip()
+    matched_file = None
+
+    for fname in os.listdir(VOICES_DIR):
+        base, ext = os.path.splitext(fname)
+        if base == safe_id and ext.lower() in (".mp3", ".wav", ".m4a", ".flac", ".ogg"):
+            matched_file = os.path.join(VOICES_DIR, fname)
+            break
+
+    if not matched_file or not os.path.isfile(matched_file):
+        raise HTTPException(status_code=404, detail=f"Voice audio for '{voice_id}' not found.")
+
+    ext = os.path.splitext(matched_file)[1].lower()
+    media_type = "audio/mpeg" if ext == ".mp3" else f"audio/{ext.lstrip('.')}"
+    return FileResponse(
+        path=matched_file,
+        media_type=media_type,
+        filename=os.path.basename(matched_file),
     )
 
 
