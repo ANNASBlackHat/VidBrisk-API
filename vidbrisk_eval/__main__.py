@@ -37,7 +37,10 @@ def main():
             tag=args.tag,
             cache_selection=args.cache_selection,
         )
+        from vidbrisk_eval.metrics import calculate_metrics_for_run
+        metrics = calculate_metrics_for_run(run_dir)
         print(f"Run completed successfully: {run_dir}")
+        print("Overall metrics:", json.dumps(metrics.get("overall", {}), indent=2))
 
 
 if __name__ == "__main__":
