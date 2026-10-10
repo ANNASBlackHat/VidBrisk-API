@@ -21,6 +21,8 @@ def resolve_footage(
     top_k: int = 5,
     target_orientation: Optional[OrientationType] = "horizontal",
     provider: Optional[str] = None,
+    exclude_source_video_ids: Optional[list[str]] = None,
+    exclude_chunk_ids: Optional[list[str]] = None,
 ) -> list[CandidateChunk]:
     """Resolves raw footage candidates for a single beat via Footage Engine search."""
     motion_props = beat.motion_props or {}
@@ -53,6 +55,10 @@ def resolve_footage(
     }
     if provider is not None:
         kwargs["provider"] = provider
+    if exclude_source_video_ids is not None:
+        kwargs["exclude_source_video_ids"] = exclude_source_video_ids
+    if exclude_chunk_ids is not None:
+        kwargs["exclude_chunk_ids"] = exclude_chunk_ids
     return footage_engine.search_candidates(**kwargs)
 
 
@@ -66,6 +72,8 @@ def resolve_beat_visuals(
     motion_floor: float = 5.0,
     max_requeries: int = 2,
     llm_client: Optional[GeminiLLMClient] = None,
+    exclude_source_video_ids: Optional[list[str]] = None,
+    exclude_chunk_ids: Optional[list[str]] = None,
 ) -> tuple[Beat, list[CandidateChunk]]:
     """Executes the full staged Beat -> Search -> Assess/Requery -> Concept loop.
 
@@ -100,6 +108,8 @@ def resolve_beat_visuals(
         top_k=top_k,
         target_orientation=target_orientation,
         provider=provider,
+        exclude_source_video_ids=exclude_source_video_ids,
+        exclude_chunk_ids=exclude_chunk_ids,
     )
 
     # Stage 4: Assess & Decide
@@ -122,6 +132,8 @@ def resolve_beat_visuals(
             top_k=top_k,
             target_orientation=target_orientation,
             provider=provider,
+            exclude_source_video_ids=exclude_source_video_ids,
+            exclude_chunk_ids=exclude_chunk_ids,
         )
 
         status = assess_beat_candidates(

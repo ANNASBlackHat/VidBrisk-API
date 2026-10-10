@@ -180,6 +180,8 @@ class FootageResolver:
         media_type: Optional[str] = None,
         target_orientation: Optional[OrientationType] = "horizontal",
         provider: Optional[str] = None,
+        exclude_source_video_ids: Optional[list[str]] = None,
+        exclude_chunk_ids: Optional[list[str]] = None,
     ) -> list[CandidateChunk]:
         """Queries Footage Engine (Worker with in-process fallback) with orientation prioritization."""
         if not query or not query.strip():
@@ -188,8 +190,11 @@ class FootageResolver:
         eff_provider = provider or self.default_provider
         search_fn, search_filters_cls = self._load_footage_engine()
 
-        # Fetch slightly larger candidate pool to allow orientation filtering
-        fetch_k = top_k * 2 if target_orientation and target_orientation != "any" else top_k
+        # Fetch slightly larger candidate pool to allow orientation and exclusion filtering
+        multiplier = 2
+        if exclude_source_video_ids or exclude_chunk_ids:
+            multiplier += 2
+        fetch_k = top_k * multiplier if (target_orientation and target_orientation != "any") or exclude_source_video_ids or exclude_chunk_ids else top_k
 
         candidates: Optional[list[CandidateChunk]] = None
 
@@ -234,6 +239,15 @@ class FootageResolver:
                         tags=getattr(r, "tags", []) or [],
                     )
                 )
+
+        # Apply exclusions (e.g. for Mode B substitution evaluation)
+        if candidates and (exclude_source_video_ids or exclude_chunk_ids):
+            ex_media = set(exclude_source_video_ids or [])
+            ex_chunks = set(exclude_chunk_ids or [])
+            candidates = [
+                c for c in candidates
+                if c.media_item_id not in ex_media and c.chunk_id not in ex_chunks
+            ]
 
         # Prioritize matching orientation if specified
         if target_orientation and target_orientation != "any" and candidates:
