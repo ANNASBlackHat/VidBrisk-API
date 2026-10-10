@@ -1,0 +1,315 @@
+{
+  "case_id": "wreck-001",
+  "video_id": "a15b1968-f4b5-4e3c-822c-791b71082cd7",
+  "title": "Deep Wreck Files: Episode 1 (Part 1)",
+  "topic": "naval_history",
+  "language": "en",
+  "orientation": "horizontal",
+  "metadata": {
+    "total_beats_in_range": 18,
+    "included_beats": 16,
+    "excluded_beats_count": 2,
+    "excluded_beats": [
+      {
+        "beat_id": "b5",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "stat"
+      },
+      {
+        "beat_id": "b15",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "stat"
+      }
+    ]
+  },
+  "beats": [
+    {
+      "beat_id": "b1",
+      "start": 0.0,
+      "end": 10.0,
+      "vo_text": "Somewhere in the waters off the north coast of Scotland, there's a patch of sea with nothing on it. No dive boats. No buoys marking a popular wreck site.",
+      "visual_intent": "Cinematic wide drone shot of a grey, cold North Sea under an overcast sky, completely empty ocean surface, gentle swells.",
+      "original_clips": [
+        {
+          "clip_id": "939a4986-be2b-4998-9e08-ea42defb9307",
+          "source_video_id": "8ec45be6-e1bf-406a-9c0c-042282f86e25",
+          "start": 15.0,
+          "end": 25.0
+        }
+      ]
+    },
+    {
+      "beat_id": "b2",
+      "start": 10.0,
+      "end": 16.54,
+      "vo_text": "Just one lonely marker, and a warning painted on it that most people never get close enough to read.",
+      "visual_intent": "A weathered, solitary green navigational buoy bobbing in choppy dark water, stenciled warning text visible as the camera pushes in.",
+      "original_clips": [
+        {
+          "clip_id": "8578449a-8d45-4e2f-8bfc-4aff12d4846a",
+          "source_video_id": "0f75402e-857e-4fc7-ba46-94ec4b073c7c",
+          "start": 6.73,
+          "end": 13.27
+        }
+      ]
+    },
+    {
+      "beat_id": "b3",
+      "start": 16.54,
+      "end": 26.17,
+      "vo_text": "Beneath that buoy, in water shallow enough that recreational divers could reach it in minutes, lies one of the best-preserved battleships in the world.",
+      "visual_intent": "Underwater point-of-view shot looking down into dark, murky green depths where the massive hull of a sunken warship looms out of the gloom.",
+      "original_clips": [
+        {
+          "clip_id": "f93db511-a0c9-460f-b218-43175d728a5b",
+          "source_video_id": "1275d066-6062-45eb-9771-8997d9375d46",
+          "start": 0.0,
+          "end": 6.94
+        },
+        {
+          "clip_id": "d83b7a4f-ba8e-499d-9982-99c05629d6c7",
+          "source_video_id": "da39d523-b8e3-4902-b29d-c66434215cfe",
+          "start": 0.0,
+          "end": 2.69
+        }
+      ]
+    },
+    {
+      "beat_id": "b4",
+      "start": 26.17,
+      "end": 36.18,
+      "vo_text": "Over eight hundred men are still inside it. And for more than forty years, it has been illegal \u2014 under UK law \u2014 for almost anyone to go down and see it.",
+      "visual_intent": "Dramatic close-up of a rusted metal plaque or legal seal bolted to steel, with cinematic underwater lighting filtering down.",
+      "original_clips": [
+        {
+          "clip_id": "cc32952c-78c9-48d6-a8f8-0e12cb925cce",
+          "source_video_id": "cf20e9b6-c6e8-4e7e-8f9b-98a48b3dd2c0",
+          "start": 0.0,
+          "end": 4.0
+        },
+        {
+          "clip_id": "365fe98a-99e6-4134-85c1-fc03ab02bddf",
+          "source_video_id": "11cc52a9-d567-4c29-841c-d8b046a782e3",
+          "start": 12.67,
+          "end": 14.17
+        },
+        {
+          "clip_id": "65e0a9bd-314b-44d5-ae2e-6325e99082cc",
+          "source_video_id": "11cc52a9-d567-4c29-841c-d8b046a782e3",
+          "start": 40.73,
+          "end": 45.1
+        },
+        {
+          "clip_id": "920b579e-84e2-453e-8103-77ec14e44210",
+          "source_video_id": "2f68a69e-c999-4a04-9c6b-87d6cf3f884d",
+          "start": 0.0,
+          "end": 0.14
+        }
+      ]
+    },
+    {
+      "beat_id": "b6",
+      "start": 45.06,
+      "end": 51.0,
+      "vo_text": "Nobody has fully explained how long it will keep happening \u2014 or what happens when it stops.",
+      "visual_intent": "Slow pan across the murky, light-starved side of a submerged steel bulkhead covered in marine growth.",
+      "original_clips": [
+        {
+          "clip_id": "b7aa4399-3f1b-474c-b049-75d0aea49da1",
+          "source_video_id": "ecb6b191-340b-4d64-a4b0-59c5d32a1848",
+          "start": 6.53,
+          "end": 12.47
+        }
+      ]
+    },
+    {
+      "beat_id": "b7",
+      "start": 51.0,
+      "end": 62.86,
+      "vo_text": "To understand why this wreck is off-limits, you have to go back to October 1939 \u2014 five weeks into the Second World War \u2014 to a body of water called Scapa Flow.",
+      "visual_intent": "Archival sepia-toned or desaturated panning photograph of a British naval harbor filled with warships in the late 1930s.",
+      "original_clips": [
+        {
+          "clip_id": "8eea546e-7a23-46f1-91e5-b327664c899e",
+          "source_video_id": "cc52b08b-8fc2-4d5f-a9f7-2de18deb8321",
+          "start": 10.0,
+          "end": 20.0
+        },
+        {
+          "clip_id": "b65df8b2-2aea-4a6a-86d9-337e9d61bbbc",
+          "source_video_id": "cc52b08b-8fc2-4d5f-a9f7-2de18deb8321",
+          "start": 15.0,
+          "end": 16.86
+        }
+      ]
+    },
+    {
+      "beat_id": "b8",
+      "start": 62.86,
+      "end": 73.96,
+      "vo_text": "Scapa Flow is a natural harbor in the Orkney Islands, ringed by land on almost every side. For decades it had been the Royal Navy's main fleet anchorage in the north.",
+      "visual_intent": "Aerial map animation zooming into the Orkney Islands, highlighting the enclosed geography of Scapa Flow.",
+      "original_clips": [
+        {
+          "clip_id": "42b640f2-4581-47a3-97e8-8b7fe5f69ac5",
+          "source_video_id": "f86f5859-6edd-46d5-bf52-e742ae4ef83e",
+          "start": 27.05,
+          "end": 38.15
+        }
+      ]
+    },
+    {
+      "beat_id": "b9",
+      "start": 73.96,
+      "end": 84.53,
+      "vo_text": "The entrances were narrow, the currents were vicious, and the Navy believed that made the anchorage effectively unreachable by enemy submarines. They were wrong.",
+      "visual_intent": "Dramatic graphic representation of turbulent ocean straits with dotted lines indicating supposed impenetrable defenses.",
+      "original_clips": [
+        {
+          "clip_id": "b630c4ce-6279-4bb5-bd4b-69441bdf877b",
+          "source_video_id": "f1070d1d-ff73-49c5-bdcc-37867b0bec7e",
+          "start": 13.71,
+          "end": 24.28
+        }
+      ]
+    },
+    {
+      "beat_id": "b10",
+      "start": 84.53,
+      "end": 96.8,
+      "vo_text": "On the night of October 13th, a German submarine \u2014 U-47, commanded by a 30-year-old officer named G\u00fcnther Prien \u2014 threaded its way through one of those 'impossible' gaps.",
+      "visual_intent": "Atmospheric, low-light dramatic recreation of a World War II U-boat conning tower slicing through dark, icy water at night.",
+      "original_clips": [
+        {
+          "clip_id": "7ef2feb2-29d2-48d0-813e-1c2f502192ed",
+          "source_video_id": "4b02cb7c-20d4-45b8-8258-5f7989827eb2",
+          "start": 0.0,
+          "end": 10.0
+        },
+        {
+          "clip_id": "d4cd6453-21f5-4515-b6b6-141ad4b165e4",
+          "source_video_id": "0bddf317-de96-4fbc-9053-9d7c6dbe0854",
+          "start": 0.0,
+          "end": 2.27
+        }
+      ]
+    },
+    {
+      "beat_id": "b11",
+      "start": 96.8,
+      "end": 109.42,
+      "vo_text": "Inside Scapa Flow, at anchor, sat HMS Royal Oak \u2014 a Revenge-class battleship built back in 1914, twenty-five years old by then, but still carrying over a thousand men.",
+      "visual_intent": "Archival photograph of HMS Royal Oak at sea, showing its massive dreadnought-era gun turrets and superstructure.",
+      "original_clips": [
+        {
+          "clip_id": "333f575d-23da-465d-bfef-1030c3a6beb6",
+          "source_video_id": "ae3ced63-defd-4a55-992f-97cfbbffdeeb",
+          "start": 0.0,
+          "end": 6.0
+        },
+        {
+          "clip_id": "911f462f-d9c3-4ae9-a068-a7b89c5f3d57",
+          "source_video_id": "05c270cf-d66a-4825-96f8-adcba5cc3dec",
+          "start": 0.0,
+          "end": 6.62
+        }
+      ]
+    },
+    {
+      "beat_id": "b12",
+      "start": 109.42,
+      "end": 121.39,
+      "vo_text": "In the early hours of October 14th, Prien fired his first spread of torpedoes. Most of the crew barely noticed \u2014 the explosion was small, and far from the ship's magazines.",
+      "visual_intent": "Subdued cinematic lighting inside a dark naval berth, simulating the muted thud of a distant explosion.",
+      "original_clips": [
+        {
+          "clip_id": "da252631-8ac5-4df0-badd-b40b6be2d1d6",
+          "source_video_id": "40b2cb4b-4fe8-4612-a2d7-3fd25b2c3a68",
+          "start": 9.02,
+          "end": 20.99
+        }
+      ]
+    },
+    {
+      "beat_id": "b13",
+      "start": 121.39,
+      "end": 131.04,
+      "vo_text": "Prien turned his boat around, reloaded, and fired again. This time there was no ambiguity. A second salvo struck the ship's side directly.",
+      "visual_intent": "Dramatic tactical animation showing a submarine firing torpedoes directly into an anchored battleship silhouette.",
+      "original_clips": [
+        {
+          "clip_id": "911f462f-d9c3-4ae9-a068-a7b89c5f3d57",
+          "source_video_id": "05c270cf-d66a-4825-96f8-adcba5cc3dec",
+          "start": 10.18,
+          "end": 19.83
+        }
+      ]
+    },
+    {
+      "beat_id": "b14",
+      "start": 131.04,
+      "end": 140.41,
+      "vo_text": "Royal Oak began to capsize almost immediately \u2014 she rolled and went under in a matter of minutes, far too fast for most of the crew to escape.",
+      "visual_intent": "Fast-moving kinetic typography over dark archival footage of a sinking warship listing heavily to port.",
+      "original_clips": [
+        {
+          "clip_id": "8578449a-8d45-4e2f-8bfc-4aff12d4846a",
+          "source_video_id": "0f75402e-857e-4fc7-ba46-94ec4b073c7c",
+          "start": 5.32,
+          "end": 14.69
+        }
+      ]
+    },
+    {
+      "beat_id": "b16",
+      "start": 150.09,
+      "end": 160.12,
+      "vo_text": "A nearby drifter, the Daisy II, managed to pull nearly 400 men from the freezing water. But for the majority of the crew, there was no time.",
+      "visual_intent": "Archival photo of rescue sailors pulling survivors onto a small wooden deck from choppy, dark seas.",
+      "original_clips": [
+        {
+          "clip_id": "d83b7a4f-ba8e-499d-9982-99c05629d6c7",
+          "source_video_id": "da39d523-b8e3-4902-b29d-c66434215cfe",
+          "start": 9.98,
+          "end": 20.01
+        }
+      ]
+    },
+    {
+      "beat_id": "b17",
+      "start": 160.12,
+      "end": 172.29,
+      "vo_text": "Royal Oak came to rest upside down in just over 30 meters of water \u2014 shallow enough that, in theory, any certified recreational diver could reach her. And for decades, some did.",
+      "visual_intent": "Underwater archival footage from the 1970s showing early scuba divers swimming around rusted steel structures with handheld lights.",
+      "original_clips": [
+        {
+          "clip_id": "f7b89d49-eddd-43d5-be9c-f2a41a168cb8",
+          "source_video_id": "014d2e11-d11f-4efb-940a-0bc37d0b6664",
+          "start": 9.41,
+          "end": 21.58
+        }
+      ]
+    },
+    {
+      "beat_id": "b18s",
+      "start": 172.29,
+      "end": 186.16,
+      "vo_text": "Through the 1960s and 70s, divers visited the wreck relatively freely. But some came for something else \u2014 brass fittings, portholes, and small artifacts that could be sold or kept as souvenirs.",
+      "visual_intent": "Close-up shot of barnacle-encrusted brass hardware and portholes on a submerged wreck, lit by a diver's flashlight beam.",
+      "original_clips": [
+        {
+          "clip_id": "d050c31c-b84d-4642-b3a8-d4fdb1da0144",
+          "source_video_id": "39680afb-40cc-49f6-94f1-ea76956efe53",
+          "start": 0.0,
+          "end": 10.0
+        },
+        {
+          "clip_id": "56c80660-f3dd-44bf-81a9-f939910b4ab5",
+          "source_video_id": "ca2d065a-7655-4022-9329-06b0b4f81b15",
+          "start": 40.0,
+          "end": 43.87
+        }
+      ]
+    }
+  ]
+}

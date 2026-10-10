@@ -1,0 +1,159 @@
+{
+  "case_id": "dynamic-001",
+  "video_id": "cd5fd764-ceb8-4b57-8d61-1814ac1845df",
+  "title": "Oceanographic Exploration & Tech",
+  "topic": "modern_oceanography",
+  "language": "en",
+  "orientation": "horizontal",
+  "metadata": {
+    "total_beats_in_range": 12,
+    "included_beats": 7,
+    "excluded_beats_count": 5,
+    "excluded_beats": [
+      {
+        "beat_id": "b2",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "kinetic"
+      },
+      {
+        "beat_id": "b4",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "stat"
+      },
+      {
+        "beat_id": "b10",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "abstract"
+      },
+      {
+        "beat_id": "b11",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "swipe_deck"
+      },
+      {
+        "beat_id": "b12",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "kinetic"
+      }
+    ]
+  },
+  "beats": [
+    {
+      "beat_id": "b1",
+      "start": 0.0,
+      "end": 9.97,
+      "vo_text": "On April 14th, 1912, the largest moving object ever built by human hands was sailing through the freezing dark of the North Atlantic.",
+      "visual_intent": "Cinematic dark ocean at night with foggy atmosphere, viewed from the deck of a massive Edwardian luxury steamship cutting through icy black water.",
+      "original_clips": [
+        {
+          "clip_id": "b900886f-5308-464a-aab5-13d0491b14c1",
+          "source_video_id": "39c3d843-4958-41ef-8021-818fec646df5",
+          "start": 8.02,
+          "end": 17.99
+        }
+      ]
+    },
+    {
+      "beat_id": "b3",
+      "start": 13.49,
+      "end": 20.78,
+      "vo_text": "The RMS Titanic set sail from Southampton with over two thousand passengers on board, bound for New York.",
+      "visual_intent": "Historical archival footage and sepia-toned photographs of passengers waving farewell from the crowded decks of the Titanic at Southampton dock.",
+      "original_clips": [
+        {
+          "clip_id": "21ad6d37-0949-4441-9063-9cf4340efe23",
+          "source_video_id": "2dfecdfc-74ae-4cb0-afc0-afc124f07e12",
+          "start": 1.35,
+          "end": 8.64
+        }
+      ]
+    },
+    {
+      "beat_id": "b5",
+      "start": 31.62,
+      "end": 40.02,
+      "vo_text": "Engineers believed she could survive flooding in any four of her sixteen watertight compartments. The iceberg breached six.",
+      "visual_intent": "Technical cutaway diagram of the RMS Titanic highlighting the sixteen watertight compartments across the ship's length.",
+      "original_clips": [
+        {
+          "clip_id": "a38668cd-cb54-4fc2-9b71-f2cf37101a1a",
+          "source_video_id": "6e3dd173-bd6a-4eff-9a9d-30c360fbd016",
+          "start": 70.8,
+          "end": 79.2
+        }
+      ]
+    },
+    {
+      "beat_id": "b6",
+      "start": 40.02,
+      "end": 49.18,
+      "vo_text": "At 11:40 PM, a lookout in the crow's nest spotted it too late. The ship struck the iceberg along her starboard side.",
+      "visual_intent": "Dramatic dramatization inside a dark crow's nest at night, looking down over the bow toward a towering shadowy iceberg dead ahead.",
+      "original_clips": [
+        {
+          "clip_id": "d83b7a4f-ba8e-499d-9982-99c05629d6c7",
+          "source_video_id": "da39d523-b8e3-4902-b29d-c66434215cfe",
+          "start": 10.42,
+          "end": 19.58
+        }
+      ]
+    },
+    {
+      "beat_id": "b7",
+      "start": 49.18,
+      "end": 54.65,
+      "vo_text": "The order went out across the decks, as the crew scrambled to load the lifeboats.",
+      "visual_intent": "Panicked passengers and crew members gathering on the sloping deck of an ocean liner at night under emergency red and white lighting.",
+      "original_clips": [
+        {
+          "clip_id": "862ed90c-4438-4162-baff-193f4237b19f",
+          "source_video_id": "c2dea75b-cdc5-4d46-8e2d-9abdc21ba90a",
+          "start": 89.76,
+          "end": 90.17
+        },
+        {
+          "clip_id": "0706c0f2-0fb6-4974-ad3b-c62eb951964c",
+          "source_video_id": "c2dea75b-cdc5-4d46-8e2d-9abdc21ba90a",
+          "start": 0.0,
+          "end": 5.06
+        }
+      ]
+    },
+    {
+      "beat_id": "b8",
+      "start": 54.65,
+      "end": 66.41,
+      "vo_text": "Titanic wasn't alone. Her sister ship, the Britannic, was nearly identical in design \u2014 and met her own disaster years later, sunk by a mine in the Aegean Sea during World War One.",
+      "visual_intent": "Comparative side-by-side architectural blueprint drawings of the RMS Titanic and her sister ship HMHS Britannic.",
+      "original_clips": [
+        {
+          "clip_id": "176bdf14-07af-4eb8-bc37-41404db24931",
+          "source_video_id": "3a3f465f-1921-4996-bf0d-ed7f45b06718",
+          "start": 0.0,
+          "end": 11.76
+        },
+        {
+          "clip_id": "525e63e0-3ef0-45fd-9b36-7087757da260",
+          "source_video_id": "393dc7ee-1058-4b03-a6db-cbb0ee77b740",
+          "start": 5.0,
+          "end": 16.76
+        }
+      ]
+    },
+    {
+      "beat_id": "b9",
+      "start": 66.41,
+      "end": 75.26,
+      "vo_text": "The wreck wasn't discovered until 1985, resting over twelve thousand feet down, split into two pieces on the ocean floor.",
+      "visual_intent": "Deep-sea underwater submersible spotlight illuminating the ghostly, rusted bow of the Titanic resting upright on the pitch-black ocean floor.",
+      "original_clips": [
+        {
+          "clip_id": "faef1039-1122-4c67-897c-baeae5c3efce",
+          "source_video_id": "528875d6-6fd2-47f6-96b8-ab5a1e29206e",
+          "start": 7.58,
+          "end": 16.43
+        }
+      ]
+    }
+  ]
+}

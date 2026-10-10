@@ -1,0 +1,367 @@
+{
+  "case_id": "ghost-001",
+  "video_id": "930ff842-f898-491d-b833-08c2dbb87d04",
+  "title": "Ghost Fleet of Scapa Flow (Part 1)",
+  "topic": "deep_sea_wrecks",
+  "language": "en",
+  "orientation": "horizontal",
+  "metadata": {
+    "total_beats_in_range": 17,
+    "included_beats": 17,
+    "excluded_beats_count": 0,
+    "excluded_beats": []
+  },
+  "beats": [
+    {
+      "beat_id": "b1",
+      "start": 0.0,
+      "end": 15.85,
+      "vo_text": "Somewhere in the waters off the north coast of Scotland, there's a patch of sea with nothing on it. No dive boats. No buoys marking a popular wreck site.",
+      "visual_intent": "Cinematic drone shot over a desolate, cold, dark grey Scottish coastal sea under an overcast sky.",
+      "original_clips": [
+        {
+          "clip_id": "2e9319cd-eec9-4776-9cce-0ddb1b1b77e9",
+          "source_video_id": "f86f5859-6edd-46d5-bf52-e742ae4ef83e",
+          "start": 0.0,
+          "end": 6.94
+        },
+        {
+          "clip_id": "f93db511-a0c9-460f-b218-43175d728a5b",
+          "source_video_id": "1275d066-6062-45eb-9771-8997d9375d46",
+          "start": 0.0,
+          "end": 6.94
+        },
+        {
+          "clip_id": "939a4986-be2b-4998-9e08-ea42defb9307",
+          "source_video_id": "8ec45be6-e1bf-406a-9c0c-042282f86e25",
+          "start": 15.0,
+          "end": 16.97
+        }
+      ]
+    },
+    {
+      "beat_id": "b2",
+      "start": 15.85,
+      "end": 26.19,
+      "vo_text": "Just one lonely marker, and a warning painted on it that most people never get close enough to read.",
+      "visual_intent": "Close-up shot of a single green navigational buoy bobbing in choppy dark water, with warning text stenciled on its side.",
+      "original_clips": [
+        {
+          "clip_id": "7c9594c3-b219-4db6-9210-36dcc2816be5",
+          "source_video_id": "42932446-5114-409d-b7c8-c758bd006710",
+          "start": 0.0,
+          "end": 10.0
+        },
+        {
+          "clip_id": "8eea546e-7a23-46f1-91e5-b327664c899e",
+          "source_video_id": "cc52b08b-8fc2-4d5f-a9f7-2de18deb8321",
+          "start": 10.0,
+          "end": 10.34
+        }
+      ]
+    },
+    {
+      "beat_id": "b3",
+      "start": 26.19,
+      "end": 46.85,
+      "vo_text": "Beneath that buoy, in water shallow enough that recreational divers could reach it in minutes, lies one of the best-preserved battleships in the world. Over eight hundred men are still inside it.",
+      "visual_intent": "Underwater medium shot looking up past a green mooring chain into deep, murky green water.",
+      "original_clips": [
+        {
+          "clip_id": "a583a9db-aecf-4bf7-b21f-dd3aa81be31b",
+          "source_video_id": "13296d3b-0b84-4a67-93ad-5c355204a6c7",
+          "start": 0.0,
+          "end": 11.0
+        },
+        {
+          "clip_id": "c0341b14-6cca-4f8a-9d54-af1bc9f7e654",
+          "source_video_id": "09bc2ebc-b7ba-4be3-9c1c-19c4c1ccb5d0",
+          "start": 0.0,
+          "end": 9.66
+        }
+      ]
+    },
+    {
+      "beat_id": "b4",
+      "start": 46.85,
+      "end": 57.56,
+      "vo_text": "And for more than forty years, it has been illegal \u2014 under UK law \u2014 for almost anyone to go down and see it.",
+      "visual_intent": "Dramatic underwater spotlight beam cutting through murky dark water, illuminating a rusted steel hull.",
+      "original_clips": [
+        {
+          "clip_id": "65e0a9bd-314b-44d5-ae2e-6325e99082cc",
+          "source_video_id": "11cc52a9-d567-4c29-841c-d8b046a782e3",
+          "start": 40.73,
+          "end": 45.1
+        },
+        {
+          "clip_id": "cc32952c-78c9-48d6-a8f8-0e12cb925cce",
+          "source_video_id": "cf20e9b6-c6e8-4e7e-8f9b-98a48b3dd2c0",
+          "start": 0.0,
+          "end": 4.0
+        },
+        {
+          "clip_id": "eb4fb133-c717-4ea6-85a3-8e4cda59476a",
+          "source_video_id": "746e56ab-5d97-478a-a90c-782df0940303",
+          "start": 40.0,
+          "end": 42.34
+        }
+      ]
+    },
+    {
+      "beat_id": "b5",
+      "start": 57.56,
+      "end": 72.18,
+      "vo_text": "Every single day, somewhere beneath that ship, a small amount of oil still rises to the surface. It's been doing that for over eighty years.",
+      "visual_intent": "Macro shot of iridescent oil droplets slowly detaching and rising upward toward the light.",
+      "original_clips": [
+        {
+          "clip_id": "dbcdb686-3300-4aaf-929a-d2c3caea1feb",
+          "source_video_id": "76647aff-430e-4472-a1d9-2fc3934a21a9",
+          "start": 0.19,
+          "end": 14.81
+        }
+      ]
+    },
+    {
+      "beat_id": "b6",
+      "start": 72.18,
+      "end": 81.63,
+      "vo_text": "Nobody has fully explained how long it will keep happening \u2014 or what happens when it stops.",
+      "visual_intent": "Surface water shot showing a faint, shimmering oily sheen spreading across dark, cold waves.",
+      "original_clips": [
+        {
+          "clip_id": "7bec5ada-aecc-40d9-9299-9b2bf501d240",
+          "source_video_id": "d50ee66f-4a24-45cb-920e-ba397b8cf99b",
+          "start": 0.28,
+          "end": 9.73
+        }
+      ]
+    },
+    {
+      "beat_id": "b7",
+      "start": 81.63,
+      "end": 97.64,
+      "vo_text": "To understand why this wreck is off-limits, you have to go back to October 1939 \u2014 five weeks into the Second World War \u2014 to a body of water called Scapa Flow.",
+      "visual_intent": "Archival sepia-toned photograph of a wartime naval harbor under cloudy skies.",
+      "original_clips": [
+        {
+          "clip_id": "9a5c7112-7eb5-47e5-affd-aa04b820e9d2",
+          "source_video_id": "b8aa10f7-05a5-4d7c-ad53-1c41e5bb96d8",
+          "start": 10.0,
+          "end": 20.0
+        },
+        {
+          "clip_id": "a3281a10-8bfd-4e39-b31b-12625e20bf65",
+          "source_video_id": "1b899bc6-30a7-45b9-a313-519748977c0f",
+          "start": 0.0,
+          "end": 6.01
+        }
+      ]
+    },
+    {
+      "beat_id": "b8",
+      "start": 97.64,
+      "end": 114.77,
+      "vo_text": "Scapa Flow is a natural harbor in the Orkney Islands, ringed by land on almost every side. For decades it had been the Royal Navy's main fleet anchorage in the north.",
+      "visual_intent": "Wide aerial shot of a calm, enclosed Scottish sea loch surrounded by rolling green hills.",
+      "original_clips": [
+        {
+          "clip_id": "a676febe-339f-4a39-bf75-47c70e2f09aa",
+          "source_video_id": "c1bc6514-3def-4f1d-a5da-9df55e69bbd5",
+          "start": 0.0,
+          "end": 14.0
+        },
+        {
+          "clip_id": "4bb543ba-dbf8-4e7e-80c4-5ea6e19b963b",
+          "source_video_id": "2cc46126-be36-4aed-bd1e-f607829edf00",
+          "start": 0.0,
+          "end": 3.13
+        }
+      ]
+    },
+    {
+      "beat_id": "b9",
+      "start": 114.77,
+      "end": 132.16,
+      "vo_text": "The entrances were narrow, the currents were vicious, and the Navy believed that made the anchorage effectively unreachable by enemy submarines. They were wrong.",
+      "visual_intent": "Dramatic close-up of a vintage Royal Navy compass spinning and shuddering against a dark background.",
+      "original_clips": [
+        {
+          "clip_id": "896eef87-c362-4525-b9a3-932e515467b7",
+          "source_video_id": "b8aa10f7-05a5-4d7c-ad53-1c41e5bb96d8",
+          "start": 61.95,
+          "end": 62.23
+        },
+        {
+          "clip_id": "0706c0f2-0fb6-4974-ad3b-c62eb951964c",
+          "source_video_id": "c2dea75b-cdc5-4d46-8e2d-9abdc21ba90a",
+          "start": 0.0,
+          "end": 6.26
+        },
+        {
+          "clip_id": "fea98514-9c41-4c1c-8209-c4c7bab5cf0f",
+          "source_video_id": "812556df-3a14-4277-8fa1-4f35f8361bdc",
+          "start": 0.0,
+          "end": 10.85
+        }
+      ]
+    },
+    {
+      "beat_id": "b10",
+      "start": 132.16,
+      "end": 148.17,
+      "vo_text": "On the night of October 13th, a German submarine \u2014 U-47, commanded by 30-year-old G\u00fcnther Prien \u2014 threaded its way through one of those impossible gaps.",
+      "visual_intent": "Archival black-and-white photo of a German U-boat cutting through dark, choppy ocean waters at night.",
+      "original_clips": [
+        {
+          "clip_id": "62dccc2c-ef48-483e-8023-2e6c898a98f6",
+          "source_video_id": "cc52b08b-8fc2-4d5f-a9f7-2de18deb8321",
+          "start": 0.0,
+          "end": 10.0
+        },
+        {
+          "clip_id": "7744fb71-892d-4b6c-9aa7-a0a56cf76aba",
+          "source_video_id": "cc52b08b-8fc2-4d5f-a9f7-2de18deb8321",
+          "start": 5.0,
+          "end": 11.01
+        }
+      ]
+    },
+    {
+      "beat_id": "b11",
+      "start": 148.17,
+      "end": 161.4,
+      "vo_text": "Inside Scapa Flow, at anchor, sat HMS Royal Oak \u2014 a Revenge-class battleship built back in 1914, carrying over a thousand men.",
+      "visual_intent": "Historical blueprint and photograph collage of a massive dreadnought battleship at anchor.",
+      "original_clips": [
+        {
+          "clip_id": "46b832b6-2a44-4adb-b66b-525cf84d3d9e",
+          "source_video_id": "9192a90e-2422-479e-9cc1-536b2203b625",
+          "start": 0.0,
+          "end": 13.23
+        }
+      ]
+    },
+    {
+      "beat_id": "b12",
+      "start": 161.4,
+      "end": 178.54,
+      "vo_text": "In the early hours of October 14th, Prien fired his first spread of torpedoes. Most of the crew barely noticed \u2014 the explosion was small, and far from the magazines.",
+      "visual_intent": "Low-key cinematic reenactment lighting of a submarine periscope view looking toward a distant anchored warship silhouette.",
+      "original_clips": [
+        {
+          "clip_id": "7ef2feb2-29d2-48d0-813e-1c2f502192ed",
+          "source_video_id": "4b02cb7c-20d4-45b8-8258-5f7989827eb2",
+          "start": 0.0,
+          "end": 10.0
+        },
+        {
+          "clip_id": "2282e1a3-6324-41b7-bb54-c3f91932489d",
+          "source_video_id": "3295b96e-30ef-4948-9599-b596339301cf",
+          "start": 0.0,
+          "end": 7.14
+        }
+      ]
+    },
+    {
+      "beat_id": "b13",
+      "start": 178.54,
+      "end": 193.16,
+      "vo_text": "Prien turned his boat around, reloaded, and fired again. This time there was no ambiguity. A second salvo struck the ship's side directly.",
+      "visual_intent": "Dramatic graphic representation of torpedo tracks converging on a battleship hull silhouette in dark blue water.",
+      "original_clips": [
+        {
+          "clip_id": "15af4933-0f67-49ed-9088-ea35332409a1",
+          "source_video_id": "e4797bfa-59bf-4309-a727-79729d02d36f",
+          "start": 0.0,
+          "end": 5.0
+        },
+        {
+          "clip_id": "3d3cd0a9-786e-44a0-b96f-d1a8154bc145",
+          "source_video_id": "0fcbea9a-d708-4d20-81ad-b920fc334e8c",
+          "start": 90.0,
+          "end": 99.62
+        }
+      ]
+    },
+    {
+      "beat_id": "b14",
+      "start": 193.16,
+      "end": 207.65,
+      "vo_text": "Royal Oak began to capsize almost immediately \u2014 she rolled and went under in a matter of minutes, far too fast for most of the crew to escape.",
+      "visual_intent": "Cinematic underwater motion graphic showing a massive battleship hull rolling over and sinking into the abyss.",
+      "original_clips": [
+        {
+          "clip_id": "2282e1a3-6324-41b7-bb54-c3f91932489d",
+          "source_video_id": "3295b96e-30ef-4948-9599-b596339301cf",
+          "start": 0.0,
+          "end": 13.0
+        },
+        {
+          "clip_id": "eb4fb133-c717-4ea6-85a3-8e4cda59476a",
+          "source_video_id": "746e56ab-5d97-478a-a90c-782df0940303",
+          "start": 40.0,
+          "end": 41.49
+        }
+      ]
+    },
+    {
+      "beat_id": "b15",
+      "start": 207.65,
+      "end": 224.53,
+      "vo_text": "Eight hundred and thirty-three men and boys died that night. Some were as young as fourteen. It remains one of the deadliest single losses in Royal Navy history.",
+      "visual_intent": "Solemn memorial visual with stacked typographic counters and archival sailor portraits fading into shadow.",
+      "original_clips": [
+        {
+          "clip_id": "551db71f-b49b-4d87-b4b9-a20200364a28",
+          "source_video_id": "3656a197-74e3-4190-ae14-c711afc77b1e",
+          "start": 0.0,
+          "end": 16.88
+        }
+      ]
+    },
+    {
+      "beat_id": "b16",
+      "start": 224.53,
+      "end": 238.9,
+      "vo_text": "A nearby drifter, the Daisy II, managed to pull nearly 400 men from the freezing water. But for the majority of the crew, there was no time.",
+      "visual_intent": "Archival black-and-white photograph of exhausted sailors wrapped in blankets on a rescue vessel deck.",
+      "original_clips": [
+        {
+          "clip_id": "550ddda0-ae7d-4cdb-abd5-84197dd6452f",
+          "source_video_id": "5ce888ed-b486-482b-87f4-1c6c4e0af720",
+          "start": 40.0,
+          "end": 50.0
+        },
+        {
+          "clip_id": "0ab05ce6-d7b1-4162-8db6-d4be60ddd4fe",
+          "source_video_id": "b43f2453-b1f3-46df-adae-37cffd0dfe1d",
+          "start": 0.0,
+          "end": 4.37
+        }
+      ]
+    },
+    {
+      "beat_id": "b17",
+      "start": 238.9,
+      "end": 254.53,
+      "vo_text": "Royal Oak came to rest upside down in just over 30 meters of water \u2014 shallow enough that, in theory, any certified recreational diver could reach her.",
+      "visual_intent": "3D bathymetric cross-section graphic showing a sunken ship resting upside down on the seabed 30 meters below the surface.",
+      "original_clips": [
+        {
+          "clip_id": "b5fce678-a4bb-4288-8166-820748821099",
+          "source_video_id": "7d540826-daf9-46c0-bc69-0f4db768d722",
+          "start": 40.0,
+          "end": 50.0
+        },
+        {
+          "clip_id": "a5205ddb-2038-462e-8b67-f37cc4a79255",
+          "source_video_id": "7d540826-daf9-46c0-bc69-0f4db768d722",
+          "start": 35.0,
+          "end": 40.63
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "case_id": "abyss-001",
+  "video_id": "ab454cfb-30c3-4a45-9810-c4682f9c5571",
+  "title": "Abyss Descent",
+  "topic": "ocean_abyss",
+  "language": "en",
+  "orientation": "horizontal",
+  "metadata": {
+    "total_beats_in_job": 4,
+    "included_beats": 4,
+    "excluded_beats_count": 0,
+    "excluded_beats": []
+  },
+  "beats": [
+    {
+      "beat_id": "b1",
+      "start": 0.0,
+      "end": 6.43,
+      "vo_text": "Nearly eleven thousand meters beneath the Pacific lies Challenger Deep, the deepest point on Earth.",
+      "visual_intent": "Cinematic underwater drone shot descending into pitch-black deep sea trench, dramatic blue lighting fading into total darkness, eerie atmosphere.",
+      "original_clips": [
+        {
+          "clip_id": "84d3e229-3e28-4fad-b50f-d74d81b26c98",
+          "source_video_id": "dc34765f-2cc8-4984-854b-18855c566c36",
+          "start": 16.79,
+          "end": 23.22
+        }
+      ]
+    },
+    {
+      "beat_id": "b2",
+      "start": 6.43,
+      "end": 13.52,
+      "vo_text": "In total darkness and crushing pressure, alien-like creatures survive with mesmerizing bioluminescence.",
+      "visual_intent": "Close-up macro footage of glowing deep-sea jellyfish and siphonophores pulsing with neon blue and green light in the abyss.",
+      "original_clips": [
+        {
+          "clip_id": "5074e053-d03d-4894-a106-d9982a92158f",
+          "source_video_id": "9257eff3-8ab7-4eb3-a6df-ac16b2d1f49d",
+          "start": 51.45,
+          "end": 58.54
+        }
+      ]
+    },
+    {
+      "beat_id": "b3",
+      "start": 13.52,
+      "end": 20.3,
+      "vo_text": "The water pressure exceeds one thousand atmospheres, equivalent to fifty jumbo jets resting on a human.",
+      "visual_intent": "Submersible robotic arm operating under extreme hydraulic pressure, deep sea exploration vessel in pitch black water.",
+      "original_clips": [
+        {
+          "clip_id": "dee60363-1b64-4365-acbf-e509fe9436ab",
+          "source_video_id": "e79c6c0b-5b9a-4c53-97e0-06282e20eec7",
+          "start": 0.0,
+          "end": 6.78
+        }
+      ]
+    },
+    {
+      "beat_id": "b4",
+      "start": 20.3,
+      "end": 26.74,
+      "vo_text": "We know more about the surface of Mars than we do about the mysteries hidden in our own ocean depths.",
+      "visual_intent": "Split visual concept comparing a brightly lit satellite view of Mars on one side with a murky, unexplored deep ocean trench on the other.",
+      "original_clips": [
+        {
+          "clip_id": "777d1de9-4761-480f-8575-0e84816cba1d",
+          "source_video_id": "dec5595f-987d-4985-9951-f4833f6f42b7",
+          "start": 0.0,
+          "end": 6.44
+        },
+        {
+          "clip_id": "ec8a9075-1cb9-4d56-8635-67059bf900c6",
+          "source_video_id": "2b65b3b1-8531-446d-a11b-8426b8b862e4",
+          "start": 0.0,
+          "end": 6.44
+        }
+      ]
+    }
+  ]
+}

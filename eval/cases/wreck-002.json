@@ -1,0 +1,307 @@
+{
+  "case_id": "wreck-002",
+  "video_id": "a15b1968-f4b5-4e3c-822c-791b71082cd7",
+  "title": "Deep Wreck Files: Episode 1 (Part 2)",
+  "topic": "naval_history",
+  "language": "en",
+  "orientation": "horizontal",
+  "metadata": {
+    "total_beats_in_range": 18,
+    "included_beats": 14,
+    "excluded_beats_count": 4,
+    "excluded_beats": [
+      {
+        "beat_id": "b19",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "stat"
+      },
+      {
+        "beat_id": "b22",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "abstract"
+      },
+      {
+        "beat_id": "b26",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "stat"
+      },
+      {
+        "beat_id": "b35",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "abstract"
+      }
+    ]
+  },
+  "beats": [
+    {
+      "beat_id": "b20",
+      "start": 199.78,
+      "end": 211.22,
+      "vo_text": "The Act created two categories for military wrecks: 'protected places' where you can look but not touch, and 'controlled sites' where no diving is permitted at all without a license.",
+      "visual_intent": "Clean graphic split-screen showing two regulatory warning icons for restricted maritime zones.",
+      "original_clips": [
+        {
+          "clip_id": "9581c9ee-5957-4680-8bfc-610e1ddf804b",
+          "source_video_id": "1d5bf0e4-6988-49ee-944d-3eca1b0db01a",
+          "start": 0.0,
+          "end": 10.48
+        },
+        {
+          "clip_id": "a3281a10-8bfd-4e39-b31b-12625e20bf65",
+          "source_video_id": "1b899bc6-30a7-45b9-a313-519748977c0f",
+          "start": 0.0,
+          "end": 0.96
+        }
+      ]
+    },
+    {
+      "beat_id": "b21",
+      "start": 211.22,
+      "end": 221.49,
+      "vo_text": "In 2002, HMS Royal Oak was formally designated a controlled site \u2014 the highest level of legal protection a wreck can receive in UK waters.",
+      "visual_intent": "Official government plaque on a stone pillar, reading 'Controlled Site - Restricted Area', shot with a shallow depth of field.",
+      "original_clips": [
+        {
+          "clip_id": "f0abfdb1-34c3-4615-af5e-25a072300cee",
+          "source_video_id": "8ec45be6-e1bf-406a-9c0c-042282f86e25",
+          "start": 5.0,
+          "end": 15.0
+        },
+        {
+          "clip_id": "76f59cf7-8014-498f-abed-561168003438",
+          "source_video_id": "8ec45be6-e1bf-406a-9c0c-042282f86e25",
+          "start": 0.0,
+          "end": 0.27
+        }
+      ]
+    },
+    {
+      "beat_id": "b23",
+      "start": 233.49,
+      "end": 241.97,
+      "vo_text": "The law isn't absolute. A small number of people are allowed near HMS Royal Oak \u2014 but almost none of them are civilians.",
+      "visual_intent": "Modern naval divers in drysuits preparing their equipment on the deck of a grey military support vessel.",
+      "original_clips": [
+        {
+          "clip_id": "3680cbee-c70a-4847-8af4-7ca5a21201ff",
+          "source_video_id": "4f162dca-8412-4e29-89ed-c90d09e1b066",
+          "start": 66.23,
+          "end": 71.04
+        },
+        {
+          "clip_id": "6eb5b950-d4c7-40ad-b848-babd00ca3218",
+          "source_video_id": "100d98d8-b5d2-4c12-993e-548c0ab088e8",
+          "start": 0.0,
+          "end": 3.67
+        }
+      ]
+    },
+    {
+      "beat_id": "b24",
+      "start": 241.97,
+      "end": 254.48,
+      "vo_text": "Since the 1980s, Royal Navy divers have made an annual trip to the wreck. Their task is simple, and largely ceremonial: they replace the White Ensign flying from the wreck.",
+      "visual_intent": "Underwater shot of a diver carefully attaching a crisp white naval ensign to a rusted railing on the sunken deck.",
+      "original_clips": [
+        {
+          "clip_id": "0c0b9cd5-a9eb-48f2-94f3-37d30e396972",
+          "source_video_id": "c2112184-929f-4c07-aa75-ffec843bde7b",
+          "start": 5.75,
+          "end": 18.26
+        }
+      ]
+    },
+    {
+      "beat_id": "b25",
+      "start": 254.48,
+      "end": 266.16,
+      "vo_text": "Then there are the rare, licensed surveys \u2014 expeditions granted special permission by the Ministry of Defence, almost always tied to a specific research or memorial purpose.",
+      "visual_intent": "Technically advanced underwater ROV equipped with high-intensity floodlights inspecting encrusted steel decking.",
+      "original_clips": [
+        {
+          "clip_id": "56c80660-f3dd-44bf-81a9-f939910b4ab5",
+          "source_video_id": "ca2d065a-7655-4022-9329-06b0b4f81b15",
+          "start": 40.0,
+          "end": 50.0
+        },
+        {
+          "clip_id": "dbc50cf3-1ed0-4aa7-a65f-e28bf27dfc15",
+          "source_video_id": "019014be-3e73-4d07-9319-6536e05853ec",
+          "start": 0.0,
+          "end": 1.68
+        }
+      ]
+    },
+    {
+      "beat_id": "b27",
+      "start": 279.36,
+      "end": 287.47,
+      "vo_text": "Their goal wasn't salvage. It was documentation \u2014 recording exactly what condition the ship was in, eight decades underwater.",
+      "visual_intent": "High-definition underwater camera rig sweeping slowly across an intact ship's telegraph mounted on the bridge.",
+      "original_clips": [
+        {
+          "clip_id": "b591297e-f382-4c23-8c07-06ccc18ec1a4",
+          "source_video_id": "426a8271-53dc-45a5-998c-611b231068da",
+          "start": 3.95,
+          "end": 12.06
+        }
+      ]
+    },
+    {
+      "beat_id": "b28",
+      "start": 287.47,
+      "end": 296.91,
+      "vo_text": "What they found, largely, was a ship remarkably intact \u2014 a fully-armed warship, frozen in the exact condition she was in the moment she went down.",
+      "visual_intent": "Wide cinematic underwater shot revealing an enormous, perfectly preserved anti-aircraft gun barrel draped in white anemones.",
+      "original_clips": [
+        {
+          "clip_id": "eaaa97b1-b6b0-440d-8d09-16a1d8959682",
+          "source_video_id": "ca2d065a-7655-4022-9329-06b0b4f81b15",
+          "start": 35.28,
+          "end": 44.72
+        }
+      ]
+    },
+    {
+      "beat_id": "b29",
+      "start": 296.91,
+      "end": 310.45,
+      "vo_text": "Which brings us to the part of this story that never really ended. When Royal Oak went down in 1939, she was carrying around 75 separate fuel tanks \u2014 and she was fully fuelled.",
+      "visual_intent": "Archival blueprint graphic highlighting internal bunker fuel compartments across the length of the battleship.",
+      "original_clips": [
+        {
+          "clip_id": "31a2e656-094a-4d43-870d-82a8bc726f6c",
+          "source_video_id": "6e3dd173-bd6a-4eff-9a9d-30c360fbd016",
+          "start": 50.0,
+          "end": 60.0
+        },
+        {
+          "clip_id": "4a4f9c41-bf6f-4aad-beec-ac694ec35561",
+          "source_video_id": "cae787b5-dcd4-41ac-b056-8ac4f8c377e8",
+          "start": 10.0,
+          "end": 13.54
+        }
+      ]
+    },
+    {
+      "beat_id": "b30",
+      "start": 310.45,
+      "end": 318.9,
+      "vo_text": "Eighty-plus years later, some of that oil is still down there. And in small quantities, it's still finding its way to the surface.",
+      "visual_intent": "Macro shot of dark, viscous oil pooling against the rusted rivet lines of a submerged steel plate.",
+      "original_clips": [
+        {
+          "clip_id": "fd95dfdd-3cfc-4d19-b5ec-3923bbaaead4",
+          "source_video_id": "11cc52a9-d567-4c29-841c-d8b046a782e3",
+          "start": 26.47,
+          "end": 28.17
+        },
+        {
+          "clip_id": "d9c69b67-8357-474f-bf1e-7fdf9337bdb0",
+          "source_video_id": "82272869-0ff3-4de5-b37f-6bd6d00cc093",
+          "start": 25.0,
+          "end": 31.75
+        }
+      ]
+    },
+    {
+      "beat_id": "b31",
+      "start": 318.9,
+      "end": 329.02,
+      "vo_text": "It's not a dramatic slick, but a slow, persistent trickle \u2014 corrosion and pressure very gradually working oil out of tanks sealed nearly a century ago.",
+      "visual_intent": "Close-up of bubbling seawater against a corroded metal seam where tiny dark streaks escape into the current.",
+      "original_clips": [
+        {
+          "clip_id": "b65df8b2-2aea-4a6a-86d9-337e9d61bbbc",
+          "source_video_id": "cc52b08b-8fc2-4d5f-a9f7-2de18deb8321",
+          "start": 15.0,
+          "end": 25.0
+        },
+        {
+          "clip_id": "8eea546e-7a23-46f1-91e5-b327664c899e",
+          "source_video_id": "cc52b08b-8fc2-4d5f-a9f7-2de18deb8321",
+          "start": 10.0,
+          "end": 10.12
+        }
+      ]
+    },
+    {
+      "beat_id": "b32",
+      "start": 329.02,
+      "end": 339.94,
+      "vo_text": "No one has published a firm timeline for when \u2014 or if \u2014 that will stop. The tanks are corroding, and eventually, decades from now, they may fail in a different way.",
+      "visual_intent": "Macro timelapse animation of heavy metal oxidation and structural flaking over decades underwater.",
+      "original_clips": [
+        {
+          "clip_id": "d9c69b67-8357-474f-bf1e-7fdf9337bdb0",
+          "source_video_id": "82272869-0ff3-4de5-b37f-6bd6d00cc093",
+          "start": 25.0,
+          "end": 35.0
+        },
+        {
+          "clip_id": "8bbbeada-5d7a-44a7-80bd-534c8c204a88",
+          "source_video_id": "11cc52a9-d567-4c29-841c-d8b046a782e3",
+          "start": 52.13,
+          "end": 53.05
+        }
+      ]
+    },
+    {
+      "beat_id": "b33",
+      "start": 339.94,
+      "end": 350.66,
+      "vo_text": "For now, the ship keeps almost all of her secrets to herself. A war grave, legally sealed off from the world, still slowly leaking evidence of the night she went down.",
+      "visual_intent": "Moody cinematic shot looking up from deep underwater toward the pale circle of surface light, framing the dark silhouette of the hull.",
+      "original_clips": [
+        {
+          "clip_id": "06c4fb19-f661-47e9-a90c-39a2e2d1b473",
+          "source_video_id": "746e56ab-5d97-478a-a90c-782df0940303",
+          "start": 35.0,
+          "end": 45.0
+        },
+        {
+          "clip_id": "eb4fb133-c717-4ea6-85a3-8e4cda59476a",
+          "source_video_id": "746e56ab-5d97-478a-a90c-782df0940303",
+          "start": 40.0,
+          "end": 40.72
+        }
+      ]
+    },
+    {
+      "beat_id": "b34",
+      "start": 350.66,
+      "end": 362.28,
+      "vo_text": "Scapa Flow isn't the only place like this. Off Lincolnshire, Padstow, Mevagissey \u2014 there are other wrecks under exact same legal protection, and other crews still aboard.",
+      "visual_intent": "Rapid montage of various UK coastal waters\u2014rocky cliffs, grey seas, and distant lighthouse markers under moody skies.",
+      "original_clips": [
+        {
+          "clip_id": "a5e73d59-09eb-47bf-94b2-e59f3cf86051",
+          "source_video_id": "9f4e871d-1447-420a-b7d1-ad0f03975fb8",
+          "start": 10.0,
+          "end": 20.0
+        },
+        {
+          "clip_id": "4ea1775c-c8dd-4dcf-942f-e499afc4b02c",
+          "source_video_id": "9f4e871d-1447-420a-b7d1-ad0f03975fb8",
+          "start": 5.0,
+          "end": 6.62
+        }
+      ]
+    },
+    {
+      "beat_id": "b36",
+      "start": 371.13,
+      "end": 381.22,
+      "vo_text": "If you want to know which ship we're opening the case file on next, subscribe \u2014 and tell us in the comments which forbidden wreck you think we should investigate first.",
+      "visual_intent": "Clean minimalist end-card graphics featuring subscription call-to-action buttons and subtle channel branding.",
+      "original_clips": [
+        {
+          "clip_id": "ee5ce067-7ef5-41a3-ba7b-f7985c3ba1b1",
+          "source_video_id": "0367270d-e9b7-4593-b3ae-dde6814f046c",
+          "start": 2.46,
+          "end": 12.55
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "case_id": "squid-001",
+  "video_id": "34b6b8f1-aa34-402d-856c-f3c9236346e2",
+  "title": "The Giant Squid",
+  "topic": "marine_biology",
+  "language": "en",
+  "orientation": "horizontal",
+  "metadata": {
+    "total_beats_in_job": 8,
+    "included_beats": 0,
+    "excluded_beats_count": 8,
+    "excluded_beats": [
+      {
+        "beat_id": "b1",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "typewriter"
+      },
+      {
+        "beat_id": "b2",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "typewriter"
+      },
+      {
+        "beat_id": "b3",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "typewriter"
+      },
+      {
+        "beat_id": "b4",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "typewriter"
+      },
+      {
+        "beat_id": "b5",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "quote"
+      },
+      {
+        "beat_id": "b6",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "kinetic"
+      },
+      {
+        "beat_id": "b7",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "typewriter"
+      },
+      {
+        "beat_id": "b8",
+        "reason": "no_usable_original_footage (motion_only or missing)",
+        "beat_type": "swipe_deck"
+      }
+    ]
+  },
+  "beats": []
+}

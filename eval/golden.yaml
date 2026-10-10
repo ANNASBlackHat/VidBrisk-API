@@ -1,0 +1,44 @@
+# Golden Evaluation Cases for VidBrisk Footage Selection
+# Format: list of test cases in eval/cases/<case_id>.json
+
+version: 1
+cases:
+  - id: "ghost-001"
+    file: "eval/cases/ghost-001.json"
+    topic: "deep_sea_wrecks"
+    title: "Ghost Fleet of Scapa Flow (Part 1)"
+    beats: 17
+    orientation: "horizontal"
+    language: "en"
+
+  - id: "ghost-002"
+    file: "eval/cases/ghost-002.json"
+    topic: "deep_sea_wrecks"
+    title: "Ghost Fleet of Scapa Flow (Part 2)"
+    beats: 15
+    orientation: "horizontal"
+    language: "en"
+
+  - id: "wreck-001"
+    file: "eval/cases/wreck-001.json"
+    topic: "naval_history"
+    title: "Deep Wreck Files: Episode 1 (Part 1)"
+    beats: 16
+    orientation: "horizontal"
+    language: "en"
+
+  - id: "wreck-002"
+    file: "eval/cases/wreck-002.json"
+    topic: "naval_history"
+    title: "Deep Wreck Files: Episode 1 (Part 2)"
+    beats: 14
+    orientation: "horizontal"
+    language: "en"
+
+  - id: "dynamic-001"
+    file: "eval/cases/dynamic-001.json"
+    topic: "modern_oceanography"
+    title: "Oceanographic Exploration & Tech"
+    beats: 7
+    orientation: "horizontal"
+    language: "en"
