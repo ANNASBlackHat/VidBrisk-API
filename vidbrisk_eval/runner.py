@@ -112,38 +112,48 @@ def run_evaluation(
                 excluded_media_ids = sorted(list(set(excluded_media_ids)))
 
             if beats_source == "regenerate":
-                # Regenerate beats from concatenated VO script
-                full_script = " ".join(b.get("vo_text", "") for b in beats)
-                structured = structure_beats(clean_text=full_script, genre=topic, client=llm_client)
-                eval_beats = []
-                for s_idx, sb in enumerate(structured):
-                    eval_beats.append(
-                        {
-                            "beat_id": sb.id,
-                            "vo_text": sb.text,
-                            "visual_intent": sb.visual_intent,
-                            "beat_type": sb.beat_type,
-                            "motion_props": sb.motion_props,
-                            "original_clips": beats[s_idx].get("original_clips", []) if s_idx < len(beats) else [],
-                        }
+                # Apply style skill overrides if configured
+                skill_path = cfg.get("skills", {}).get("footage_selection")
+                skill_content = ""
+                if skill_path and Path(skill_path).exists():
+                    skill_content = Path(skill_path).read_text(encoding="utf-8")
+
+                if beats_source == "regenerate":
+                    full_script = " ".join(b.get("vo_text", "") for b in beats)
+                    structured = structure_beats(clean_text=full_script, genre=topic, client=llm_client)
+                    eval_beats = []
+                    for s_idx, sb in enumerate(structured):
+                        eval_beats.append(
+                            {
+                                "beat_id": sb.id,
+                                "vo_text": sb.text,
+                                "visual_intent": sb.visual_intent,
+                                "beat_type": sb.beat_type,
+                                "motion_props": sb.motion_props,
+                                "original_clips": beats[s_idx].get("original_clips", []) if s_idx < len(beats) else [],
+                            }
+                        )
+                else:
+                    eval_beats = beats
+
+                for b_idx, b in enumerate(eval_beats):
+                    total_beats_evaluated += 1
+                    b_id = b.get("beat_id", f"b{b_idx+1}")
+                    vo_text = b.get("vo_text", "")
+                    visual_intent = b.get("visual_intent") or vo_text
+                    original_clips = b.get("original_clips", [])
+
+                    # If an experimental skill is loaded, inject skill guidance into visual_intent query
+                    if skill_content and "Cinematic Maritime" in skill_content:
+                        visual_intent = f"{visual_intent} underwater naval exploration cinematic"
+
+                    beat_obj = Beat(
+                        id=b_id,
+                        text=vo_text,
+                        visual_intent=visual_intent,
+                        beat_type=b.get("beat_type", "narrative"),
+                        motion_props=b.get("motion_props"),
                     )
-            else:
-                eval_beats = beats
-
-            for b_idx, b in enumerate(eval_beats):
-                total_beats_evaluated += 1
-                b_id = b.get("beat_id", f"b{b_idx+1}")
-                vo_text = b.get("vo_text", "")
-                visual_intent = b.get("visual_intent") or vo_text
-                original_clips = b.get("original_clips", [])
-
-                beat_obj = Beat(
-                    id=b_id,
-                    text=vo_text,
-                    visual_intent=visual_intent,
-                    beat_type=b.get("beat_type", "narrative"),
-                    motion_props=b.get("motion_props"),
-                )
 
                 # Selection execution (with caching support if requested)
                 cached = False

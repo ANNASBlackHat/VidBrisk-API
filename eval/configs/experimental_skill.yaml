@@ -1,0 +1,26 @@
+# Experimental Skill Override Configuration for VidBrisk Evaluation
+version: 1
+
+retrieval:
+  top_k: 10
+  rerank: false
+
+resolver:
+  target_orientation: "horizontal"
+  worker_enabled: true
+  worker_timeout_sec: 40
+  worker_backend: "qwen"
+
+llm:
+  model: "gemini-2.5-flash"
+  temperature: 0.0
+
+skills:
+  footage_selection: "eval/skills/experimental_deep_sea.md"
+  topic: null
+
+prompt_overrides: {}
+rag_exemplars: false
+semantic_threshold: 0.50
+motion_floor: 5.0
+max_requeries: 2
