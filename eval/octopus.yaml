@@ -1,0 +1,10 @@
+# Octopus Evaluation Case
+version: 1
+cases:
+  - id: "octopus-001"
+    file: "eval/cases/octopus-001.json"
+    topic: "marine_biology"
+    title: "The Mystery of the Octopus"
+    beats: 19
+    orientation: "horizontal"
+    language: "en"

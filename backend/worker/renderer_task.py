@@ -133,6 +133,13 @@ def _execute_render(
                 return
 
             video_url = f"http://localhost:8000/static/output/rendered/{out_filename}"
+            # Record footage chunk usage upon successful export
+            try:
+                from backend.repository_footage import record_timeline_footage_usage
+                record_timeline_footage_usage(db=session, timeline=timeline_data)
+            except Exception as e:
+                pass
+
             update_job_progress(
                 session=session,
                 job_id=job_id,

@@ -1,0 +1,216 @@
+{
+  "case_id": "octopus-001",
+  "video_id": "custom-octopus-001",
+  "title": "The Mystery of the Octopus",
+  "topic": "marine_biology",
+  "language": "en",
+  "orientation": "horizontal",
+  "beats": [
+    {
+      "beat_id": "b1",
+      "start": 0.0,
+      "end": 5.0,
+      "vo_text": "Imagine a creature that has three hearts pumping blue blood through its vessels.",
+      "visual_intent": "Cinematic close-up of a glowing blue octopus pulsating in dark ocean water.",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "original_clips": []
+    },
+    {
+      "beat_id": "b2",
+      "start": 5.0,
+      "end": 10.0,
+      "vo_text": "Although it resembles a bag of water, it can easily open a baby-proofed bottle.",
+      "visual_intent": "Macro shot of a flexible octopus tentacle unscrewing a child safety cap on a bottle underwater.",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "original_clips": []
+    },
+    {
+      "beat_id": "b3",
+      "start": 10.0,
+      "end": 15.0,
+      "vo_text": "It can feel light and taste with its skin, sensing the world in fascinating ways.",
+      "visual_intent": "Extreme close-up of octopus suction cups detecting textures and chemical signatures on a reef.",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "original_clips": []
+    },
+    {
+      "beat_id": "b4",
+      "start": 15.0,
+      "end": 20.0,
+      "vo_text": "It has no ears, yet it constantly changes color and texture to match its environment.",
+      "visual_intent": "Time-lapse of an octopus seamlessly shifting its skin pattern from sandy bottom to vibrant coral.",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "original_clips": []
+    },
+    {
+      "beat_id": "b5",
+      "start": 20.0,
+      "end": 25.0,
+      "vo_text": "Even though it doesn't identify colors, it sees the world entirely in black and white.",
+      "visual_intent": "High contrast black and white footage of an octopus gliding across a rocky seafloor.",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "original_clips": []
+    },
+    {
+      "beat_id": "b6",
+      "start": 25.0,
+      "end": 30.0,
+      "vo_text": "It is venomous and can be hostile, but at the same time curious and playful.",
+      "visual_intent": "An octopus playfully interacting with a scuba diver's camera lens in clear blue water.",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "original_clips": []
+    },
+    {
+      "beat_id": "b7",
+      "start": 30.0,
+      "end": 35.0,
+      "vo_text": "On top of that, it's highly intelligent and solves non-trivial problems with ease.",
+      "visual_intent": "An octopus inside a marine lab tank successfully untying a complex latch to reach food.",
+      "beat_type": "stat",
+      "motion_props": {
+        "layout_recipe": "stat_over_footage",
+        "component": "DataAnimations/StatCard",
+        "primary_value": "9",
+        "kicker": "CENTRAL & DISTRIBUTED BRAINS",
+        "visual_type": "ring",
+        "subtext": "One central brain plus eight autonomous arm ganglia.",
+        "display_mode": "overlay"
+      },
+      "original_clips": []
+    },
+    {
+      "beat_id": "b8",
+      "start": 35.0,
+      "end": 40.0,
+      "vo_text": "In addition to the main brain, it has eight smaller brains in different parts of the body.",
+      "visual_intent": "Glowing anatomical infographic overlay highlighting neural clusters inside octopus arms.",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "original_clips": []
+    },
+    {
+      "beat_id": "b9",
+      "start": 40.0,
+      "end": 45.0,
+      "vo_text": "These additional brains make their own independent decisions without central control.",
+      "visual_intent": "Close-up of an octopus arm independently exploring a crevice while the head remains still.",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "original_clips": []
+    },
+    {
+      "beat_id": "b10",
+      "start": 45.0,
+      "end": 50.0,
+      "vo_text": "Who is this monster? Does it come from Earth?",
+      "visual_intent": "Dramatic wide shot of a giant Pacific octopus emerging from a dark underwater cave.",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "original_clips": []
+    },
+    {
+      "beat_id": "b11",
+      "start": 50.0,
+      "end": 55.0,
+      "vo_text": "Yes, you got that right\u2014it's an octopus, and it comes from our very own planet.",
+      "visual_intent": "Sunlight rays piercing through turquoise ocean surface down to a resting octopus.",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "original_clips": []
+    },
+    {
+      "beat_id": "b12",
+      "start": 55.0,
+      "end": 60.0,
+      "vo_text": "Although some scientists entertain another wild idea, let's start from the beginning.",
+      "visual_intent": "Abstract cosmic nebula transitioning into deep ocean blue currents.",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "original_clips": []
+    },
+    {
+      "beat_id": "b13",
+      "start": 60.0,
+      "end": 65.0,
+      "vo_text": "We are certainly used to modern octopuses, and everyone has known them since childhood.",
+      "visual_intent": "Vintage illustration style animation of sea monsters blending into modern documentary footage.",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "original_clips": []
+    },
+    {
+      "beat_id": "b14",
+      "start": 65.0,
+      "end": 70.0,
+      "vo_text": "This familiarity somewhat reduces our perceptual acuity when observing them today.",
+      "visual_intent": "A casual aquarium visitor walking past an octopus tank without stopping to look.",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "original_clips": []
+    },
+    {
+      "beat_id": "b15",
+      "start": 70.0,
+      "end": 75.0,
+      "vo_text": "Seeing these shots, many feel surprised, but hardly anyone feels true excitement.",
+      "visual_intent": "Close-up of an octopus eye blinking slowly behind cloudy aquarium glass.",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "original_clips": []
+    },
+    {
+      "beat_id": "b16",
+      "start": 75.0,
+      "end": 80.0,
+      "vo_text": "Even though the metamorphosis of X-Men superheroes isn't all that different.",
+      "visual_intent": "Sci-fi cinematic visual effect of skin shifting and morphing with digital particle sparks.",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "original_clips": []
+    },
+    {
+      "beat_id": "b17",
+      "start": 80.0,
+      "end": 85.0,
+      "vo_text": "For some reason, we perceive movie fiction as extraordinary while ignoring real nature.",
+      "visual_intent": "Split screen comparing a Hollywood superhero transformation scene with a real octopus color shift.",
+      "beat_type": "split_screen",
+      "motion_props": {
+        "component": "Layouts/SplitScreen",
+        "layout_recipe": "split_screen",
+        "leftTitle": "SCI-FI CINEMA",
+        "leftContent": "Fictional mutations and transformations in blockbuster movies.",
+        "rightTitle": "REAL NATURE",
+        "rightContent": "Actual biological camouflage happening in our oceans.",
+        "display_mode": "overlay"
+      },
+      "original_clips": []
+    },
+    {
+      "beat_id": "b18",
+      "start": 85.0,
+      "end": 90.0,
+      "vo_text": "Isn't it time to revisit how we see these incredible creatures?",
+      "visual_intent": "Majestic cinematic shot of a large octopus swimming gracefully toward the ocean surface.",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "original_clips": []
+    },
+    {
+      "beat_id": "b19",
+      "start": 90.0,
+      "end": 95.0,
+      "vo_text": "Moreover, octopi are much more interesting than most people could ever imagine.",
+      "visual_intent": "A dazzling display of bioluminescent colors rippling across an octopus's entire body.",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "original_clips": []
+    }
+  ]
+}

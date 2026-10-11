@@ -111,49 +111,69 @@ def run_evaluation(
                             excluded_media_ids.append(oc["source_video_id"])
                 excluded_media_ids = sorted(list(set(excluded_media_ids)))
 
+            # Apply style skill overrides if configured
+            skill_path = cfg.get("skills", {}).get("footage_selection")
+            skill_content = ""
+            if skill_path and Path(skill_path).exists():
+                skill_content = Path(skill_path).read_text(encoding="utf-8")
+
             if beats_source == "regenerate":
-                # Apply style skill overrides if configured
-                skill_path = cfg.get("skills", {}).get("footage_selection")
-                skill_content = ""
-                if skill_path and Path(skill_path).exists():
-                    skill_content = Path(skill_path).read_text(encoding="utf-8")
-
-                if beats_source == "regenerate":
-                    full_script = " ".join(b.get("vo_text", "") for b in beats)
-                    structured = structure_beats(clean_text=full_script, genre=topic, client=llm_client)
-                    eval_beats = []
-                    for s_idx, sb in enumerate(structured):
-                        eval_beats.append(
-                            {
-                                "beat_id": sb.id,
-                                "vo_text": sb.text,
-                                "visual_intent": sb.visual_intent,
-                                "beat_type": sb.beat_type,
-                                "motion_props": sb.motion_props,
-                                "original_clips": beats[s_idx].get("original_clips", []) if s_idx < len(beats) else [],
-                            }
-                        )
-                else:
-                    eval_beats = beats
-
-                for b_idx, b in enumerate(eval_beats):
-                    total_beats_evaluated += 1
-                    b_id = b.get("beat_id", f"b{b_idx+1}")
-                    vo_text = b.get("vo_text", "")
-                    visual_intent = b.get("visual_intent") or vo_text
-                    original_clips = b.get("original_clips", [])
-
-                    # If an experimental skill is loaded, inject skill guidance into visual_intent query
-                    if skill_content and "Cinematic Maritime" in skill_content:
-                        visual_intent = f"{visual_intent} underwater naval exploration cinematic"
-
-                    beat_obj = Beat(
-                        id=b_id,
-                        text=vo_text,
-                        visual_intent=visual_intent,
-                        beat_type=b.get("beat_type", "narrative"),
-                        motion_props=b.get("motion_props"),
+                full_script = " ".join(b.get("vo_text", "") for b in beats)
+                structured = structure_beats(clean_text=full_script, genre=topic, client=llm_client)
+                eval_beats = []
+                for s_idx, sb in enumerate(structured):
+                    eval_beats.append(
+                        {
+                            "beat_id": sb.id,
+                            "vo_text": sb.text,
+                            "visual_intent": sb.visual_intent,
+                            "beat_type": sb.beat_type,
+                            "motion_props": sb.motion_props,
+                            "original_clips": beats[s_idx].get("original_clips", []) if s_idx < len(beats) else [],
+                        }
                     )
+            else:
+                eval_beats = beats
+
+            # Cross-beat deduplication tracking per case
+            dedup_cfg = cfg.get("deduplication", {})
+            dedup_enabled = dedup_cfg.get("enabled", False)
+            exclude_chunks_mode = dedup_cfg.get("exclude_chunks", True)
+            exclude_media_window = dedup_cfg.get("media_window", 0)  # 0 means don't exclude media, >0 excludes past N media items
+
+            selected_chunk_history: list[str] = []
+            selected_media_history: list[str] = []
+
+            for b_idx, b in enumerate(eval_beats):
+                total_beats_evaluated += 1
+                b_id = b.get("beat_id", f"b{b_idx+1}")
+                vo_text = b.get("vo_text", "")
+                visual_intent = b.get("visual_intent") or vo_text
+                original_clips = b.get("original_clips", [])
+
+                # If an experimental skill is loaded, inject skill guidance into visual_intent query
+                if skill_content and "Cinematic Maritime" in skill_content:
+                    visual_intent = f"{visual_intent} underwater naval exploration cinematic"
+
+                beat_obj = Beat(
+                    id=b_id,
+                    text=vo_text,
+                    visual_intent=visual_intent,
+                    beat_type=b.get("beat_type", "narrative"),
+                    motion_props=b.get("motion_props"),
+                )
+
+                # Assemble active exclusions
+                curr_excluded_media = list(excluded_media_ids)
+                curr_excluded_chunks = []
+
+                if dedup_enabled:
+                    if exclude_chunks_mode:
+                        curr_excluded_chunks = list(selected_chunk_history)
+                    if exclude_media_window > 0:
+                        recent_media = [m for m in selected_media_history[-exclude_media_window:] if m]
+                        curr_excluded_media.extend(recent_media)
+                        curr_excluded_media = sorted(list(set(curr_excluded_media)))
 
                 # Selection execution (with caching support if requested)
                 cached = False
@@ -173,11 +193,21 @@ def run_evaluation(
                         motion_floor=motion_floor,
                         max_requeries=max_requeries,
                         llm_client=llm_client,
-                        exclude_source_video_ids=excluded_media_ids or None,
+                        exclude_source_video_ids=curr_excluded_media or None,
+                        exclude_chunk_ids=curr_excluded_chunks or None,
                     )
 
                     cands_dump = [c.model_dump() for c in candidates]
                     selected_cand = cands_dump[0] if cands_dump else None
+
+                    # Update history for next beats
+                    if selected_cand:
+                        cid = selected_cand.get("chunk_id")
+                        mid = selected_cand.get("media_item_id")
+                        if cid:
+                            selected_chunk_history.append(cid)
+                        if mid:
+                            selected_media_history.append(mid)
 
                     payload = {
                         "case_id": case_id,

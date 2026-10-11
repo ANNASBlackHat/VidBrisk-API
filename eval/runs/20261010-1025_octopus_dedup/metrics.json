@@ -1,0 +1,54 @@
+{
+  "overall": {
+    "count": 19,
+    "hit_at_1": 0.0,
+    "hit_at_3": 0.0,
+    "hit_at_5": 0.0,
+    "hit_at_10": 0.0,
+    "mean_sim": 0.6864,
+    "mean_dynamism": 0.83,
+    "static_rate": 0.8947,
+    "repeat_rate": 0.3684,
+    "judge_relevance": 4.84,
+    "judge_visual_interest": 4.84,
+    "judge_tier_fit": 5.0,
+    "coverage_low_confidence_rate": 0.0,
+    "coverage_low_score_rate": 0.0
+  },
+  "by_case": {
+    "octopus-001": {
+      "count": 19,
+      "hit_at_1": 0.0,
+      "hit_at_3": 0.0,
+      "hit_at_5": 0.0,
+      "hit_at_10": 0.0,
+      "mean_sim": 0.6864,
+      "mean_dynamism": 0.83,
+      "static_rate": 0.8947,
+      "repeat_rate": 0.3684,
+      "judge_relevance": 4.84,
+      "judge_visual_interest": 4.84,
+      "judge_tier_fit": 5.0,
+      "coverage_low_confidence_rate": 0.0,
+      "coverage_low_score_rate": 0.0
+    }
+  },
+  "by_topic": {
+    "marine_biology": {
+      "count": 19,
+      "hit_at_1": 0.0,
+      "hit_at_3": 0.0,
+      "hit_at_5": 0.0,
+      "hit_at_10": 0.0,
+      "mean_sim": 0.6864,
+      "mean_dynamism": 0.83,
+      "static_rate": 0.8947,
+      "repeat_rate": 0.3684,
+      "judge_relevance": 4.84,
+      "judge_visual_interest": 4.84,
+      "judge_tier_fit": 5.0,
+      "coverage_low_confidence_rate": 0.0,
+      "coverage_low_score_rate": 0.0
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "git_commit": "f2efe70a4fde91dd00c2effaaf3a9a69d2cf34a8",
+  "timestamp": "20261010-0956",
+  "mode": "A",
+  "beats_source": "original",
+  "tag": "octopus_full",
+  "total_cases": 1,
+  "total_beats": 19,
+  "elapsed_seconds": 251.89,
+  "config_file": "eval/configs/baseline.yaml",
+  "cases_file": "eval/octopus.yaml"
+}

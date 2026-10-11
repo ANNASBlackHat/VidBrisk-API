@@ -80,10 +80,13 @@ def create_app() -> FastAPI:
         return {"status": "ok", "service": "video-generation-pipeline"}
 
     # Include API routes (both root and /api prefix for frontend compatibility)
+    from backend.api.routes.footage import router as footage_router
     app.include_router(jobs_router)
     app.include_router(jobs_router, prefix="/api")
     app.include_router(voices_router)
     app.include_router(voices_router, prefix="/api")
+    app.include_router(footage_router)
+    app.include_router(footage_router, prefix="/api")
 
     return app
 

@@ -1,0 +1,12 @@
+{
+  "git_commit": "a65d987dcdf265eeee25b09277cd992063de7283",
+  "timestamp": "20261010-0838",
+  "mode": "B",
+  "beats_source": "original",
+  "tag": "test_mode_b",
+  "total_cases": 5,
+  "total_beats": 5,
+  "elapsed_seconds": 91.58,
+  "config_file": "eval/configs/baseline.yaml",
+  "cases_file": "eval/golden.yaml"
+}

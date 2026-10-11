@@ -45,19 +45,27 @@ def parse_transcript(content: str) -> list[dict]:
     """Parses structured transcript blocks into narration↔visual pairs.
 
     Skips blocks where narration is fewer than 4 words (too short to be useful).
+    Supports:
+      - 'Visual:' or 'Visual Caption:'
+      - 'Transcribe:' or 'Speech / Subtitles:'
     """
     blocks = re.split(r"\n{2,}", content.strip())
     pairs: list[dict] = []
     for block in blocks:
         lines = block.strip().splitlines()
-        visual = next(
-            (line.removeprefix("Visual:").strip() for line in lines if line.startswith("Visual:")),
-            None,
-        )
-        narration = next(
-            (line.removeprefix("Transcribe:").strip() for line in lines if line.startswith("Transcribe:")),
-            None,
-        )
+        visual = None
+        narration = None
+        for line in lines:
+            line_str = line.strip()
+            if line_str.startswith("Visual Caption:"):
+                visual = line_str.removeprefix("Visual Caption:").strip()
+            elif line_str.startswith("Visual:"):
+                visual = line_str.removeprefix("Visual:").strip()
+            elif line_str.startswith("Speech / Subtitles:"):
+                narration = line_str.removeprefix("Speech / Subtitles:").strip()
+            elif line_str.startswith("Transcribe:"):
+                narration = line_str.removeprefix("Transcribe:").strip()
+
         if visual and narration and len(narration.split()) >= 4:
             pairs.append({"narration_text": narration, "visual_description": visual})
     return pairs

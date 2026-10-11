@@ -1,6 +1,7 @@
 """CLI entry point for vidbrisk_eval."""
 
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
@@ -25,7 +26,6 @@ def main():
     run_parser.add_argument("--tag", default="baseline", help="Tag for the run output directory")
     run_parser.add_argument("--cache-selection", action="store_true", help="Cache selection API calls")
 
-    args = parser.parse_args()
 
     # Subcommand: compare
     compare_parser = subparsers.add_parser("compare", help="Compare two evaluation runs")

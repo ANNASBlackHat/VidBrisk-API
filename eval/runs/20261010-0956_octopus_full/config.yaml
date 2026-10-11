@@ -1,0 +1,20 @@
+llm:
+  model: gemini-2.5-flash
+  temperature: 0.0
+max_requeries: 2
+motion_floor: 5.0
+prompt_overrides: {}
+rag_exemplars: false
+resolver:
+  target_orientation: horizontal
+  worker_backend: qwen
+  worker_enabled: true
+  worker_timeout_sec: 40
+retrieval:
+  rerank: false
+  top_k: 10
+semantic_threshold: 0.5
+skills:
+  footage_selection: pipeline/style_skills/deep_sea_documentary.md
+  topic: null
+version: 1

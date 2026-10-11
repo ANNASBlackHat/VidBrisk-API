@@ -76,6 +76,10 @@ def run_pipeline(
     timings_map: dict[str, list[WordTiming]] = {}
     candidates_map: dict[str, list[CandidateChunk]] = {}
 
+    # Cross-beat deduplication tracking
+    selected_chunk_ids: list[str] = []
+    selected_media_ids: list[str] = []
+
     if custom_audio_path and os.path.exists(custom_audio_path):
         print(f"\n▶ [3 & 4] Aligning & slicing pre-recorded custom audio from '{custom_audio_path}'...")
         voice_clips, timings_dict = slice_audio_for_beats(
@@ -93,6 +97,8 @@ def run_pipeline(
         print("\n▶ [5] Processing per-beat footage resolution...")
         for idx, beat in enumerate(beats, start=1):
             print(f"  • Beat {idx}/{len(beats)} [{beat.id}]:")
+            # Exclude already used chunks and sliding 2-beat media window
+            recent_media = [m for m in selected_media_ids[-2:] if m]
             try:
                 updated_beat, candidates = resolve_beat_visuals(
                     beat=beat,
@@ -100,12 +106,20 @@ def run_pipeline(
                     top_k=5,
                     target_orientation=target_orientation,
                     provider=footage_provider,
+                    exclude_chunk_ids=selected_chunk_ids or None,
+                    exclude_source_video_ids=recent_media or None,
                 )
                 beats[idx - 1] = updated_beat
             except Exception as e:
                 print(f"    - Footage resolution note: {e} (using fallback)")
                 candidates = []
             candidates_map[beat.id] = candidates
+            if candidates:
+                top_cand = candidates[0]
+                if top_cand.chunk_id:
+                    selected_chunk_ids.append(top_cand.chunk_id)
+                if top_cand.media_item_id:
+                    selected_media_ids.append(top_cand.media_item_id)
             print(f"    - Footage candidates resolved: {len(candidates)} match(es) (status: {getattr(beats[idx - 1].footage_status, 'value', str(beats[idx - 1].footage_status))})")
     else:
         print("\n▶ [3, 4, 5] Processing per-beat synthesis, alignment, and footage resolution...")
@@ -132,6 +146,7 @@ def run_pipeline(
             print(f"    - Timestamps aligned: {len(beat_timings)} words")
 
             # Stage 5: Resolve footage
+            recent_media = [m for m in selected_media_ids[-2:] if m]
             try:
                 updated_beat, candidates = resolve_beat_visuals(
                     beat=beat,
@@ -139,12 +154,20 @@ def run_pipeline(
                     top_k=5,
                     target_orientation=target_orientation,
                     provider=footage_provider,
+                    exclude_chunk_ids=selected_chunk_ids or None,
+                    exclude_source_video_ids=recent_media or None,
                 )
                 beats[idx - 1] = updated_beat
             except Exception as e:
                 print(f"    - Footage resolution note: {e} (using fallback)")
                 candidates = []
             candidates_map[beat.id] = candidates
+            if candidates:
+                top_cand = candidates[0]
+                if top_cand.chunk_id:
+                    selected_chunk_ids.append(top_cand.chunk_id)
+                if top_cand.media_item_id:
+                    selected_media_ids.append(top_cand.media_item_id)
             print(f"    - Footage candidates resolved: {len(candidates)} match(es) (status: {getattr(beats[idx - 1].footage_status, 'value', str(beats[idx - 1].footage_status))})")
 
     # Stage 6: Assemble timeline

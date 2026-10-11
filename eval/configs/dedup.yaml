@@ -1,0 +1,33 @@
+# Deduplication Configuration for VidBrisk Footage Selection
+# Enforces cross-beat deduplication: prevents re-selecting the same chunk,
+# and enforces a 2-beat sliding window exclusion on source media items.
+version: 1
+
+retrieval:
+  top_k: 10
+  rerank: false
+
+resolver:
+  target_orientation: "horizontal"
+  worker_enabled: true
+  worker_timeout_sec: 40
+  worker_backend: "qwen"
+
+llm:
+  model: "gemini-2.5-flash"
+  temperature: 0.0
+
+deduplication:
+  enabled: true
+  exclude_chunks: true      # Never repeat exact chunk in the same video
+  media_window: 2           # Prevent re-using the same source video within 2 consecutive beats
+
+skills:
+  footage_selection: "pipeline/style_skills/deep_sea_documentary.md"
+  topic: null
+
+prompt_overrides: {}
+rag_exemplars: false
+semantic_threshold: 0.50
+motion_floor: 5.0
+max_requeries: 2

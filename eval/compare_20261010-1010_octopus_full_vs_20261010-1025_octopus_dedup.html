@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>VidBrisk Eval Comparison: 20261010-1010_octopus_full vs 20261010-1025_octopus_dedup</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      margin: 0;
+      padding: 24px;
+    }
+    header {
+      border-bottom: 1px solid #334155;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+    h1 { margin: 0 0 8px 0; font-size: 22px; color: #38bdf8; }
+    .meta { font-size: 13px; color: #94a3b8; }
+
+    .diff-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #1e293b;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .diff-table th, .diff-table td {
+      padding: 10px 16px;
+      text-align: left;
+      border-bottom: 1px solid #334155;
+      font-size: 13px;
+    }
+    .diff-table th { background: #0f172a; color: #94a3b8; text-transform: uppercase; font-size: 11px; }
+    .delta-pos { color: #4ade80; font-weight: bold; }
+    .delta-neg { color: #f87171; font-weight: bold; }
+
+    .changed-beat-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      padding: 16px;
+    }
+    .beat-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 8px;
+    }
+    .beat-title { font-size: 14px; font-weight: bold; color: #38bdf8; }
+    .beat-vo { font-size: 14px; margin-bottom: 16px; }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .option-box {
+      background: #0f172a;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+    }
+    .option-label { font-size: 12px; font-weight: bold; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; }
+    video, .img-preview {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      border-radius: 4px;
+      background: #000;
+    }
+
+    .vote-controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #334155;
+    }
+    .vote-btn {
+      background: #334155;
+      color: #f8fafc;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    .vote-btn:hover { background: #475569; }
+    .vote-btn.selected { background: #0284c7; color: #fff; }
+    .status-msg { font-size: 12px; color: #38bdf8; text-align: center; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>A/B Comparison: 20261010-1010_octopus_full vs 20261010-1025_octopus_dedup</h1>
+    <div class="meta">Changed beats: 3 / 19 total beats | Blinded A/B Pairwise Evaluation</div>
+  </header>
+
+  <table class="diff-table">
+    <thead>
+      <tr>
+        <th>Metric</th>
+        <th>20261010-1010_octopus_full</th>
+        <th>20261010-1025_octopus_dedup</th>
+        <th>Delta (B - A)</th>
+      </tr>
+    </thead>
+    <tbody>
+      
+        <tr>
+          <td><strong>mean_sim</strong></td>
+          <td>0.6891</td>
+          <td>0.6864</td>
+          <td class="delta-neg">-0.0027</td>
+        </tr>
+        
+        <tr>
+          <td><strong>hit_at_1</strong></td>
+          <td>0.0</td>
+          <td>0.0</td>
+          <td class="">0.0000</td>
+        </tr>
+        
+        <tr>
+          <td><strong>hit_at_3</strong></td>
+          <td>0.0</td>
+          <td>0.0</td>
+          <td class="">0.0000</td>
+        </tr>
+        
+        <tr>
+          <td><strong>judge_relevance</strong></td>
+          <td>4.84</td>
+          <td>4.84</td>
+          <td class="">0.0000</td>
+        </tr>
+        
+        <tr>
+          <td><strong>judge_visual_interest</strong></td>
+          <td>4.84</td>
+          <td>4.84</td>
+          <td class="">0.0000</td>
+        </tr>
+        
+        <tr>
+          <td><strong>mean_dynamism</strong></td>
+          <td>0.83</td>
+          <td>0.83</td>
+          <td class="">0.0000</td>
+        </tr>
+        
+        <tr>
+          <td><strong>static_rate</strong></td>
+          <td>0.8947</td>
+          <td>0.8947</td>
+          <td class="">0.0000</td>
+        </tr>
+        
+        <tr>
+          <td><strong>repeat_rate</strong></td>
+          <td>0.3684</td>
+          <td>0.3684</td>
+          <td class="">0.0000</td>
+        </tr>
+        
+    </tbody>
+  </table>
+
+  <h2>Changed Beats (3)</h2>
+  <div id="changedBeats">
+    
+            <div class="changed-beat-card">
+              <div class="beat-header">
+                <span class="beat-title">octopus-001 — b3</span>
+                <span style="font-size: 12px; color: #94a3b8;">Query: Extreme close-up of octopus suction cups detecting textures and chemical signatures on a reef.</span>
+              </div>
+              <div class="beat-vo">"It can feel light and taste with its skin, sensing the world in fascinating ways."</div>
+
+              <div class="options-grid">
+                <div class="option-box">
+                  <div class="option-label">Option 1</div>
+                  <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/76dfc9af_7cf0b528.mp4" controls muted loop preload="metadata"></video>
+                  <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Sim: 0.738</div>
+                </div>
+
+                <div class="option-box">
+                  <div class="option-label">Option 2</div>
+                  <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/a22aa387_12a2b2fe.mp4" controls muted loop preload="metadata"></video>
+                  <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Sim: 0.729</div>
+                </div>
+              </div>
+
+              <div class="vote-controls">
+                <button id="btn_octopus-001_b3_1" data-beat="octopus-001_b3" class="vote-btn" onclick="vote('octopus-001_b3', '1', '20261010-1010_octopus_full', '20261010-1025_octopus_dedup', '78fdd34a-e514-40fc-8cc3-afacfba6cd11', 'cf8de5d3-eb38-4416-90d9-a2a16cfd6e99')">Option 1 is Better</button>
+                <button id="btn_octopus-001_b3_2" data-beat="octopus-001_b3" class="vote-btn" onclick="vote('octopus-001_b3', '2', '20261010-1010_octopus_full', '20261010-1025_octopus_dedup', '78fdd34a-e514-40fc-8cc3-afacfba6cd11', 'cf8de5d3-eb38-4416-90d9-a2a16cfd6e99')">Option 2 is Better</button>
+                <button id="btn_octopus-001_b3_tie" data-beat="octopus-001_b3" class="vote-btn" onclick="vote('octopus-001_b3', 'tie', '20261010-1010_octopus_full', '20261010-1025_octopus_dedup', '78fdd34a-e514-40fc-8cc3-afacfba6cd11', 'cf8de5d3-eb38-4416-90d9-a2a16cfd6e99')">Tie</button>
+                <button id="btn_octopus-001_b3_both_bad" data-beat="octopus-001_b3" class="vote-btn" onclick="vote('octopus-001_b3', 'both_bad', '20261010-1010_octopus_full', '20261010-1025_octopus_dedup', '78fdd34a-e514-40fc-8cc3-afacfba6cd11', 'cf8de5d3-eb38-4416-90d9-a2a16cfd6e99')">Both Bad</button>
+              </div>
+              <div id="status_octopus-001_b3" class="status-msg"></div>
+            </div>
+            
+            <div class="changed-beat-card">
+              <div class="beat-header">
+                <span class="beat-title">octopus-001 — b4</span>
+                <span style="font-size: 12px; color: #94a3b8;">Query: Time-lapse of an octopus seamlessly shifting its skin pattern from sandy bottom to vibrant coral.</span>
+              </div>
+              <div class="beat-vo">"It has no ears, yet it constantly changes color and texture to match its environment."</div>
+
+              <div class="options-grid">
+                <div class="option-box">
+                  <div class="option-label">Option 1</div>
+                  <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/e4ea8da0_effe0f20.mp4" controls muted loop preload="metadata"></video>
+                  <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Sim: 0.667</div>
+                </div>
+
+                <div class="option-box">
+                  <div class="option-label">Option 2</div>
+                  <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/76dfc9af_9055329c.mp4" controls muted loop preload="metadata"></video>
+                  <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Sim: 0.711</div>
+                </div>
+              </div>
+
+              <div class="vote-controls">
+                <button id="btn_octopus-001_b4_1" data-beat="octopus-001_b4" class="vote-btn" onclick="vote('octopus-001_b4', '1', '20261010-1025_octopus_dedup', '20261010-1010_octopus_full', 'c60aaba1-fcaf-40fc-ad31-8df04ceb8d06', 'f3643f59-b248-4a7f-bca9-706db2c7e9ee')">Option 1 is Better</button>
+                <button id="btn_octopus-001_b4_2" data-beat="octopus-001_b4" class="vote-btn" onclick="vote('octopus-001_b4', '2', '20261010-1025_octopus_dedup', '20261010-1010_octopus_full', 'c60aaba1-fcaf-40fc-ad31-8df04ceb8d06', 'f3643f59-b248-4a7f-bca9-706db2c7e9ee')">Option 2 is Better</button>
+                <button id="btn_octopus-001_b4_tie" data-beat="octopus-001_b4" class="vote-btn" onclick="vote('octopus-001_b4', 'tie', '20261010-1025_octopus_dedup', '20261010-1010_octopus_full', 'c60aaba1-fcaf-40fc-ad31-8df04ceb8d06', 'f3643f59-b248-4a7f-bca9-706db2c7e9ee')">Tie</button>
+                <button id="btn_octopus-001_b4_both_bad" data-beat="octopus-001_b4" class="vote-btn" onclick="vote('octopus-001_b4', 'both_bad', '20261010-1025_octopus_dedup', '20261010-1010_octopus_full', 'c60aaba1-fcaf-40fc-ad31-8df04ceb8d06', 'f3643f59-b248-4a7f-bca9-706db2c7e9ee')">Both Bad</button>
+              </div>
+              <div id="status_octopus-001_b4" class="status-msg"></div>
+            </div>
+            
+            <div class="changed-beat-card">
+              <div class="beat-header">
+                <span class="beat-title">octopus-001 — b9</span>
+                <span style="font-size: 12px; color: #94a3b8;">Query: Close-up of an octopus arm independently exploring a crevice while the head remains still.</span>
+              </div>
+              <div class="beat-vo">"These additional brains make their own independent decisions without central control."</div>
+
+              <div class="options-grid">
+                <div class="option-box">
+                  <div class="option-label">Option 1</div>
+                  <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/e4ea8da0_e59914e7.mp4" controls muted loop preload="metadata"></video>
+                  <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Sim: 0.709</div>
+                </div>
+
+                <div class="option-box">
+                  <div class="option-label">Option 2</div>
+                  <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/76dfc9af_28c93fce.mp4" controls muted loop preload="metadata"></video>
+                  <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Sim: 0.709</div>
+                </div>
+              </div>
+
+              <div class="vote-controls">
+                <button id="btn_octopus-001_b9_1" data-beat="octopus-001_b9" class="vote-btn" onclick="vote('octopus-001_b9', '1', '20261010-1010_octopus_full', '20261010-1025_octopus_dedup', 'be309790-9636-4575-83bd-eb9a4caa0338', 'cda40ce2-2a9e-4895-adeb-676cbff811b4')">Option 1 is Better</button>
+                <button id="btn_octopus-001_b9_2" data-beat="octopus-001_b9" class="vote-btn" onclick="vote('octopus-001_b9', '2', '20261010-1010_octopus_full', '20261010-1025_octopus_dedup', 'be309790-9636-4575-83bd-eb9a4caa0338', 'cda40ce2-2a9e-4895-adeb-676cbff811b4')">Option 2 is Better</button>
+                <button id="btn_octopus-001_b9_tie" data-beat="octopus-001_b9" class="vote-btn" onclick="vote('octopus-001_b9', 'tie', '20261010-1010_octopus_full', '20261010-1025_octopus_dedup', 'be309790-9636-4575-83bd-eb9a4caa0338', 'cda40ce2-2a9e-4895-adeb-676cbff811b4')">Tie</button>
+                <button id="btn_octopus-001_b9_both_bad" data-beat="octopus-001_b9" class="vote-btn" onclick="vote('octopus-001_b9', 'both_bad', '20261010-1010_octopus_full', '20261010-1025_octopus_dedup', 'be309790-9636-4575-83bd-eb9a4caa0338', 'cda40ce2-2a9e-4895-adeb-676cbff811b4')">Both Bad</button>
+              </div>
+              <div id="status_octopus-001_b9" class="status-msg"></div>
+            </div>
+            
+  </div>
+
+  <div style="text-align: center; margin-top: 24px;">
+    <button class="vote-btn" style="background: #10b981;" onclick="downloadLabels()">Export Labels JSON</button>
+  </div>
+
+  <script>
+    const labelsData = [];
+
+    async function vote(beatId, choice, opt1Run, opt2Run, opt1Clip, opt2Clip) {
+      const record = {
+        run_a: "20261010-1010_octopus_full",
+        run_b: "20261010-1025_octopus_dedup",
+        beat_id: beatId,
+        choice: choice,
+        chosen_run: choice === "1" ? opt1Run : choice === "2" ? opt2Run : choice,
+        clip_1: opt1Clip,
+        clip_2: opt2Clip,
+        timestamp: new Date().toISOString()
+      };
+
+      labelsData.push(record);
+
+      // Attempt to save to local API server if running
+      try {
+        await fetch("http://localhost:8000/labels", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(record)
+        });
+      } catch (e) {
+        console.log("Local label server not running, saving in memory for download.");
+      }
+
+      // Highlight selected button
+      const btns = document.querySelectorAll(`[data-beat="${beatId}"]`);
+      btns.forEach(b => b.classList.remove("selected"));
+      const activeBtn = document.getElementById(`btn_${beatId}_${choice}`);
+      if (activeBtn) activeBtn.classList.add("selected");
+      const statusEl = document.getElementById(`status_${beatId}`);
+      if (statusEl) statusEl.innerText = `Recorded: ${choice === "1" ? "Option 1" : choice === "2" ? "Option 2" : choice}`;
+    }
+
+    function downloadLabels() {
+      const blob = new Blob([JSON.stringify(labelsData, null, 2)], {type: "application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "labels_20261010-1010_octopus_full_vs_20261010-1025_octopus_dedup.json";
+      a.click();
+    }
+  </script>
+</body>
+</html>

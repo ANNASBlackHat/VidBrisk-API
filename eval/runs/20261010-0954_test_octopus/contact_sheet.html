@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>VidBrisk Eval Contact Sheet — test_octopus</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      margin: 0;
+      padding: 24px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+    h1 { margin: 0; font-size: 24px; color: #38bdf8; }
+    .meta { color: #94a3b8; font-size: 14px; }
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      background: #1e293b;
+      padding: 12px 16px;
+      border-radius: 8px;
+    }
+    .controls select, .controls input {
+      background: #0f172a;
+      color: #f8fafc;
+      border: 1px solid #475569;
+      padding: 6px 12px;
+      border-radius: 6px;
+    }
+    .summary-card {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .stat-box {
+      background: #1e293b;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-value { font-size: 20px; font-weight: bold; color: #38bdf8; }
+    .stat-label { font-size: 12px; color: #94a3b8; text-transform: uppercase; }
+
+    .beat-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 280px 1fr 1fr;
+      gap: 20px;
+    }
+    .beat-card.static-flag { border-left: 4px solid #f59e0b; }
+    .beat-card.repeat-flag { border-left: 4px solid #ef4444; }
+    .beat-card.low-sim { border-left: 4px solid #ec4899; }
+
+    .beat-info { display: flex; flex-direction: column; gap: 8px; }
+    .beat-id { font-size: 12px; font-weight: bold; color: #38bdf8; text-transform: uppercase; }
+    .vo-text { font-size: 14px; font-weight: 500; line-height: 1.4; }
+    .visual-intent { font-size: 12px; color: #94a3b8; font-style: italic; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .chip {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: #334155;
+      color: #cbd5e1;
+    }
+    .chip.warn { background: #78350f; color: #fde68a; }
+    .chip.alert { background: #7f1d1d; color: #fecaca; }
+    .chip.good { background: #064e3b; color: #a7f3d0; }
+
+    .video-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .video-title { font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; }
+    video, .img-preview {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      border-radius: 6px;
+      background: #000;
+    }
+    .clip-meta { font-size: 11px; color: #64748b; }
+
+    .candidates-list {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .cand-thumb {
+      width: 80px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid #475569;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>VidBrisk Eval Contact Sheet — test_octopus</h1>
+      <div class="meta">Mode: A | Beats: original | Commit: f2efe70a | Generated: 20261010-0954</div>
+    </div>
+  </header>
+
+  <div class="summary-card">
+    <div class="stat-box"><div class="stat-value">3</div><div class="stat-label">Total Beats</div></div>
+    <div class="stat-box"><div class="stat-value">0.7366</div><div class="stat-label">Mean Sim</div></div>
+    <div class="stat-box"><div class="stat-value">0.0%</div><div class="stat-label">Hit@1</div></div>
+    <div class="stat-box"><div class="stat-value">5.0 / 5</div><div class="stat-label">Judge Relevance</div></div>
+    <div class="stat-box"><div class="stat-value">100.0%</div><div class="stat-label">Static Rate</div></div>
+    <div class="stat-box"><div class="stat-value">33.3%</div><div class="stat-label">Repeat Rate</div></div>
+  </div>
+
+  <div class="controls">
+    <label>Filter Case:
+      <select id="caseFilter" onchange="filterBeats()">
+        <option value="all">All Cases</option>
+        <option value="octopus-001">octopus-001</option>
+      </select>
+    </label>
+    <label>Filter Flag:
+      <select id="flagFilter" onchange="filterBeats()">
+        <option value="all">All Beats</option>
+        <option value="static">Static / Low Motion</option>
+        <option value="repeat">Repeated</option>
+        <option value="low_score">Low Similarity Score (&lt;0.5)</option>
+      </select>
+    </label>
+  </div>
+
+  <div id="beatsContainer">
+    
+        <div class="beat-card static-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b1</div>
+            <div class="vo-text">"Imagine a creature that has three hearts pumping blue blood through its vessels."</div>
+            <div class="visual_intent">Query: Cinematic close-up of a glowing blue octopus pulsating in dark ocean water.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.772</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage precisely matches the voiceover narration about a blue creature with its cinematic and glowing visual style.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/e4ea8da0_d62dff10.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: c5a6e83c-94fe-459e-b15a-d18335725137 | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b2</div>
+            <div class="vo-text">"Although it resembles a bag of water, it can easily open a baby-proofed bottle."</div>
+            <div class="visual_intent">Query: Macro shot of a flexible octopus tentacle unscrewing a child safety cap on a bottle underwater.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.700</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage precisely matches the narrative beat and voiceover by showing an octopus tentacle skillfully opening a child-safety cap in a dynamic macro shot.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/76dfc9af_73fca4f9.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 3e833821-bd72-4c27-993b-b65b73c8ee9d | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag repeat-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="true"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b3</div>
+            <div class="vo-text">"It can feel light and taste with its skin, sensing the world in fascinating ways."</div>
+            <div class="visual_intent">Query: Extreme close-up of octopus suction cups detecting textures and chemical signatures on a reef.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.738</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span><span class="chip alert">Repeat</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The extreme close-up of the octopus suction cups perfectly aligns with the narration about feeling and tasting with the skin, delivering a visually compelling and contextually precise shot.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/76dfc9af_7cf0b528.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 78fdd34a-e514-40fc-8cc3-afacfba6cd11 | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+  </div>
+
+  <script>
+    function filterBeats() {
+      const c = document.getElementById("caseFilter").value;
+      const f = document.getElementById("flagFilter").value;
+      const cards = document.querySelectorAll(".beat-card");
+
+      cards.forEach(card => {
+        const cardCase = card.getAttribute("data-case");
+        const isStatic = card.getAttribute("data-static") === "true";
+        const isRepeat = card.getAttribute("data-repeat") === "true";
+        const isLowScore = card.getAttribute("data-low-score") === "true";
+
+        let caseMatch = (c === "all" || cardCase === c);
+        let flagMatch = true;
+        if (f === "static") flagMatch = isStatic;
+        if (f === "repeat") flagMatch = isRepeat;
+        if (f === "low_score") flagMatch = isLowScore;
+
+        if (caseMatch && flagMatch) {
+          card.style.display = "grid";
+        } else {
+          card.style.display = "none";
+        }
+      });
+    }
+  </script>
+</body>
+</html>

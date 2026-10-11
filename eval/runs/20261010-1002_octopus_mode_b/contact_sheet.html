@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>VidBrisk Eval Contact Sheet — octopus_mode_b</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      margin: 0;
+      padding: 24px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+    h1 { margin: 0; font-size: 24px; color: #38bdf8; }
+    .meta { color: #94a3b8; font-size: 14px; }
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      background: #1e293b;
+      padding: 12px 16px;
+      border-radius: 8px;
+    }
+    .controls select, .controls input {
+      background: #0f172a;
+      color: #f8fafc;
+      border: 1px solid #475569;
+      padding: 6px 12px;
+      border-radius: 6px;
+    }
+    .summary-card {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .stat-box {
+      background: #1e293b;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-value { font-size: 20px; font-weight: bold; color: #38bdf8; }
+    .stat-label { font-size: 12px; color: #94a3b8; text-transform: uppercase; }
+
+    .beat-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 280px 1fr 1fr;
+      gap: 20px;
+    }
+    .beat-card.static-flag { border-left: 4px solid #f59e0b; }
+    .beat-card.repeat-flag { border-left: 4px solid #ef4444; }
+    .beat-card.low-sim { border-left: 4px solid #ec4899; }
+
+    .beat-info { display: flex; flex-direction: column; gap: 8px; }
+    .beat-id { font-size: 12px; font-weight: bold; color: #38bdf8; text-transform: uppercase; }
+    .vo-text { font-size: 14px; font-weight: 500; line-height: 1.4; }
+    .visual-intent { font-size: 12px; color: #94a3b8; font-style: italic; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .chip {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: #334155;
+      color: #cbd5e1;
+    }
+    .chip.warn { background: #78350f; color: #fde68a; }
+    .chip.alert { background: #7f1d1d; color: #fecaca; }
+    .chip.good { background: #064e3b; color: #a7f3d0; }
+
+    .video-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .video-title { font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; }
+    video, .img-preview {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      border-radius: 6px;
+      background: #000;
+    }
+    .clip-meta { font-size: 11px; color: #64748b; }
+
+    .candidates-list {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .cand-thumb {
+      width: 80px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid #475569;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>VidBrisk Eval Contact Sheet — octopus_mode_b</h1>
+      <div class="meta">Mode: B | Beats: original | Commit: f2efe70a | Generated: 20261010-1002</div>
+    </div>
+  </header>
+
+  <div class="summary-card">
+    <div class="stat-box"><div class="stat-value">19</div><div class="stat-label">Total Beats</div></div>
+    <div class="stat-box"><div class="stat-value">0.6891</div><div class="stat-label">Mean Sim</div></div>
+    <div class="stat-box"><div class="stat-value">0.0%</div><div class="stat-label">Hit@1</div></div>
+    <div class="stat-box"><div class="stat-value">4.84 / 5</div><div class="stat-label">Judge Relevance</div></div>
+    <div class="stat-box"><div class="stat-value">89.5%</div><div class="stat-label">Static Rate</div></div>
+    <div class="stat-box"><div class="stat-value">36.8%</div><div class="stat-label">Repeat Rate</div></div>
+  </div>
+
+  <div class="controls">
+    <label>Filter Case:
+      <select id="caseFilter" onchange="filterBeats()">
+        <option value="all">All Cases</option>
+        <option value="octopus-001">octopus-001</option>
+      </select>
+    </label>
+    <label>Filter Flag:
+      <select id="flagFilter" onchange="filterBeats()">
+        <option value="all">All Beats</option>
+        <option value="static">Static / Low Motion</option>
+        <option value="repeat">Repeated</option>
+        <option value="low_score">Low Similarity Score (&lt;0.5)</option>
+      </select>
+    </label>
+  </div>
+
+  <div id="beatsContainer">
+    
+        <div class="beat-card static-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b1</div>
+            <div class="vo-text">"Imagine a creature that has three hearts pumping blue blood through its vessels."</div>
+            <div class="visual_intent">Query: Cinematic close-up of a glowing blue octopus pulsating in dark ocean water.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.772</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage precisely matches the voiceover narration about a blue creature with its cinematic and glowing visual style.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/e4ea8da0_d62dff10.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: c5a6e83c-94fe-459e-b15a-d18335725137 | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b2</div>
+            <div class="vo-text">"Although it resembles a bag of water, it can easily open a baby-proofed bottle."</div>
+            <div class="visual_intent">Query: Macro shot of a flexible octopus tentacle unscrewing a child safety cap on a bottle underwater.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.700</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage precisely matches the narrative beat and voiceover by showing an octopus tentacle skillfully opening a child-safety cap in a dynamic macro shot.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/76dfc9af_73fca4f9.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 3e833821-bd72-4c27-993b-b65b73c8ee9d | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag repeat-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="true"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b3</div>
+            <div class="vo-text">"It can feel light and taste with its skin, sensing the world in fascinating ways."</div>
+            <div class="visual_intent">Query: Extreme close-up of octopus suction cups detecting textures and chemical signatures on a reef.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.738</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span><span class="chip alert">Repeat</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The extreme close-up of the octopus suction cups perfectly aligns with the narration about feeling and tasting with the skin, delivering a visually compelling and contextually precise shot.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/76dfc9af_7cf0b528.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 78fdd34a-e514-40fc-8cc3-afacfba6cd11 | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag repeat-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="true"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b4</div>
+            <div class="vo-text">"It has no ears, yet it constantly changes color and texture to match its environment."</div>
+            <div class="visual_intent">Query: Time-lapse of an octopus seamlessly shifting its skin pattern from sandy bottom to vibrant coral.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.711</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span><span class="chip alert">Repeat</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected time-lapse footage precisely matches the voiceover narration of the octopus changing color and texture to match its environment while offering high visual impact.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/76dfc9af_9055329c.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: f3643f59-b248-4a7f-bca9-706db2c7e9ee | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b5</div>
+            <div class="vo-text">"Even though it doesn't identify colors, it sees the world entirely in black and white."</div>
+            <div class="visual_intent">Query: High contrast black and white footage of an octopus gliding across a rocky seafloor.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.731</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected high-contrast black and white footage of an octopus gliding across the seafloor perfectly illustrates the narration's mention of seeing the world in black and white.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/ce35f411_890bb396.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 60dd2501-85d3-46a0-9f6e-b244879f6d6c | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b6</div>
+            <div class="vo-text">"It is venomous and can be hostile, but at the same time curious and playful."</div>
+            <div class="visual_intent">Query: An octopus playfully interacting with a scuba diver's camera lens in clear blue water.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.764</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage perfectly captures the playful curiosity described in the voiceover through a captivating and direct interaction with the diver's camera.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks_056bea4f_59203c42.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 679e4d0f-b162-4fc9-ac51-332d5c6bb88e | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b7</div>
+            <div class="vo-text">"On top of that, it's highly intelligent and solves non-trivial problems with ease."</div>
+            <div class="visual_intent">Query: An octopus inside a marine lab tank successfully untying a complex latch to reach food.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.739</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The footage precisely matches the narrative context by showing an octopus solving a problem, embodying high intelligence and visual engagement.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/e4ea8da0_846d1ffe.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: cd46d150-6660-4608-b41e-9dd28255dc94 | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b8</div>
+            <div class="vo-text">"In addition to the main brain, it has eight smaller brains in different parts of the body."</div>
+            <div class="visual_intent">Query: Glowing anatomical infographic overlay highlighting neural clusters inside octopus arms.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.716</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage precisely matches both the voiceover narration and visual intent by showcasing a glowing anatomical infographic of the octopus's distributed neural clusters.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/a22aa387_ce3f9e74.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 88d0124c-3703-4bb3-8ac1-99117147d570 | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag repeat-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="true"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b9</div>
+            <div class="vo-text">"These additional brains make their own independent decisions without central control."</div>
+            <div class="visual_intent">Query: Close-up of an octopus arm independently exploring a crevice while the head remains still.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.709</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span><span class="chip alert">Repeat</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The footage precisely matches the narrative focus and visual intent by showcasing an autonomous octopus arm in action with high visual fidelity.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/e4ea8da0_e59914e7.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: be309790-9636-4575-83bd-eb9a4caa0338 | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag repeat-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="true"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b10</div>
+            <div class="vo-text">"Who is this monster? Does it come from Earth?"</div>
+            <div class="visual_intent">Query: Dramatic wide shot of a giant Pacific octopus emerging from a dark underwater cave.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.698</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span><span class="chip alert">Repeat</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage precisely matches the dramatic narrative tone of the voiceover and fulfills the required visual intent of an octopus emerging from a cave.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/e4ea8da0_e59914e7.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: be309790-9636-4575-83bd-eb9a4caa0338 | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card "
+             data-case="octopus-001"
+             data-static="false"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b11</div>
+            <div class="vo-text">"Yes, you got that right—it's an octopus, and it comes from our very own planet."</div>
+            <div class="visual_intent">Query: Sunlight rays piercing through turquoise ocean surface down to a resting octopus.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.659</span><span class="chip">Dynamism: 5.31</span><span class="chip good">Judge: 5/5</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage precisely matches both the voiceover narration and visual intent by showcasing sun rays piercing the turquoise water to illuminate a resting octopus.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://videos.pexels.com/video-files/37334334/15812624_640_360_60fps.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 6d156392-e11f-4dee-a25f-b1b522ce3c63 | Provider: pexels</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b12</div>
+            <div class="vo-text">"Although some scientists entertain another wild idea, let's start from the beginning."</div>
+            <div class="visual_intent">Query: Abstract cosmic nebula transitioning into deep ocean blue currents.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.723</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 4/5</span><span class="chip warn">Static</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage perfectly matches the requested abstract cosmic nebula and ocean current transition, providing a visually compelling and thematic backdrop for the introductory narration.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://cdn.pixabay.com/video/2022/06/21/121615-724710355_medium.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 0122f034-96e9-4d8f-a7e9-9f67f5f30c2b | Provider: pixabay</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b13</div>
+            <div class="vo-text">"We are certainly used to modern octopuses, and everyone has known them since childhood."</div>
+            <div class="visual_intent">Query: Vintage illustration style animation of sea monsters blending into modern documentary footage.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.618</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 4/5</span><span class="chip warn">Static</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The vintage sea monster illustration seamlessly transitioning into modern footage perfectly captures the nostalgic and familiar tone of the narration.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks_388ce507_5167c533.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 9a20e43a-262f-4f91-aedd-2129963bdace | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag repeat-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="true"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b14</div>
+            <div class="vo-text">"This familiarity somewhat reduces our perceptual acuity when observing them today."</div>
+            <div class="visual_intent">Query: A casual aquarium visitor walking past an octopus tank without stopping to look.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.572</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span><span class="chip alert">Repeat</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The footage directly illustrates the narrative concept of diminished perceptual acuity through a casual visitor ignoring the octopus tank, perfectly matching the visual intent.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/e4ea8da0_38a54cfe.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 0a64c9a9-f234-4d27-b71e-2f68977932d4 | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b15</div>
+            <div class="vo-text">"Seeing these shots, many feel surprised, but hardly anyone feels true excitement."</div>
+            <div class="visual_intent">Query: Close-up of an octopus eye blinking slowly behind cloudy aquarium glass.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.719</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 4/5</span><span class="chip warn">Static</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The footage precisely matches the requested visual intent of an octopus eye blinking behind glass, evoking a subtle, contemplative mood that aligns with the narration.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/76dfc9af_d3e36bcf.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: dbab8e77-f007-4eb3-9ec3-b7b11a3401ff | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card "
+             data-case="octopus-001"
+             data-static="false"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b16</div>
+            <div class="vo-text">"Even though the metamorphosis of X-Men superheroes isn't all that different."</div>
+            <div class="visual_intent">Query: Sci-fi cinematic visual effect of skin shifting and morphing with digital particle sparks.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.511</span><span class="chip">Dynamism: 10.55</span><span class="chip good">Judge: 5/5</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage precisely matches the narrative context of superhero metamorphosis with dynamic, cinematic sci-fi effects of shifting skin and particle sparks.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://cdn.pixabay.com/video/2017/01/12/7251-199191069_medium.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: a8dc3ecd-3239-41cb-bcf7-38f4df702d56 | Provider: pixabay</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag repeat-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="true"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b17</div>
+            <div class="vo-text">"For some reason, we perceive movie fiction as extraordinary while ignoring real nature."</div>
+            <div class="visual_intent">Query: Split screen comparing a Hollywood superhero transformation scene with a real octopus color shift.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.509</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span><span class="chip alert">Repeat</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The split screen footage directly embodies the narrative contrast between cinematic fiction and real natural wonders described in the voiceover.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks_388ce507_06d84caa.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 824bd53c-a001-42d6-b14d-052d4b86f949 | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b18</div>
+            <div class="vo-text">"Isn't it time to revisit how we see these incredible creatures?"</div>
+            <div class="visual_intent">Query: Majestic cinematic shot of a large octopus swimming gracefully toward the ocean surface.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.731</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage perfectly matches the majestic tone of the voiceover and directly fulfills the visual intent with a captivating cinematic shot of an octopus.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/a22aa387_3befbd61.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 12702848-a6cd-4c0b-9c4c-40f4b634e239 | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag repeat-flag"
+             data-case="octopus-001"
+             data-static="true"
+             data-repeat="true"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">octopus-001 — b19</div>
+            <div class="vo-text">"Moreover, octopi are much more interesting than most people could ever imagine."</div>
+            <div class="visual_intent">Query: A dazzling display of bioluminescent colors rippling across an octopus's entire body.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.773</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span><span class="chip alert">Repeat</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage perfectly captures the voiceover's narrative intent by showcasing a mesmerizing and dynamic display of bioluminescent colors on the octopus.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://ik.imagekit.io/annassocial/footage_engine/raw/chunks/76dfc9af_df5f9633.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: a6652ffe-48e0-4ed8-a39d-92c01bbd89f7 | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> N/A</div>
+              <div><strong>Source Video ID:</strong> N/A</div>
+              <div><strong>Span:</strong> 0.0s - 0.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+  </div>
+
+  <script>
+    function filterBeats() {
+      const c = document.getElementById("caseFilter").value;
+      const f = document.getElementById("flagFilter").value;
+      const cards = document.querySelectorAll(".beat-card");
+
+      cards.forEach(card => {
+        const cardCase = card.getAttribute("data-case");
+        const isStatic = card.getAttribute("data-static") === "true";
+        const isRepeat = card.getAttribute("data-repeat") === "true";
+        const isLowScore = card.getAttribute("data-low-score") === "true";
+
+        let caseMatch = (c === "all" || cardCase === c);
+        let flagMatch = true;
+        if (f === "static") flagMatch = isStatic;
+        if (f === "repeat") flagMatch = isRepeat;
+        if (f === "low_score") flagMatch = isLowScore;
+
+        if (caseMatch && flagMatch) {
+          card.style.display = "grid";
+        } else {
+          card.style.display = "none";
+        }
+      });
+    }
+  </script>
+</body>
+</html>

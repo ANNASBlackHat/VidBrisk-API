@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>VidBrisk Eval Comparison: 20261010-0836_test_mode_a vs 20261010-0838_test_mode_b</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      margin: 0;
+      padding: 24px;
+    }
+    header {
+      border-bottom: 1px solid #334155;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+    h1 { margin: 0 0 8px 0; font-size: 22px; color: #38bdf8; }
+    .meta { font-size: 13px; color: #94a3b8; }
+
+    .diff-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #1e293b;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .diff-table th, .diff-table td {
+      padding: 10px 16px;
+      text-align: left;
+      border-bottom: 1px solid #334155;
+      font-size: 13px;
+    }
+    .diff-table th { background: #0f172a; color: #94a3b8; text-transform: uppercase; font-size: 11px; }
+    .delta-pos { color: #4ade80; font-weight: bold; }
+    .delta-neg { color: #f87171; font-weight: bold; }
+
+    .changed-beat-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      padding: 16px;
+    }
+    .beat-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 8px;
+    }
+    .beat-title { font-size: 14px; font-weight: bold; color: #38bdf8; }
+    .beat-vo { font-size: 14px; margin-bottom: 16px; }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .option-box {
+      background: #0f172a;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+    }
+    .option-label { font-size: 12px; font-weight: bold; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; }
+    video, .img-preview {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      border-radius: 4px;
+      background: #000;
+    }
+
+    .vote-controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #334155;
+    }
+    .vote-btn {
+      background: #334155;
+      color: #f8fafc;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    .vote-btn:hover { background: #475569; }
+    .vote-btn.selected { background: #0284c7; color: #fff; }
+    .status-msg { font-size: 12px; color: #38bdf8; text-align: center; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>A/B Comparison: 20261010-0836_test_mode_a vs 20261010-0838_test_mode_b</h1>
+    <div class="meta">Changed beats: 1 / 5 total beats | Blinded A/B Pairwise Evaluation</div>
+  </header>
+
+  <table class="diff-table">
+    <thead>
+      <tr>
+        <th>Metric</th>
+        <th>20261010-0836_test_mode_a</th>
+        <th>20261010-0838_test_mode_b</th>
+        <th>Delta (B - A)</th>
+      </tr>
+    </thead>
+    <tbody>
+      
+        <tr>
+          <td><strong>mean_sim</strong></td>
+          <td>0.6622</td>
+          <td>0.6492</td>
+          <td class="delta-neg">-0.0130</td>
+        </tr>
+        
+        <tr>
+          <td><strong>hit_at_1</strong></td>
+          <td>0.0</td>
+          <td>0.0</td>
+          <td class="">0.0000</td>
+        </tr>
+        
+        <tr>
+          <td><strong>hit_at_3</strong></td>
+          <td>0.0</td>
+          <td>0.0</td>
+          <td class="">0.0000</td>
+        </tr>
+        
+        <tr>
+          <td><strong>judge_relevance</strong></td>
+          <td>5.0</td>
+          <td>3.0</td>
+          <td class="delta-neg">-2.0000</td>
+        </tr>
+        
+        <tr>
+          <td><strong>judge_visual_interest</strong></td>
+          <td>4.4</td>
+          <td>3.0</td>
+          <td class="delta-neg">-1.4000</td>
+        </tr>
+        
+        <tr>
+          <td><strong>mean_dynamism</strong></td>
+          <td>4.3</td>
+          <td>0.0</td>
+          <td class="delta-neg">-4.3000</td>
+        </tr>
+        
+        <tr>
+          <td><strong>static_rate</strong></td>
+          <td>0.8</td>
+          <td>0.0</td>
+          <td class="delta-pos">-0.8000</td>
+        </tr>
+        
+        <tr>
+          <td><strong>repeat_rate</strong></td>
+          <td>0.0</td>
+          <td>0.0</td>
+          <td class="">0.0000</td>
+        </tr>
+        
+    </tbody>
+  </table>
+
+  <h2>Changed Beats (1)</h2>
+  <div id="changedBeats">
+    
+            <div class="changed-beat-card">
+              <div class="beat-header">
+                <span class="beat-title">dynamic-001 — b1</span>
+                <span style="font-size: 12px; color: #94a3b8;">Query: Cinematic dark ocean at night with foggy atmosphere, viewed from the deck of a massive Edwardian luxury steamship cutting through icy black water.</span>
+              </div>
+              <div class="beat-vo">"On April 14th, 1912, the largest moving object ever built by human hands was sailing through the freezing dark of the North Atlantic."</div>
+
+              <div class="options-grid">
+                <div class="option-box">
+                  <div class="option-label">Option 1</div>
+                  <video src="https://cdn.pixabay.com/video/2025/08/06/295631_medium.mp4" controls muted loop preload="metadata"></video>
+                  <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Sim: 0.723</div>
+                </div>
+
+                <div class="option-box">
+                  <div class="option-label">Option 2</div>
+                  <video src="https://videos.pexels.com/video-files/4571674/4571674-hd_1280_720_50fps.mp4" controls muted loop preload="metadata"></video>
+                  <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Sim: 0.657</div>
+                </div>
+              </div>
+
+              <div class="vote-controls">
+                <button id="btn_dynamic-001_b1_1" data-beat="dynamic-001_b1" class="vote-btn" onclick="vote('dynamic-001_b1', '1', '20261010-0836_test_mode_a', '20261010-0838_test_mode_b', '0ee9f138-650d-4215-9bbb-93c9f27c0f4f', '8ccfffdc-606f-41cf-850c-36c41b4a2570')">Option 1 is Better</button>
+                <button id="btn_dynamic-001_b1_2" data-beat="dynamic-001_b1" class="vote-btn" onclick="vote('dynamic-001_b1', '2', '20261010-0836_test_mode_a', '20261010-0838_test_mode_b', '0ee9f138-650d-4215-9bbb-93c9f27c0f4f', '8ccfffdc-606f-41cf-850c-36c41b4a2570')">Option 2 is Better</button>
+                <button id="btn_dynamic-001_b1_tie" data-beat="dynamic-001_b1" class="vote-btn" onclick="vote('dynamic-001_b1', 'tie', '20261010-0836_test_mode_a', '20261010-0838_test_mode_b', '0ee9f138-650d-4215-9bbb-93c9f27c0f4f', '8ccfffdc-606f-41cf-850c-36c41b4a2570')">Tie</button>
+                <button id="btn_dynamic-001_b1_both_bad" data-beat="dynamic-001_b1" class="vote-btn" onclick="vote('dynamic-001_b1', 'both_bad', '20261010-0836_test_mode_a', '20261010-0838_test_mode_b', '0ee9f138-650d-4215-9bbb-93c9f27c0f4f', '8ccfffdc-606f-41cf-850c-36c41b4a2570')">Both Bad</button>
+              </div>
+              <div id="status_dynamic-001_b1" class="status-msg"></div>
+            </div>
+            
+  </div>
+
+  <div style="text-align: center; margin-top: 24px;">
+    <button class="vote-btn" style="background: #10b981;" onclick="downloadLabels()">Export Labels JSON</button>
+  </div>
+
+  <script>
+    const labelsData = [];
+
+    async function vote(beatId, choice, opt1Run, opt2Run, opt1Clip, opt2Clip) {
+      const record = {
+        run_a: "20261010-0836_test_mode_a",
+        run_b: "20261010-0838_test_mode_b",
+        beat_id: beatId,
+        choice: choice,
+        chosen_run: choice === "1" ? opt1Run : choice === "2" ? opt2Run : choice,
+        clip_1: opt1Clip,
+        clip_2: opt2Clip,
+        timestamp: new Date().toISOString()
+      };
+
+      labelsData.push(record);
+
+      // Attempt to save to local API server if running
+      try {
+        await fetch("http://localhost:8000/labels", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(record)
+        });
+      } catch (e) {
+        console.log("Local label server not running, saving in memory for download.");
+      }
+
+      // Highlight selected button
+      const btns = document.querySelectorAll(`[data-beat="${beatId}"]`);
+      btns.forEach(b => b.classList.remove("selected"));
+      const activeBtn = document.getElementById(`btn_${beatId}_${choice}`);
+      if (activeBtn) activeBtn.classList.add("selected");
+      const statusEl = document.getElementById(`status_${beatId}`);
+      if (statusEl) statusEl.innerText = `Recorded: ${choice === "1" ? "Option 1" : choice === "2" ? "Option 2" : choice}`;
+    }
+
+    function downloadLabels() {
+      const blob = new Blob([JSON.stringify(labelsData, null, 2)], {type: "application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "labels_20261010-0836_test_mode_a_vs_20261010-0838_test_mode_b.json";
+      a.click();
+    }
+  </script>
+</body>
+</html>

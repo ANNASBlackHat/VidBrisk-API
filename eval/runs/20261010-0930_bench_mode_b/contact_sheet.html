@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>VidBrisk Eval Contact Sheet — bench_mode_b</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      margin: 0;
+      padding: 24px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+    h1 { margin: 0; font-size: 24px; color: #38bdf8; }
+    .meta { color: #94a3b8; font-size: 14px; }
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      background: #1e293b;
+      padding: 12px 16px;
+      border-radius: 8px;
+    }
+    .controls select, .controls input {
+      background: #0f172a;
+      color: #f8fafc;
+      border: 1px solid #475569;
+      padding: 6px 12px;
+      border-radius: 6px;
+    }
+    .summary-card {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .stat-box {
+      background: #1e293b;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-value { font-size: 20px; font-weight: bold; color: #38bdf8; }
+    .stat-label { font-size: 12px; color: #94a3b8; text-transform: uppercase; }
+
+    .beat-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 280px 1fr 1fr;
+      gap: 20px;
+    }
+    .beat-card.static-flag { border-left: 4px solid #f59e0b; }
+    .beat-card.repeat-flag { border-left: 4px solid #ef4444; }
+    .beat-card.low-sim { border-left: 4px solid #ec4899; }
+
+    .beat-info { display: flex; flex-direction: column; gap: 8px; }
+    .beat-id { font-size: 12px; font-weight: bold; color: #38bdf8; text-transform: uppercase; }
+    .vo-text { font-size: 14px; font-weight: 500; line-height: 1.4; }
+    .visual-intent { font-size: 12px; color: #94a3b8; font-style: italic; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .chip {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: #334155;
+      color: #cbd5e1;
+    }
+    .chip.warn { background: #78350f; color: #fde68a; }
+    .chip.alert { background: #7f1d1d; color: #fecaca; }
+    .chip.good { background: #064e3b; color: #a7f3d0; }
+
+    .video-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .video-title { font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; }
+    video, .img-preview {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      border-radius: 6px;
+      background: #000;
+    }
+    .clip-meta { font-size: 11px; color: #64748b; }
+
+    .candidates-list {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .cand-thumb {
+      width: 80px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid #475569;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>VidBrisk Eval Contact Sheet — bench_mode_b</h1>
+      <div class="meta">Mode: B | Beats: original | Commit: f2efe70a | Generated: 20261010-0930</div>
+    </div>
+  </header>
+
+  <div class="summary-card">
+    <div class="stat-box"><div class="stat-value">10</div><div class="stat-label">Total Beats</div></div>
+    <div class="stat-box"><div class="stat-value">0.6163</div><div class="stat-label">Mean Sim</div></div>
+    <div class="stat-box"><div class="stat-value">0.0%</div><div class="stat-label">Hit@1</div></div>
+    <div class="stat-box"><div class="stat-value">5.0 / 5</div><div class="stat-label">Judge Relevance</div></div>
+    <div class="stat-box"><div class="stat-value">30.0%</div><div class="stat-label">Static Rate</div></div>
+    <div class="stat-box"><div class="stat-value">0.0%</div><div class="stat-label">Repeat Rate</div></div>
+  </div>
+
+  <div class="controls">
+    <label>Filter Case:
+      <select id="caseFilter" onchange="filterBeats()">
+        <option value="all">All Cases</option>
+        <option value="dynamic-001">dynamic-001</option><option value="ghost-001">ghost-001</option><option value="ghost-002">ghost-002</option><option value="wreck-001">wreck-001</option><option value="wreck-002">wreck-002</option>
+      </select>
+    </label>
+    <label>Filter Flag:
+      <select id="flagFilter" onchange="filterBeats()">
+        <option value="all">All Beats</option>
+        <option value="static">Static / Low Motion</option>
+        <option value="repeat">Repeated</option>
+        <option value="low_score">Low Similarity Score (&lt;0.5)</option>
+      </select>
+    </label>
+  </div>
+
+  <div id="beatsContainer">
+    
+        <div class="beat-card static-flag"
+             data-case="ghost-001"
+             data-static="true"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">ghost-001 — b1</div>
+            <div class="vo-text">"Somewhere in the waters off the north coast of Scotland, there's a patch of sea with nothing on it. No dive boats. No buoys marking a popular wreck site."</div>
+            <div class="visual_intent">Query: Cinematic drone shot over a desolate, cold, dark grey Scottish coastal sea under an overcast sky.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.670</span><span class="chip">Dynamism: 3.29</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage precisely matches the narrative and visual intent by showcasing a desolate, cinematic Scottish sea that directly reinforces the voiceover.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://videos.pexels.com/video-files/31456820/13414398_640_360_60fps.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: df29ff56-ab2d-47b9-9970-7011aee627ea | Provider: pexels</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> 2e9319cd-eec9-4776-9cce-0ddb1b1b77e9</div>
+              <div><strong>Source Video ID:</strong> f86f5859-6edd-46d5-bf52-e742ae4ef83e</div>
+              <div><strong>Span:</strong> 0.0s - 6.94s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card "
+             data-case="ghost-001"
+             data-static="false"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">ghost-001 — b2</div>
+            <div class="vo-text">"Just one lonely marker, and a warning painted on it that most people never get close enough to read."</div>
+            <div class="visual_intent">Query: Close-up shot of a single green navigational buoy bobbing in choppy dark water, with warning text stenciled on its side.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.609</span><span class="chip">Dynamism: 10.82</span><span class="chip good">Judge: 5/5</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The footage precisely matches the narrative and visual intent of a single lonely warning marker in choppy water.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://videos.pexels.com/video-files/32844046/13998917_640_360_24fps.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: b674429c-8581-4799-aaa9-1c19a3b9a53e | Provider: pexels</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> 7c9594c3-b219-4db6-9210-36dcc2816be5</div>
+              <div><strong>Source Video ID:</strong> 42932446-5114-409d-b7c8-c758bd006710</div>
+              <div><strong>Span:</strong> 0.0s - 10.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card "
+             data-case="ghost-002"
+             data-static="false"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">ghost-002 — b18</div>
+            <div class="vo-text">"Through the 1960s and 70s, before any legal protection existed, divers visited the wreck relatively freely. Some came for curiosity, but others came for something else — brass fittings, portholes, souvenirs."</div>
+            <div class="visual_intent">Query: Vintage 1970s grainy color photo of scuba divers examining rusted underwater metal structures.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.671</span><span class="chip">Dynamism: 16.17</span><span class="chip good">Judge: 5/5</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage precisely matches the vintage 1970s aesthetic and narrative intent of divers exploring a wreck before legal protections.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://videos.pexels.com/video-files/35154808/14892628_640_360_60fps.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 9e7e40d4-ec4e-4d53-9861-3329e922bb3f | Provider: pexels</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> 59f29528-a25a-49b9-a4e7-af08dc99aca8</div>
+              <div><strong>Source Video ID:</strong> ca2d065a-7655-4022-9329-06b0b4f81b15</div>
+              <div><strong>Span:</strong> 20.0s - 30.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card "
+             data-case="ghost-002"
+             data-static="false"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">ghost-002 — b19</div>
+            <div class="vo-text">"It wasn't until 1986 — nearly fifty years after the sinking — that the UK passed a law with real teeth: the Protection of Military Remains Act."</div>
+            <div class="visual_intent">Query: Close-up of weathered archival legal documents and parliamentary acts stamped in red ink.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.548</span><span class="chip">Dynamism: 29.48</span><span class="chip good">Judge: 5/5</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The archival legal documents directly support the narration about the 1986 UK law while providing strong historical visual texture.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://videos.pexels.com/video-files/8371858/8371858-hd_2048_1080_25fps.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: e681d09a-ba4c-4cfd-90c5-29cf0ffed5a1 | Provider: pexels</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> fcac77ff-a558-479c-b301-0f17505440cc</div>
+              <div><strong>Source Video ID:</strong> 4249b3ab-de5c-4bd2-bfb2-59f7e925c8f7</div>
+              <div><strong>Span:</strong> 0.0s - 7.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag"
+             data-case="wreck-001"
+             data-static="true"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">wreck-001 — b1</div>
+            <div class="vo-text">"Somewhere in the waters off the north coast of Scotland, there's a patch of sea with nothing on it. No dive boats. No buoys marking a popular wreck site."</div>
+            <div class="visual_intent">Query: Cinematic wide drone shot of a grey, cold North Sea under an overcast sky, completely empty ocean surface, gentle swells.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.735</span><span class="chip">Dynamism: 2.05</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage precisely matches the narrative and visual intent of an empty, cold North Sea, providing an effective atmospheric opening for the beat.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://cdn.pixabay.com/video/2016/06/27/3589-172488261_medium.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 36c330b6-f199-45ef-a536-b0edd0145e26 | Provider: pixabay</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> 939a4986-be2b-4998-9e08-ea42defb9307</div>
+              <div><strong>Source Video ID:</strong> 8ec45be6-e1bf-406a-9c0c-042282f86e25</div>
+              <div><strong>Span:</strong> 15.0s - 25.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card "
+             data-case="wreck-001"
+             data-static="false"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">wreck-001 — b2</div>
+            <div class="vo-text">"Just one lonely marker, and a warning painted on it that most people never get close enough to read."</div>
+            <div class="visual_intent">Query: A weathered, solitary green navigational buoy bobbing in choppy dark water, stenciled warning text visible as the camera pushes in.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.624</span><span class="chip">Dynamism: 10.82</span><span class="chip good">Judge: 5/5</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage precisely matches the narrative beat by depicting a solitary green buoy in choppy waters with visible warning text as the camera pushes in.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://videos.pexels.com/video-files/32844046/13998917_640_360_24fps.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: b674429c-8581-4799-aaa9-1c19a3b9a53e | Provider: pexels</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> 8578449a-8d45-4e2f-8bfc-4aff12d4846a</div>
+              <div><strong>Source Video ID:</strong> 0f75402e-857e-4fc7-ba46-94ec4b073c7c</div>
+              <div><strong>Span:</strong> 6.73s - 13.27s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card static-flag"
+             data-case="wreck-002"
+             data-static="true"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">wreck-002 — b20</div>
+            <div class="vo-text">"The Act created two categories for military wrecks: 'protected places' where you can look but not touch, and 'controlled sites' where no diving is permitted at all without a license."</div>
+            <div class="visual_intent">Query: Clean graphic split-screen showing two regulatory warning icons for restricted maritime zones.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.512</span><span class="chip">Dynamism: 0.0</span><span class="chip good">Judge: 5/5</span><span class="chip warn">Static</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected graphic directly and clearly illustrates the two distinct regulatory categories mentioned in the voiceover.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <img class="img-preview" src="https://www.youtube.com/watch?v=nwVx-xm8rlE">
+            <div class="clip-meta">ID: 734b9bd3-db47-4b75-b663-db1bbb01850a | Provider: youtube</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> 9581c9ee-5957-4680-8bfc-610e1ddf804b</div>
+              <div><strong>Source Video ID:</strong> 1d5bf0e4-6988-49ee-944d-3eca1b0db01a</div>
+              <div><strong>Span:</strong> 0.0s - 10.48s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card "
+             data-case="wreck-002"
+             data-static="false"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">wreck-002 — b21</div>
+            <div class="vo-text">"In 2002, HMS Royal Oak was formally designated a controlled site — the highest level of legal protection a wreck can receive in UK waters."</div>
+            <div class="visual_intent">Query: UK naval warship wreck underwater, underwater rusted shipwreck ocean floor, restricted maritime zone buoy, royal navy warship memorial site, deep sea historical shipwreck exploration</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.629</span><span class="chip">Dynamism: 8.65</span><span class="chip good">Judge: 5/5</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage precisely matches the narrative context of a protected underwater warship wreck, fulfilling both the visual intent and the historical significance of the voiceover.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://videos.pexels.com/video-files/38401646/16306161_640_360_60fps.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 4bd11ce0-7330-480c-8641-572ee9563f03 | Provider: pexels</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> f0abfdb1-34c3-4615-af5e-25a072300cee</div>
+              <div><strong>Source Video ID:</strong> 8ec45be6-e1bf-406a-9c0c-042282f86e25</div>
+              <div><strong>Span:</strong> 5.0s - 15.0s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card "
+             data-case="dynamic-001"
+             data-static="false"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">dynamic-001 — b1</div>
+            <div class="vo-text">"On April 14th, 1912, the largest moving object ever built by human hands was sailing through the freezing dark of the North Atlantic."</div>
+            <div class="visual_intent">Query: Cinematic dark ocean at night with foggy atmosphere, viewed from the deck of a massive Edwardian luxury steamship cutting through icy black water.</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.657</span><span class="chip">Dynamism: 22.87</span><span class="chip good">Judge: 5/5</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The selected footage precisely captures the eerie, dark oceanic atmosphere and Edwardian ship deck described in the narration and visual intent.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://videos.pexels.com/video-files/4571674/4571674-hd_1280_720_50fps.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 8ccfffdc-606f-41cf-850c-36c41b4a2570 | Provider: pexels</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> b900886f-5308-464a-aab5-13d0491b14c1</div>
+              <div><strong>Source Video ID:</strong> 39c3d843-4958-41ef-8021-818fec646df5</div>
+              <div><strong>Span:</strong> 8.02s - 17.99s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+        <div class="beat-card "
+             data-case="dynamic-001"
+             data-static="false"
+             data-repeat="false"
+             data-low-score="false">
+          <div class="beat-info">
+            <div class="beat-id">dynamic-001 — b3</div>
+            <div class="vo-text">"The RMS Titanic set sail from Southampton with over two thousand passengers on board, bound for New York."</div>
+            <div class="visual_intent">Query: vintage ocean liner departure crowd, historical ship pier departure sepia, passengers waving from ship deck archive, Edwardian dock crowd waving goodbye</div>
+            <div class="chips">
+              <span class="chip">Sim: 0.508</span><span class="chip">Dynamism: 30.61</span><span class="chip good">Judge: 5/5</span>
+            </div>
+            <div style="font-size: 11px; color: #a5b4fc; margin-top: 6px;">Judge: The archival footage perfectly captures the Edwardian departure scene described in the narration with authentic historical atmosphere.</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Engine Pick (Selected)</div>
+            <video src="https://videos.pexels.com/video-files/38088215/16171181_682_360_60fps.mp4" controls muted loop preload="metadata"></video>
+            <div class="clip-meta">ID: 9fa2999c-8447-4b2e-af39-843091739d1f | Provider: pexels</div>
+          </div>
+
+          <div class="video-preview">
+            <div class="video-title">Original Pick</div>
+            <div style="background: #020617; height: 160px; border-radius: 6px; padding: 12px; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; justify-content: center;">
+              <div><strong>Original Clip ID:</strong> 21ad6d37-0949-4441-9063-9cf4340efe23</div>
+              <div><strong>Source Video ID:</strong> 2dfecdfc-74ae-4cb0-afc0-afc124f07e12</div>
+              <div><strong>Span:</strong> 1.35s - 8.64s</div>
+            </div>
+            <div class="clip-meta">Matches: No Hit in Top-10</div>
+          </div>
+        </div>
+        
+  </div>
+
+  <script>
+    function filterBeats() {
+      const c = document.getElementById("caseFilter").value;
+      const f = document.getElementById("flagFilter").value;
+      const cards = document.querySelectorAll(".beat-card");
+
+      cards.forEach(card => {
+        const cardCase = card.getAttribute("data-case");
+        const isStatic = card.getAttribute("data-static") === "true";
+        const isRepeat = card.getAttribute("data-repeat") === "true";
+        const isLowScore = card.getAttribute("data-low-score") === "true";
+
+        let caseMatch = (c === "all" || cardCase === c);
+        let flagMatch = true;
+        if (f === "static") flagMatch = isStatic;
+        if (f === "repeat") flagMatch = isRepeat;
+        if (f === "low_score") flagMatch = isLowScore;
+
+        if (caseMatch && flagMatch) {
+          card.style.display = "grid";
+        } else {
+          card.style.display = "none";
+        }
+      });
+    }
+  </script>
+</body>
+</html>
