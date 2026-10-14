@@ -193,4 +193,17 @@ def test_dispatch_render_to_worker_success():
                 assert f.read() == b"VIDEO"
 
 
+def test_build_render_bundle():
+    from scripts.colab_render_worker import build_render_bundle
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tarball, env_path, setup_path = build_render_bundle(tmpdir)
+        assert os.path.exists(tarball)
+        assert os.path.exists(env_path)
+        assert os.path.exists(setup_path)
+        assert tarball.endswith(".tar.gz")
+        assert os.path.getsize(tarball) > 0
+
+
+
 
