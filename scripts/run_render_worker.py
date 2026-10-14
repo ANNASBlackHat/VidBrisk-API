@@ -189,7 +189,8 @@ def run_render_queue_worker(
                 last_active = time.time()
                 job_id = job["id"]
                 logger.info(f"Claimed render job '{job_id}'")
-                set_worker_status(database_url=database_url, worker_id=worker_id, status="busy", job_id=job_id)
+                set_worker_status(database_url=database_url, worker_id=worker_id, status="busy")
+                heartbeat_worker(database_url=database_url, worker_id=worker_id, current_job_id=job_id)
 
                 try:
                     payload = job.get("payload", {})
@@ -202,6 +203,8 @@ def run_render_queue_worker(
                     fail_job(database_url=database_url, job_id=job_id, error=str(ex))
 
                 set_worker_status(database_url=database_url, worker_id=worker_id, status="idle")
+                heartbeat_worker(database_url=database_url, worker_id=worker_id, clear_current_job=True)
+
                 time.sleep(0.05)
             else:
                 if idle_exit > 0 and (time.time() - last_active) > idle_exit:
