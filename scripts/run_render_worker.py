@@ -117,7 +117,7 @@ def handle_render_video_task(
 
     frontend_dir = os.path.dirname(os.path.dirname(os.path.abspath(remotion_script)))
 
-    cmd = ["node", remotion_script, "--timeline", timeline_path, "--out", out_path]
+    cmd = ["node", "--preserve-symlinks", remotion_script, "--timeline", timeline_path, "--out", out_path]
 
     t0 = time.time()
 

@@ -66,15 +66,15 @@ with tarfile.open("/content/render_worker.tar.gz", "r:gz") as tf:
 
 frontend_dir = "/content/render_repo/video-generation-frontend"
 if os.path.exists(frontend_dir):
-    cache_nm = "/content/frontend_node_modules"
     target_nm = os.path.join(frontend_dir, "node_modules")
-    if not os.path.exists(cache_nm):
-        print("[run] Installing npm dependencies for Remotion (first time)...", flush=True)
+    cache_nm = "/content/frontend_node_modules"
+    if os.path.islink(target_nm):
+        os.unlink(target_nm)
+    if os.path.exists(cache_nm) and not os.path.exists(target_nm):
+        shutil.move(cache_nm, target_nm)
+    elif not os.path.exists(target_nm):
+        print("[run] Installing npm dependencies for Remotion...", flush=True)
         subprocess.check_call(["npm", "install", "--no-audit", "--progress=false"], cwd=frontend_dir)
-        shutil.move(target_nm, cache_nm)
-
-    if not os.path.exists(target_nm):
-        os.symlink(cache_nm, target_nm)
 
 with open("/content/render_env.json") as f:
     env_vars = {k: str(v) for k, v in json.load(f).items()}
@@ -82,6 +82,9 @@ with open("/content/render_env.json") as f:
 env = os.environ.copy()
 env.update(env_vars)
 env["PYTHONPATH"] = f"/content/render_repo:{env.get('PYTHONPATH', '')}"
+if os.path.exists(frontend_dir):
+    env["NODE_PATH"] = os.path.join(frontend_dir, "node_modules")
+    env["NODE_PRESERVE_SYMLINKS"] = "1"
 
 chrome_bin = shutil.which("google-chrome") or shutil.which("google-chrome-stable") or "/usr/bin/google-chrome"
 if chrome_bin and os.path.exists(chrome_bin):
