@@ -60,7 +60,7 @@ def test_restore_payload_assets():
         assert os.path.exists(expected_path)
         with open(expected_path, "rb") as f:
             assert f.read() == dummy_bytes
-        assert expected_path in restored
+        assert expected_path in restored.values()
 
 
 def test_unpack_render_result_base64():

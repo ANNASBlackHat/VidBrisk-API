@@ -64,24 +64,41 @@ def build_render_payload(
     }
 
 
-def restore_payload_assets(payload: dict[str, Any], target_dir: str) -> list[str]:
-    """Unpacks audio manifest from payload into the target directory."""
-    restored: list[str] = []
+def restore_payload_assets(payload: dict[str, Any], target_dir: str) -> dict[str, str]:
+    """Unpacks audio manifest from payload into the target directory, returning mapping of rel_path -> abs_dest_path."""
+    path_map: dict[str, str] = {}
     audio_manifest = payload.get("audio_manifest", {})
 
     for rel_path, b64_data in audio_manifest.items():
-        dest_path = os.path.join(target_dir, rel_path)
+        dest_path = os.path.abspath(os.path.join(target_dir, rel_path))
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
         try:
             raw_bytes = base64.b64decode(b64_data.encode("ascii"))
             with open(dest_path, "wb") as f:
                 f.write(raw_bytes)
-            restored.append(dest_path)
+            path_map[rel_path] = dest_path
         except Exception as e:
             logger.error(f"Failed to restore payload asset '{rel_path}': {e}")
             raise
 
-    return restored
+    return path_map
+
+
+def rewrite_timeline_asset_paths(timeline_data: Any, path_map: dict[str, str]) -> Any:
+    """Recursively rewrites any path references in timeline_data to point to restored local files."""
+    if not path_map:
+        return timeline_data
+
+    if isinstance(timeline_data, dict):
+        return {k: rewrite_timeline_asset_paths(v, path_map) for k, v in timeline_data.items()}
+    elif isinstance(timeline_data, list):
+        return [rewrite_timeline_asset_paths(item, path_map) for item in timeline_data]
+    elif isinstance(timeline_data, str):
+        for rel_k, new_abs_path in path_map.items():
+            if timeline_data == rel_k or timeline_data.endswith(f"/{rel_k}") or timeline_data.endswith(f"\\{rel_k}"):
+                return new_abs_path
+        return timeline_data
+    return timeline_data
 
 
 def unpack_render_result(result: dict[str, Any], output_path: str, max_retries: int = 3) -> str:

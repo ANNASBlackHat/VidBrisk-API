@@ -18,7 +18,7 @@ import tempfile
 import time
 from typing import Any, Callable, Optional
 
-from backend.worker.render_payload import restore_payload_assets
+from backend.worker.render_payload import restore_payload_assets, rewrite_timeline_asset_paths
 
 logger = logging.getLogger("render_worker")
 if not logger.handlers:
@@ -90,7 +90,8 @@ def handle_render_video_task(
     os.makedirs(base_dir, exist_ok=True)
 
     # 1. Restore audio assets
-    restore_payload_assets(payload, target_dir=base_dir)
+    path_map = restore_payload_assets(payload, target_dir=base_dir)
+    timeline_data = rewrite_timeline_asset_paths(timeline_data, path_map)
 
     # 2. Write timeline JSON
     timeline_path = os.path.join(base_dir, f"job_{job_id[:8]}_timeline.json")
