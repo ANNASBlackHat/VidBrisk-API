@@ -27,13 +27,13 @@ def build_render_payload(
     def _collect_audio_paths(obj: Any) -> None:
         if isinstance(obj, dict):
             for k, v in obj.items():
-                if k in ("src", "audio_path", "audio_file", "path") and isinstance(v, str):
-                    if v.lower().endswith((".wav", ".mp3", ".m4a", ".aac")):
-                        audio_paths.add(v)
+                if isinstance(v, str) and v.lower().endswith((".wav", ".mp3", ".m4a", ".aac", ".ogg", ".flac")):
+                    audio_paths.add(v)
                 _collect_audio_paths(v)
         elif isinstance(obj, list):
             for item in obj:
                 _collect_audio_paths(item)
+
 
     _collect_audio_paths(timeline_data)
 
