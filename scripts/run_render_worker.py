@@ -45,10 +45,14 @@ def _run_remotion_subprocess(
 
     frame_regex = re.compile(r"Rendering frame (\d+)/(\d+) \((\d+)%\)")
 
+    recent_lines = []
     for line in iter(proc.stdout.readline, ""):
         line_str = line.strip()
         if not line_str:
             continue
+        recent_lines.append(line_str)
+        if len(recent_lines) > 50:
+            recent_lines.pop(0)
 
         m = frame_regex.search(line_str)
         if m:
@@ -58,10 +62,14 @@ def _run_remotion_subprocess(
             if progress_cb:
                 progress_cb(frame, total, pct, f"Rendering frame {frame}/{total} ({pct}%)")
         else:
-            logger.debug(line_str)
+            logger.info(f"[Remotion] {line_str}")
 
     proc.stdout.close()
-    return proc.wait()
+    ret = proc.wait()
+    if ret != 0:
+        err_tail = "\n".join(recent_lines[-20:])
+        raise RuntimeError(f"Remotion process failed (exit code {ret}):\n{err_tail}")
+    return ret
 
 
 def handle_render_video_task(
@@ -117,10 +125,7 @@ def handle_render_video_task(
         if progress_cb:
             progress_cb(pct, msg)
 
-    return_code = _run_remotion_subprocess(cmd=cmd, cwd=frontend_dir, progress_cb=_on_frame)
-
-    if return_code != 0:
-        raise RuntimeError(f"Remotion renderer process failed with exit code {return_code}")
+    _run_remotion_subprocess(cmd=cmd, cwd=frontend_dir, progress_cb=_on_frame)
 
     if not os.path.exists(out_path):
         raise FileNotFoundError(f"Render output MP4 file was not created: '{out_path}'")
@@ -183,6 +188,7 @@ def run_render_queue_worker(
                 worker_id=worker_id,
                 tasks=["render_video"],
                 backend="remotion",
+                lease_sec=7200,
             )
 
             if job:
@@ -190,12 +196,27 @@ def run_render_queue_worker(
                 job_id = job["id"]
                 logger.info(f"Claimed render job '{job_id}'")
                 set_worker_status(database_url=database_url, worker_id=worker_id, status="busy")
-                heartbeat_worker(database_url=database_url, worker_id=worker_id, current_job_id=job_id)
+                heartbeat_worker(database_url=database_url, worker_id=worker_id, current_job_id=job_id, lease_sec=7200)
+
+                last_hb_ts = [time.time()]
+
+                def _progress_heartbeat(pct: int, msg: str):
+                    if time.time() - last_hb_ts[0] > 10.0:
+                        last_hb_ts[0] = time.time()
+                        try:
+                            heartbeat_worker(
+                                database_url=database_url,
+                                worker_id=worker_id,
+                                current_job_id=job_id,
+                                lease_sec=7200,
+                            )
+                        except Exception:
+                            pass
 
                 try:
                     payload = job.get("payload", {})
                     payload.setdefault("transport", transport)
-                    result = handle_render_video_task(payload)
+                    result = handle_render_video_task(payload, progress_cb=_progress_heartbeat)
                     complete_job(database_url=database_url, job_id=job_id, result=result)
                     logger.info(f"Completed render job '{job_id}' successfully in {result.get('render_time_sec')}s.")
                 except Exception as ex:

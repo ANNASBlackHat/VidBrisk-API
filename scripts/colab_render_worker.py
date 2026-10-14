@@ -32,6 +32,11 @@ if not (shutil.which("google-chrome") or shutil.which("google-chrome-stable")):
     subprocess.run(["wget", "-q", "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"], check=True)
     subprocess.run("dpkg -i google-chrome-stable_current_amd64.deb || apt-get install -fy -qq", shell=True, check=True)
 
+# Install Node.js if not present
+if not shutil.which("node"):
+    print("[setup] Installing Node.js ...", flush=True)
+    subprocess.run("curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y -qq nodejs", shell=True, check=True)
+
 # Python dependencies for queue & transports
 py_groups = [
     ["sqlalchemy", "psycopg[binary]", "psycopg2-binary", "requests"],
@@ -50,6 +55,7 @@ REMOTE_RUN = '''
 """Unpack bundle, configure env, and run the Render worker."""
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -58,12 +64,28 @@ os.makedirs("/content/render_repo", exist_ok=True)
 with tarfile.open("/content/render_worker.tar.gz", "r:gz") as tf:
     tf.extractall("/content/render_repo")
 
+frontend_dir = "/content/render_repo/video-generation-frontend"
+if os.path.exists(frontend_dir):
+    cache_nm = "/content/frontend_node_modules"
+    target_nm = os.path.join(frontend_dir, "node_modules")
+    if not os.path.exists(cache_nm):
+        print("[run] Installing npm dependencies for Remotion (first time)...", flush=True)
+        subprocess.check_call(["npm", "install", "--no-audit", "--progress=false"], cwd=frontend_dir)
+        shutil.move(target_nm, cache_nm)
+
+    if not os.path.exists(target_nm):
+        os.symlink(cache_nm, target_nm)
+
 with open("/content/render_env.json") as f:
     env_vars = {k: str(v) for k, v in json.load(f).items()}
 
 env = os.environ.copy()
 env.update(env_vars)
 env["PYTHONPATH"] = f"/content/render_repo:{env.get('PYTHONPATH', '')}"
+
+chrome_bin = shutil.which("google-chrome") or shutil.which("google-chrome-stable") or "/usr/bin/google-chrome"
+if chrome_bin and os.path.exists(chrome_bin):
+    env["PUPPETEER_EXECUTABLE_PATH"] = chrome_bin
 
 cmd = [sys.executable, "-u", "/content/render_repo/scripts/run_render_worker.py", *EXTRA_ARGV]
 proc = subprocess.Popen(
