@@ -34,9 +34,10 @@ if not (shutil.which("google-chrome") or shutil.which("google-chrome-stable")):
 
 # Python dependencies for queue & transports
 py_groups = [
-    ["sqlalchemy", "psycopg2-binary", "requests"],
+    ["sqlalchemy", "psycopg[binary]", "psycopg2-binary", "requests"],
     ["fastapi", "uvicorn", "pyngrok", "pydantic", "pydantic-settings", "python-dotenv"],
 ]
+
 for group in py_groups:
     print(f"[setup] pip install {' '.join(group)} ...", flush=True)
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-qq", *group])
