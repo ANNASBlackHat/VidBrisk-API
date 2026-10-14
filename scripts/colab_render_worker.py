@@ -22,14 +22,15 @@ REMOTE_SETUP = '''
 """Install render worker dependencies on Colab VM."""
 import subprocess
 import sys
+import shutil
 
-# System packages for Remotion (Node.js, npm, FFmpeg, Chromium)
-print("[setup] Updating apt and installing nodejs, npm, ffmpeg, chromium ...", flush=True)
-sys_cmd = [
-    "apt-get", "update", "-qq", "&&",
-    "apt-get", "install", "-y", "-qq", "nodejs", "npm", "ffmpeg", "chromium-browser"
-]
-subprocess.run(" ".join(sys_cmd), shell=True, check=True)
+print("[setup] Checking system packages (FFmpeg, Node.js, Chrome)...", flush=True)
+
+# Install google-chrome if not present
+if not (shutil.which("google-chrome") or shutil.which("google-chrome-stable")):
+    print("[setup] Installing google-chrome-stable ...", flush=True)
+    subprocess.run(["wget", "-q", "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"], check=True)
+    subprocess.run("dpkg -i google-chrome-stable_current_amd64.deb || apt-get install -fy -qq", shell=True, check=True)
 
 # Python dependencies for queue & transports
 py_groups = [
@@ -42,6 +43,7 @@ for group in py_groups:
 
 print("[setup] done", flush=True)
 '''
+
 
 REMOTE_RUN = '''
 """Unpack bundle, configure env, and run the Render worker."""
