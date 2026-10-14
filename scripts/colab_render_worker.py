@@ -92,6 +92,12 @@ def build_render_bundle(tmpdir: str) -> Tuple[str, str, str]:
     """Create code tarball + env JSON + remote setup script. Returns file paths."""
     from pipeline.config import get_settings
 
+    def _bundle_filter(ti):
+        name = ti.name
+        if any(b in name for b in ("node_modules", ".next", ".git", "__pycache__", ".map", "/renders", "renders/", "/cache", "cache/", ".screenshots")):
+            return None
+        return ti
+
     tarball = os.path.join(tmpdir, "render_worker.tar.gz")
     with tarfile.open(tarball, "w:gz") as tf:
         for rel in (
@@ -102,20 +108,17 @@ def build_render_bundle(tmpdir: str) -> Tuple[str, str, str]:
         ):
             full = os.path.join(REPO_ROOT, rel)
             if os.path.exists(full):
-                tf.add(
-                    full,
-                    arcname=rel,
-                    filter=lambda ti: None if "__pycache__" in ti.name else ti,
-                )
+                tf.add(full, arcname=rel, filter=_bundle_filter)
 
-        # Include Remotion script from frontend if present
+        # Include footage_engine
+        footage_engine_dir = os.path.abspath(os.path.join(REPO_ROOT, "..", "footage-engine", "footage_engine"))
+        if os.path.exists(footage_engine_dir):
+            tf.add(footage_engine_dir, arcname="footage_engine", filter=_bundle_filter)
+
+        # Include Remotion bundle and scripts from frontend
         frontend_dir = os.path.abspath(os.path.join(REPO_ROOT, "..", "video-generation-frontend"))
         if os.path.exists(frontend_dir):
-            tf.add(
-                frontend_dir,
-                arcname="video-generation-frontend",
-                filter=lambda ti: None if "node_modules" in ti.name or ".next" in ti.name else ti,
-            )
+            tf.add(frontend_dir, arcname="video-generation-frontend", filter=_bundle_filter)
 
     settings = get_settings()
     env = {k: v for k, v in settings.model_dump().items() if v is not None}
@@ -128,6 +131,7 @@ def build_render_bundle(tmpdir: str) -> Tuple[str, str, str]:
         f.write(REMOTE_SETUP)
 
     return tarball, env_path, setup_path
+
 
 
 def main() -> int:
