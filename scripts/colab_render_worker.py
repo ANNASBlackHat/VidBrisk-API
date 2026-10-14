@@ -122,7 +122,7 @@ def build_render_bundle(tmpdir: str) -> Tuple[str, str, str]:
 
     def _bundle_filter(ti):
         name = ti.name
-        if any(b in name for b in ("node_modules", ".next", ".git", "__pycache__", ".map", "/renders", "renders/", "/cache", "cache/", ".screenshots")):
+        if any(b in name for b in ("node_modules", ".next", ".git", "__pycache__", "/renders", "renders/", "/cache", "cache/", ".screenshots")):
             return None
         return ti
 
