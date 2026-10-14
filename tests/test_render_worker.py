@@ -149,3 +149,48 @@ def test_handle_render_video_task_mock_render():
             assert len(progress_calls) > 0
 
 
+def test_dispatch_render_to_worker_no_workers_returns_false():
+    from unittest.mock import MagicMock, patch
+    from backend.worker.renderer_task import _dispatch_render_to_worker
+
+    with patch("backend.worker.renderer_task._get_worker_helpers", return_value=None):
+        handled = _dispatch_render_to_worker(
+            job_id="job-123",
+            timeline_data={"total_duration": 10},
+            out_path="/tmp/test.mp4",
+        )
+        assert handled is False
+
+
+def test_dispatch_render_to_worker_success():
+    from unittest.mock import MagicMock, patch
+    from backend.worker.renderer_task import _dispatch_render_to_worker
+
+    mock_helpers = {
+        "count_live_workers": MagicMock(return_value=1),
+        "submit_job": MagicMock(return_value="remote-job-999"),
+        "wait_for_job": MagicMock(return_value={
+            "status": "done",
+            "result": {
+                "status": "success",
+                "transport": "base64",
+                "video_b64": base64.b64encode(b"VIDEO").decode("ascii"),
+            },
+        }),
+    }
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out_file = os.path.join(tmpdir, "out.mp4")
+        with patch("backend.worker.renderer_task._get_worker_helpers", return_value=mock_helpers):
+            handled = _dispatch_render_to_worker(
+                job_id="job-123",
+                timeline_data={"total_duration": 10},
+                out_path=out_file,
+            )
+            assert handled is True
+            assert os.path.exists(out_file)
+            with open(out_file, "rb") as f:
+                assert f.read() == b"VIDEO"
+
+
+
