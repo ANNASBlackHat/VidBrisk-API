@@ -47,7 +47,7 @@ def main():
         else:
             print(f"[{elapsed}s] Job {status}... (worker: {worker_id})", flush=True)
 
-        if status in ("complete", "completed", "success"):
+        if str(status).lower() in ("done", "complete", "completed", "success"):
             print(f"🎉 Job completed in {elapsed}s!", flush=True)
             os.makedirs(os.path.dirname(out_file), exist_ok=True)
             unpack_render_result(job["result"], out_file)
