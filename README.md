@@ -219,6 +219,39 @@ uv run python scripts/run_tts_worker.py --http --port 8005
 
 ---
 
+## 🎬 Remote & Batch Render Worker (Colab & Local Fallback)
+
+For high-throughput batch video rendering, the pipeline supports opportunistic distributed rendering across your local machine and remote workers (such as Google Colab CPU runtimes or secondary machines).
+
+### Key Highlights
+- **CPU-Friendly**: Rendering does not require heavy GPUs; runs seamlessly on free Colab CPU runtimes (`--gpu none`).
+- **Opportunistic Offload & Zero Regression**:
+  - If a render worker is active in the queue, render jobs are offloaded to it.
+  - If no workers are online, or if a worker disconnects/times out, **it automatically falls back to in-process local rendering**.
+- **Dual Transports**:
+  - **`base64`** (Default): MP4 is embedded directly into the database job result. Zero external cloud storage required.
+  - **`ngrok`**: Direct HTTP download and streaming from the remote worker for large video files.
+
+### 1. Launch Render Worker on Google Colab
+```bash
+# Launch CPU worker with base64 transport (exits after 15m idle)
+uv run python scripts/colab_render_worker.py --transport base64 --idle-exit 900
+
+# Launch with ngrok direct download transport
+uv run python scripts/colab_render_worker.py --transport ngrok --ngrok-token <YOUR_TOKEN>
+
+# Test bundle packaging locally without launching Colab
+uv run python scripts/colab_render_worker.py --bundle-only
+```
+
+### 2. Run Local Render Worker Daemon
+```bash
+# Queue mode connected to PostgreSQL
+uv run python scripts/run_render_worker.py --transport base64 --interval 1.0
+```
+
+---
+
 ## 🐳 Docker Deployment
 
 ### Start with Docker Compose
