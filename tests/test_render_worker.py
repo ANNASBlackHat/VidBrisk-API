@@ -101,3 +101,51 @@ def test_unpack_render_result_ngrok(monkeypatch):
         with open(out_mp4, "rb") as f:
             assert f.read() == b"NGROK_STREAMED_CHUNK_1_NGROK_STREAMED_CHUNK_2"
 
+
+def test_handle_render_video_task_mock_render():
+    from unittest.mock import MagicMock, patch
+    from scripts.run_render_worker import handle_render_video_task
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        payload = {
+            "job_id": "job-abc",
+            "timeline": {"total_duration": 10},
+            "width": 1280,
+            "height": 720,
+            "fps": 24,
+            "transport": "base64",
+            "audio_manifest": {},
+        }
+
+        progress_calls = []
+
+        with patch("scripts.run_render_worker._run_remotion_subprocess") as mock_exec:
+            def fake_render(cmd, cwd, progress_cb):
+                if progress_cb:
+                    progress_cb(50, 100, 50, "Rendering frame 50/100 (50%)")
+                out_idx = cmd.index("--out")
+                with open(cmd[out_idx + 1], "wb") as f:
+                    f.write(b"MOCK_MP4_OUTPUT")
+                return 0
+
+            mock_exec.side_effect = fake_render
+
+            fake_script = os.path.join(tmpdir, "fake_render.mjs")
+            with open(fake_script, "w") as f:
+                f.write("// fake script")
+
+            result = handle_render_video_task(
+                payload=payload,
+                work_dir=tmpdir,
+                remotion_script=fake_script,
+                progress_cb=lambda pct, msg: progress_calls.append((pct, msg)),
+            )
+
+            assert result["status"] == "success"
+            assert result["transport"] == "base64"
+            assert "video_b64" in result
+            decoded = base64.b64decode(result["video_b64"])
+            assert decoded == b"MOCK_MP4_OUTPUT"
+            assert len(progress_calls) > 0
+
+
