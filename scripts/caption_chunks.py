@@ -120,20 +120,21 @@ def download_video_slice(
         except Exception as e:
             print(f"⚠️ Failed to fetch cookie: {e}. Attempting download without cookie...")
 
-    end_min = int(max_duration_sec // 60) + 1
-    section_arg = f"*00:00-{end_min:02d}:00"
-    print(f"📥 Downloading video slice ({section_arg}) from {source_url} to {output_path}...")
+    cmd = ["yt-dlp"]
+    if max_duration_sec is not None and max_duration_sec > 0:
+        end_min = int(max_duration_sec // 60) + 1
+        section_arg = f"*00:00-{end_min:02d}:00"
+        print(f"📥 Downloading video slice ({section_arg}) from {source_url} to {output_path}...")
+        cmd.extend(["--download-sections", section_arg, "--force-keyframes-at-cuts"])
+    else:
+        print(f"📥 Downloading video from {source_url} to {output_path}...")
 
-    cmd = [
-        "yt-dlp",
-        "--download-sections",
-        section_arg,
-        "--force-keyframes-at-cuts",
+    cmd.extend([
         "-f",
         "mp4",
         "-o",
         output_path,
-    ]
+    ])
     if cookie_file.exists() and cookie_file.stat().st_size > 10:
         cmd.extend(["--cookies", str(cookie_file)])
     cmd.append(source_url)
@@ -275,7 +276,7 @@ def main():
         video_path = args.video_file
     else:
         video_path = "/tmp/source_video.mp4"
-        download_video_slice(target_url, video_path, args.max_start_ts)
+        download_video_slice(target_url, video_path, max_ts)
 
     # Load Qwen-VL model on GPU
     import torch
