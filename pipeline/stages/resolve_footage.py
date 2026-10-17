@@ -8,6 +8,7 @@ Coordinates:
 
 from typing import Literal, Optional
 
+from pipeline.config import get_settings
 from pipeline.footage.resolver import FootageResolver, OrientationType
 from pipeline.llm.gemini import GeminiLLMClient
 from pipeline.models import Beat, CandidateChunk, FootageStatus
@@ -68,9 +69,9 @@ def resolve_beat_visuals(
     top_k: int = 5,
     target_orientation: Optional[OrientationType] = "horizontal",
     provider: Optional[str] = None,
-    semantic_threshold: float = 0.50,
-    motion_floor: float = 5.0,
-    max_requeries: int = 2,
+    semantic_threshold: Optional[float] = None,
+    motion_floor: Optional[float] = None,
+    max_requeries: Optional[int] = None,
     llm_client: Optional[GeminiLLMClient] = None,
     exclude_source_video_ids: Optional[list[str]] = None,
     exclude_chunk_ids: Optional[list[str]] = None,
@@ -88,6 +89,11 @@ def resolve_beat_visuals(
     Returns:
         tuple[Beat, list[CandidateChunk]]: The updated Beat and the candidates found.
     """
+    settings = get_settings()
+    eff_semantic_threshold = semantic_threshold if semantic_threshold is not None else settings.FOOTAGE_SEMANTIC_THRESHOLD
+    eff_motion_floor = motion_floor if motion_floor is not None else settings.FOOTAGE_MOTION_FLOOR
+    eff_max_requeries = max_requeries if max_requeries is not None else settings.FOOTAGE_MAX_REQUERIES
+
     motion_props = beat.motion_props or {}
     layout_recipe = motion_props.get("layout_recipe")
     display_mode = motion_props.get("display_mode")
@@ -116,13 +122,13 @@ def resolve_beat_visuals(
     status = assess_beat_candidates(
         beat=beat,
         candidates=candidates,
-        semantic_threshold=semantic_threshold,
-        motion_floor=motion_floor,
-        max_requeries=max_requeries,
+        semantic_threshold=eff_semantic_threshold,
+        motion_floor=eff_motion_floor,
+        max_requeries=eff_max_requeries,
     )
 
     # Requery loop if needed
-    while status == FootageStatus.REQUERIED and beat.requery_count < max_requeries:
+    while status == FootageStatus.REQUERIED and beat.requery_count < eff_max_requeries:
         beat.requery_count += 1
         new_query = reformulate_query(beat, client=llm_client)
         beat.visual_intent = new_query
@@ -139,9 +145,9 @@ def resolve_beat_visuals(
         status = assess_beat_candidates(
             beat=beat,
             candidates=candidates,
-            semantic_threshold=semantic_threshold,
-            motion_floor=motion_floor,
-            max_requeries=max_requeries,
+            semantic_threshold=eff_semantic_threshold,
+            motion_floor=eff_motion_floor,
+            max_requeries=eff_max_requeries,
         )
 
     # Stage 5: Motion Graphic Fallback if footage is INADEQUATE

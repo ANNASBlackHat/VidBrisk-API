@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     FOOTAGE_SEMANTIC_THRESHOLD: float = 0.50
     FOOTAGE_MOTION_FLOOR: float = 5.0
     FOOTAGE_MAX_REQUERIES: int = 2
+    FOOTAGE_HYBRID_SEARCH: bool = True
 
     # Storage & Outputs
     STORAGE_BACKEND: Literal["local", "imagekit"] = "local"

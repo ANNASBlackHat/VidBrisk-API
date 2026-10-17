@@ -41,6 +41,7 @@ class FootageResolver:
         self.default_provider = (
             default_provider if default_provider is not None else settings.FOOTAGE_PROVIDER
         )
+        self.hybrid_search = getattr(settings, "FOOTAGE_HYBRID_SEARCH", True)
         self._search_fn = None
         self._search_filters_cls = None
         self._worker_helpers = None
@@ -173,7 +174,7 @@ class FootageResolver:
             logger.warning(f"[FootageResolver] Worker search error: {e}. Falling back to in-process search.")
             return None
 
-    def search_candidates(
+    def search_by_caption(
         self,
         query: str,
         top_k: int = 5,
@@ -183,9 +184,172 @@ class FootageResolver:
         exclude_source_video_ids: Optional[list[str]] = None,
         exclude_chunk_ids: Optional[list[str]] = None,
     ) -> list[CandidateChunk]:
-        """Queries Footage Engine (Worker with in-process fallback) with orientation prioritization."""
+        """Searches PostgreSQL chunks table by ranking caption and tags text overlap."""
         if not query or not query.strip():
             return []
+
+        import psycopg2
+
+        stop_words = {
+            "with", "from", "that", "this", "shot", "macro", "view", "scene",
+            "close", "dark", "under", "over", "into", "onto", "some", "like",
+            "film", "real", "take", "make", "show", "have", "been", "were"
+        }
+        words = [
+            w.strip(".,;:\"'()[]{}!?-").lower()
+            for w in query.split()
+            if len(w) >= 3 and w.lower() not in stop_words
+        ]
+        if not words:
+            return []
+
+        where_clauses = ["c.caption IS NOT NULL", "c.caption != ''"]
+        params: dict[str, Any] = {"words": words, "fetch_k": top_k * 3}
+
+        if provider:
+            where_clauses.append("m.provider = %(provider)s")
+            params["provider"] = provider
+        if media_type:
+            where_clauses.append("c.media_type = %(media_type)s")
+            params["media_type"] = media_type
+
+        if exclude_source_video_ids:
+            where_clauses.append("c.media_item_id != ALL(%(ex_media)s)")
+            params["ex_media"] = list(exclude_source_video_ids)
+        if exclude_chunk_ids:
+            where_clauses.append("c.id != ALL(%(ex_chunks)s)")
+            params["ex_chunks"] = list(exclude_chunk_ids)
+
+        where_sql = " AND ".join(where_clauses)
+        sql = f"""
+            SELECT c.id, c.media_item_id, m.provider, c.start_ts, c.end_ts,
+                   c.storage_path, c.media_type, c.motion_mean, c.motion_std,
+                   c.caption, c.tags,
+                   (
+                     SELECT count(*) 
+                     FROM unnest(%(words)s::text[]) w 
+                     WHERE c.caption ILIKE '%%' || w || '%%' OR c.tags::text ILIKE '%%' || w || '%%'
+                   ) as match_count
+            FROM chunks c
+            JOIN media_items m ON c.media_item_id = m.id
+            WHERE {where_sql}
+            ORDER BY match_count DESC, c.start_ts ASC
+            LIMIT %(fetch_k)s;
+        """
+
+        try:
+            conn = psycopg2.connect(self.database_url)
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                rows = cur.fetchall()
+            conn.close()
+        except Exception as e:
+            logger.warning(f"[FootageResolver] Caption search error: {e}")
+            return []
+
+        candidates = []
+        for r in rows:
+            cid, mid, provider_val, s_ts, e_ts, storage_path, mtype, m_mean, m_std, cap, tags, match_cnt = r
+            if match_cnt <= 0:
+                continue
+            norm_score = min(1.0, 0.40 + 0.15 * match_cnt)
+            storage_url = ""
+            if storage_path:
+                if storage_path.startswith(("http://", "https://", "file://")):
+                    storage_url = storage_path
+                else:
+                    storage_url = f"https://drive.google.com/uc?export=download&id={storage_path}"
+
+            candidates.append(
+                CandidateChunk(
+                    chunk_id=cid,
+                    media_item_id=mid,
+                    score=norm_score,
+                    start_ts=s_ts,
+                    end_ts=e_ts,
+                    duration_sec=(e_ts - s_ts) if (e_ts is not None and s_ts is not None) else None,
+                    media_type=str(mtype) if mtype else "video",
+                    provider=provider_val or "unknown",
+                    storage_path=storage_path or "",
+                    storage_url=storage_url,
+                    caption=cap,
+                    tags=tags or [],
+                    motion_mean=m_mean,
+                    motion_std=m_std,
+                )
+            )
+
+        return candidates[:top_k]
+
+    def search_candidates(
+        self,
+        query: str,
+        top_k: int = 5,
+        media_type: Optional[str] = None,
+        target_orientation: Optional[OrientationType] = "horizontal",
+        provider: Optional[str] = None,
+        exclude_source_video_ids: Optional[list[str]] = None,
+        exclude_chunk_ids: Optional[list[str]] = None,
+        hybrid: Optional[bool] = None,
+    ) -> list[CandidateChunk]:
+        """Queries Footage Engine (Worker with in-process fallback) with orientation prioritization and optional hybrid search."""
+        if not query or not query.strip():
+            return []
+
+        use_hybrid = self.hybrid_search if hybrid is None else hybrid
+        if use_hybrid:
+            # Run vector search and caption search, then combine via Reciprocal Rank Fusion (RRF)
+            vec_candidates = self.search_candidates(
+                query=query,
+                top_k=top_k * 2,
+                media_type=media_type,
+                target_orientation=target_orientation,
+                provider=provider,
+                exclude_source_video_ids=exclude_source_video_ids,
+                exclude_chunk_ids=exclude_chunk_ids,
+                hybrid=False,
+            )
+            cap_candidates = self.search_by_caption(
+                query=query,
+                top_k=top_k * 2,
+                media_type=media_type,
+                target_orientation=target_orientation,
+                provider=provider,
+                exclude_source_video_ids=exclude_source_video_ids,
+                exclude_chunk_ids=exclude_chunk_ids,
+            )
+
+            rrf_scores: dict[str, float] = {}
+            chunk_map: dict[str, CandidateChunk] = {}
+
+            for rank, c in enumerate(vec_candidates, 1):
+                rrf_scores[c.chunk_id] = rrf_scores.get(c.chunk_id, 0.0) + (1.0 / (60.0 + rank))
+                chunk_map[c.chunk_id] = c
+
+            for rank, c in enumerate(cap_candidates, 1):
+                rrf_scores[c.chunk_id] = rrf_scores.get(c.chunk_id, 0.0) + (1.0 / (60.0 + rank))
+                if c.chunk_id not in chunk_map:
+                    chunk_map[c.chunk_id] = c
+                else:
+                    chunk_map[c.chunk_id].score = max(chunk_map[c.chunk_id].score, c.score)
+                    if not chunk_map[c.chunk_id].caption and c.caption:
+                        chunk_map[c.chunk_id].caption = c.caption
+                        chunk_map[c.chunk_id].tags = c.tags
+                    if not chunk_map[c.chunk_id].storage_url and c.storage_url:
+                        chunk_map[c.chunk_id].storage_url = c.storage_url
+
+            fused = sorted(
+                chunk_map.values(),
+                key=lambda c: rrf_scores.get(c.chunk_id, 0.0),
+                reverse=True,
+            )
+            if fused and rrf_scores:
+                max_rrf = max(rrf_scores.values())
+                for c in fused:
+                    rel = rrf_scores[c.chunk_id] / max_rrf
+                    c.score = max(c.score, round(0.55 + 0.40 * rel, 3))
+
+            return fused[:top_k]
 
         eff_provider = provider or self.default_provider
         search_fn, search_filters_cls = self._load_footage_engine()
@@ -221,6 +385,19 @@ class FootageResolver:
             for r in results:
                 resolution = getattr(r, "resolution", None)
                 orientation = getattr(r, "orientation", "unknown")
+                storage_path = getattr(r, "storage_path", "") or ""
+                storage_url = getattr(r, "storage_url", "") or ""
+                if storage_url and storage_url.startswith("file://"):
+                    local_f = storage_url.replace("file://", "")
+                    if not os.path.exists(local_f):
+                        storage_url = ""
+
+                if not storage_url and storage_path:
+                    if storage_path.startswith(("http://", "https://", "file://")):
+                        storage_url = storage_path
+                    else:
+                        storage_url = f"https://drive.google.com/uc?export=download&id={storage_path}"
+
                 candidates.append(
                     CandidateChunk(
                         chunk_id=getattr(r, "chunk_id", ""),
@@ -231,8 +408,8 @@ class FootageResolver:
                         duration_sec=float(r.duration_sec) if getattr(r, "duration_sec", None) is not None else None,
                         media_type=getattr(r, "media_type", "video"),
                         provider=getattr(r, "provider", "unknown"),
-                        storage_path=getattr(r, "storage_path", "") or "",
-                        storage_url=getattr(r, "storage_url", "") or "",
+                        storage_path=storage_path,
+                        storage_url=storage_url,
                         resolution=resolution,
                         orientation=orientation,
                         caption=getattr(r, "caption", None),
