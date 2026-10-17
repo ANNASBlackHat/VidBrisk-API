@@ -20,6 +20,8 @@ ENV/
 .env
 *.env
 !.env.example
+kaggle_worker/
+
 
 # Distribution / Packaging / Eggs
 build/
