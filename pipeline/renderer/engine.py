@@ -329,31 +329,60 @@ class VideoRenderer:
                 "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", output_path
             ])
 
+    def _get_media_duration(self, file_path: str) -> Optional[float]:
+        try:
+            cmd = [
+                "ffprobe", "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                file_path,
+            ]
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            if res.returncode == 0:
+                val = float(res.stdout.strip())
+                if val > 0:
+                    return val
+        except Exception:
+            pass
+        return None
+
     def _trim_scale_video_clip(
         self, output_path: str, video_path: str, start_ts: float, duration: float, width: int, height: int, fps: int, fit_mode: FitMode = "blur_bg"
     ) -> None:
+        media_dur = self._get_media_duration(video_path)
+        if media_dur is not None and (start_ts >= media_dur or start_ts + 0.05 > media_dur):
+            surplus = max(0.0, media_dur - duration)
+            start_ts = round(surplus / 2.0, 2)
+            self._log(f"  ↳ [Sanitize] Video start_ts clamped to {start_ts}s (media duration: {media_dur:.2f}s)")
+
+        loop_args = ["-stream_loop", "-1"] if (media_dur is not None and duration > media_dur) else []
+
         if fit_mode == "blur_bg":
             filter_str = self._get_filter_complex(width, height, fit_mode)
-            self._run_cmd([
+            cmd = [
                 self.ffmpeg_bin, "-y",
                 "-ss", str(start_ts),
+                *loop_args,
                 "-i", video_path,
                 "-t", str(duration),
                 "-filter_complex", filter_str,
                 "-r", str(fps),
                 "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", output_path
-            ])
+            ]
+            self._run_cmd(cmd)
         else:
             vf = self._get_filter_complex(width, height, fit_mode)
-            self._run_cmd([
+            cmd = [
                 self.ffmpeg_bin, "-y",
                 "-ss", str(start_ts),
+                *loop_args,
                 "-i", video_path,
                 "-t", str(duration),
                 "-vf", vf,
                 "-r", str(fps),
                 "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", output_path
-            ])
+            ]
+            self._run_cmd(cmd)
 
     def _create_text_card_clip(
         self,

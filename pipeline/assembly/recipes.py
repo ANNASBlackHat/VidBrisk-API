@@ -54,8 +54,8 @@ def plan_split_screen(
 
     # 1. Left layer (z=0, layout="split-left")
     left_type = "image" if cand_left.media_type in ("image", "photo") else "video"
-    left_s_in = round(cand_left.start_ts, 2)
-    left_s_out = round(left_s_in + visual_duration, 2)
+    left_s_in = 0.0
+    left_s_out = round(visual_duration, 2)
     left_props = apply_mood_effects_to_props(None, beat)
 
     layer_left = Layer(
@@ -88,8 +88,8 @@ def plan_split_screen(
 
     # 2. Right layer (z=1, layout="split-right")
     right_type = "image" if cand_right.media_type in ("image", "photo") else "video"
-    right_s_in = round(cand_right.start_ts, 2)
-    right_s_out = round(right_s_in + visual_duration, 2)
+    right_s_in = 0.0
+    right_s_out = round(visual_duration, 2)
     right_props = apply_mood_effects_to_props(None, beat)
 
     layer_right = Layer(
@@ -211,8 +211,8 @@ def plan_stat_over_footage(
     # Layer 0: Background footage
     top_cand = candidates[0]
     asset_type = "image" if top_cand.media_type in ("image", "photo") else "video"
-    source_in = round(top_cand.start_ts, 2)
-    source_out = round(source_in + visual_duration, 2)
+    source_in = 0.0
+    source_out = round(visual_duration, 2)
     bg_props = apply_mood_effects_to_props(None, beat)
 
     bg_layer = Layer(
@@ -329,8 +329,8 @@ def plan_quote_over_footage(
 
     top_cand = candidates[0]
     asset_type = "image" if top_cand.media_type in ("image", "photo") else "video"
-    source_in = round(top_cand.start_ts, 2)
-    source_out = round(source_in + visual_duration, 2)
+    source_in = 0.0
+    source_out = round(visual_duration, 2)
     bg_props = apply_mood_effects_to_props(None, beat)
 
     bg_layer = Layer(

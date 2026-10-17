@@ -256,7 +256,7 @@ def plan_beat_assets(
         # Center the window within candidate bounds if possible
         surplus = cand_duration - visual_duration
         offset = surplus / 2.0
-        source_in = round(top_cand.start_ts + offset, 2)
+        source_in = round(offset, 2)
         source_out = round(source_in + visual_duration, 2)
         bg_props = apply_mood_effects_to_props(None, beat)
 
@@ -323,7 +323,7 @@ def plan_beat_assets(
         if cand.motion_mean is not None and cand.motion_mean < 5.0:
             c_dur = min(c_dur, 2.0)
         use_dur = min(c_dur, remaining_duration)
-        s_in = round(cand.start_ts, 2)
+        s_in = 0.0
         s_out = round(s_in + use_dur, 2)
         t_start = round(current_track_pos, 2)
         t_end = round(t_start + use_dur, 2)
