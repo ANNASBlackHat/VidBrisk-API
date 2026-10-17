@@ -252,6 +252,54 @@ uv run python scripts/run_render_worker.py --transport base64 --interval 1.0
 
 ---
 
+## 🔍 Automated Chunk Captioning (Colab & Kaggle GPU Workers)
+
+The pipeline utilizes **Hybrid Dense+Sparse Retrieval (RRF)** to match video clips to narration beats. To avoid false positives (e.g., matching generic water ripples instead of subject close-ups), video chunks are enriched with visual descriptions and semantic tags using vision-language models like **Qwen-VL**.
+
+### 1. Run Captioning via Google Colab CLI
+You can dispatch a Colab GPU instance directly from your local terminal:
+```bash
+# Auto-provision Colab T4 GPU, install packages, and caption chunks end-to-end:
+uv run python scripts/colab_caption_worker.py \
+  --media-item-id "auto" \
+  --gpu t4 \
+  --idle-exit 1800
+```
+
+### 2. Run Captioning on Kaggle (CLI or Notebook)
+Kaggle provides free GPU runtimes (T4 × 2 or P100).
+
+**Option A: Push & Run via Kaggle CLI**
+```bash
+kaggle kernels push -p kaggle_caption_worker/
+```
+
+**Option B: In a Kaggle Notebook**
+```python
+# Install dependencies
+!pip install -q psycopg2-binary yt-dlp opencv-python transformers accelerate torchvision
+
+# Configure database
+import os
+os.environ["DATABASE_URL"] = "postgres://user:password@your-pg-host:port/defaultdb?sslmode=require"
+
+# Run captioning (picks next uncaptioned video in DB automatically)
+!python scripts/caption_chunks.py --media-item-id auto --model-id "Qwen/Qwen3-VL-2B-Instruct"
+```
+
+### 3. Local Dry-Run & CLI Options
+```bash
+# Inspect upcoming uncaptioned chunk intervals without running the model or writing to DB
+uv run python scripts/caption_chunks.py --dry-run
+
+# Caption a specific video media item up to a specific timestamp
+uv run python scripts/caption_chunks.py \
+  --media-item-id "e4ea8da0-ed79-4286-b0da-f9b4a47d7655" \
+  --max-start-ts 1200.0
+```
+
+---
+
 ## 🐳 Docker Deployment
 
 ### Start with Docker Compose
