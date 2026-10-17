@@ -327,7 +327,8 @@ class FootageResolver:
                 chunk_map[c.chunk_id] = c
 
             for rank, c in enumerate(cap_candidates, 1):
-                rrf_scores[c.chunk_id] = rrf_scores.get(c.chunk_id, 0.0) + (1.0 / (60.0 + rank))
+                # Verified caption matches carry higher precision than uncaptioned dense search
+                rrf_scores[c.chunk_id] = rrf_scores.get(c.chunk_id, 0.0) + 1.5 * (1.0 / (60.0 + rank))
                 if c.chunk_id not in chunk_map:
                     chunk_map[c.chunk_id] = c
                 else:
