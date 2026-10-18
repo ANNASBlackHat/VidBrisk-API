@@ -10,7 +10,6 @@ class EngineRegistry:
     _engines: Dict[str, Type[BaseVideoEngine]] = {}
     _default_engines: Dict[str, Type[BaseVideoEngine]] = {}
     _future_engines: Dict[str, str] = {
-        "hyperframes": "Phase 2",
         "native_fast": "Phase 3",
     }
 

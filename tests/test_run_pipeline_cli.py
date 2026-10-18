@@ -29,13 +29,44 @@ def test_cli_unsupported_engine_error():
 
 def test_cli_future_phase_engine_error():
     result = subprocess.run(
-        [sys.executable, "run_pipeline.py", "--script", "examples/sample_raw_script.txt", "--engine", "hyperframes"],
+        [sys.executable, "run_pipeline.py", "--script", "examples/sample_raw_script.txt", "--engine", "native_fast"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
     )
     assert result.returncode != 0
-    assert "Phase 2" in result.stderr or "Phase 2" in result.stdout
+    assert "Phase 3" in result.stderr or "Phase 3" in result.stdout
+
+
+def test_cli_hyperframes_engine_delegation(monkeypatch, tmp_path):
+    import run_pipeline
+
+    dummy_script = tmp_path / "script.txt"
+    dummy_script.write_text("Test narration script.")
+    out_timeline = tmp_path / "timeline.json"
+    out_video = tmp_path / "out.mp4"
+
+    mock_timeline = MagicMock()
+    mock_timeline.to_dict.return_value = {"total_duration": 5.0, "tracks": []}
+    mock_timeline.metadata = {}
+
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "run_pipeline.py",
+            "--script", str(dummy_script),
+            "--output", str(out_timeline),
+            "--engine", "hyperframes",
+            "--render", str(out_video),
+        ],
+    )
+    monkeypatch.setattr("run_pipeline.run_pipeline", lambda *args, **kwargs: mock_timeline)
+
+    with patch("pipeline.engines.hyperframes.HyperFramesEngine.render", return_value=str(out_video)) as mock_render:
+        run_pipeline.main()
+        mock_render.assert_called_once()
+        _, kwargs = mock_render.call_args
+        assert kwargs.get("output_path") == str(out_video)
 
 
 def test_cli_remotion_engine_delegation(monkeypatch, tmp_path):
