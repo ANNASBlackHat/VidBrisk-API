@@ -252,6 +252,47 @@ uv run python scripts/run_render_worker.py --transport base64 --interval 1.0
 
 ---
 
+## ⚡ Unified Multi-Task Worker (OmniVoice TTS + Qwen Search + Remotion Render)
+
+Google Colab free tier limits accounts to **2 concurrent active sessions** (typically 1 GPU + 1 CPU). Running separate workers for TTS, Footage Search, and Video Rendering causes GPU quota exhaustion.
+
+The **Unified Multi-Task Worker** solves this by consolidating GPU tasks into a single session while scaling CPU rendering independently:
+* **GPU Worker Session (`unified-gpu`)**: Runs OmniVoice voice cloning (~2.5 GB VRAM) and Qwen2-VL footage embedding (~4.5 GB VRAM) side-by-side in one process (~7 GB total VRAM on a 15 GB T4 GPU).
+* **CPU Worker Session (`unified-cpu-1`, ..., `unified-cpu-N`)**: Spawns dedicated Colab CPU instance(s) running headless Remotion video rendering (Chromium + Node.js + FFmpeg), preserving GPU quota.
+
+### 1. Launch with Local Automation Driver
+```bash
+# Standard 2-session setup: 1 Colab GPU (TTS + Search) + 1 Colab CPU (Render)
+uv run python scripts/colab_unified_worker.py
+
+# Single-session setup: Run EVERYTHING on 1 Colab GPU VM (0 CPU VMs)
+uv run python scripts/colab_unified_worker.py --tasks all --cpu-workers 0
+
+# Scale rendering across multiple CPU instances (Colab Pro / multiple seats)
+uv run python scripts/colab_unified_worker.py --tasks tts,search --cpu-workers 2
+
+# Inspect bundle packaging without connecting to Colab
+uv run python scripts/colab_unified_worker.py --bundle-only
+
+# Preview execution plan without launching VMs
+uv run python scripts/colab_unified_worker.py --dry-run
+```
+
+### 2. Standalone Unified Worker (Colab, Kaggle, or Local Server)
+You can also run the unified worker script directly on any machine:
+```bash
+# Handle TTS and Footage Search on GPU:
+uv run python scripts/run_unified_worker.py --tasks tts,search --idle-exit 1800
+
+# Handle Remotion rendering only (CPU-friendly):
+uv run python scripts/run_unified_worker.py --tasks render --idle-exit 1800
+
+# Handle all tasks with 30-minute idle exit:
+uv run python scripts/run_unified_worker.py --tasks all --idle-exit 1800
+```
+
+---
+
 ## 🔍 Automated Chunk Captioning (Colab & Kaggle GPU Workers)
 
 The pipeline utilizes **Hybrid Dense+Sparse Retrieval (RRF)** to match video clips to narration beats. To avoid false positives (e.g., matching generic water ripples instead of subject close-ups), video chunks are enriched with visual descriptions and semantic tags using vision-language models like **Qwen-VL**.
