@@ -23,6 +23,7 @@ class FootageResolver:
         worker_timeout_sec: Optional[float] = None,
         worker_backend: Optional[str] = None,
         default_provider: Optional[str] = None,
+        hybrid_search: Optional[bool] = None,
     ):
         settings = get_settings()
         self.engine_path = footage_engine_path or settings.FOOTAGE_ENGINE_PATH
@@ -41,7 +42,9 @@ class FootageResolver:
         self.default_provider = (
             default_provider if default_provider is not None else settings.FOOTAGE_PROVIDER
         )
-        self.hybrid_search = getattr(settings, "FOOTAGE_HYBRID_SEARCH", True)
+        self.hybrid_search = (
+            hybrid_search if hybrid_search is not None else getattr(settings, "FOOTAGE_HYBRID_SEARCH", True)
+        )
         self._search_fn = None
         self._search_filters_cls = None
         self._worker_helpers = None

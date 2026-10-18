@@ -19,7 +19,7 @@ graph TD
     end
 
     subgraph Database
-        DB[(PostgreSQL / SQLite: video_jobs table)]
+        DB[(PostgreSQL: video_jobs, chunks with VLM captions)]
     end
 
     subgraph Durable Worker Engine (backend/worker)
@@ -27,11 +27,21 @@ graph TD
         S1[Stage 1: clean_script]
         S2[Stage 2: structure_beats]
         CP1{Checkpoint 1: Auto-Approve?}
-        S3[Stage 3: synthesize_voice]
-        S4[Stage 4: extract_timestamps]
-        S5[Stage 5: resolve_footage]
+        S3[Stage 3: synthesize_voice Omni/Kokoro Remote GPU]
+        S4[Stage 4: extract_timestamps WhisperX]
+        
+        subgraph S5_Loop [Stage 5: Caption-Aware Footage & Decision Loop]
+            S5_HYB[Hybrid Dense + Sparse Caption Search RRF]
+            S5_DEC{Assess & Decide: Semantic >= 0.50, Motion >= 5.0}
+            S5_REQ[Requery with Reason]
+            S5_FALL[Motion Graphic Takeover Fallback]
+            S5_HYB --> S5_DEC
+            S5_DEC -->|Below bar & tries < 2| S5_REQ --> S5_HYB
+            S5_DEC -->|Below bar & tries >= 2| S5_FALL
+        end
+        
         CP2{Checkpoint 2: Auto-Approve?}
-        S6[Stage 6: assemble_timeline]
+        S6[Stage 6: assemble_timeline Video + Audio + Kinetic Subtitles]
         COMP[Compile Step: compile_timeline]
         REG[Component Registry: Motion Props]
     end
@@ -40,7 +50,9 @@ graph TD
     API -->|Create / Read / Approve| DB
     W -->|Poll & Persist State| DB
     W --> S1 --> S2 --> CP1
-    CP1 -->|Approved| S3 --> S4 --> S5 --> CP2
+    CP1 -->|Approved| S3 --> S4 --> S5_HYB
+    S5_DEC -->|Pass| CP2
+    S5_FALL --> CP2
     CP2 -->|Approved| S6 --> COMP
     REG --> COMP
     COMP -->|Save compiled tracks timeline| DB
@@ -145,9 +157,11 @@ python run_pipeline.py \
 |---|---|---|---|
 | `--script` | `-s` | *Required* | Path to raw narration script text file |
 | `--output` | `-o` | `output/timeline.json` | Path to save the compiled timeline JSON |
-| `--tts` | | `kokoro` | TTS engine (`kokoro`, `supersonic`, `chatterbox`, `mock`) |
+| `--tts` | | `kokoro` | TTS engine (`omni`, `kokoro`, `supersonic`, `chatterbox`, `mock`) |
+| `--voice` | | `deep_documentary` | Voice identifier or clone reference file in `data/voices/` |
 | `--aligner` | | `mock` | Alignment engine (`whisperx`, `easytranscriber`, `mock`) |
 | `--orientation` | | `horizontal` | Video aspect ratio (`horizontal` 16:9, `vertical` 9:16, `square` 1:1) |
+| `--no-captions` | | `False` | Disable automatic kinetic subtitles/captions overlay |
 | `--render` | `-r` | `None` | Output MP4 path. If specified, auto-renders final video |
 | `--single-pass` | | `False` | Use single combined LLM call for script clean + beat structure |
 

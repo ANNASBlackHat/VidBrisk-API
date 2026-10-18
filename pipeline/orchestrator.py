@@ -29,6 +29,7 @@ def run_pipeline(
     footage_provider: Optional[str] = None,
     channel: Optional[str] = None,
     genre: Optional[str] = None,
+    voice: Optional[str] = None,
 ) -> TimelinePlan:
     """Executes stages [1] to [6] end-to-end on raw script text.
 
@@ -129,6 +130,7 @@ def run_pipeline(
             # Stage 3: Synthesize voice
             clip = tts_engine = tts.synthesize(
                 text=beat.text,
+                voice=voice,
                 output_path=os.path.join(audio_output_dir, f"{beat.id}.wav") if audio_output_dir else None,
             )
             voice_clip = VoiceClip(

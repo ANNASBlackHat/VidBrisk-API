@@ -203,10 +203,30 @@ class WorkerTTSProvider:
                 )
                 return None
 
+            # Resolve reference audio or prompt if provided
+            ref_audio_b64 = None
+            ref_text = None
+            voice_prompt = None
+            try:
+                from pipeline.tts.omni import resolve_voice_reference
+                ref_audio, r_text, v_prompt = resolve_voice_reference(voice)
+                if ref_audio and os.path.isfile(ref_audio):
+                    import base64
+                    with open(ref_audio, "rb") as rf:
+                        ref_audio_b64 = base64.b64encode(rf.read()).decode("ascii")
+                    ref_text = r_text
+                elif v_prompt:
+                    voice_prompt = v_prompt
+            except Exception as ex:
+                logger.debug(f"[WorkerTTSProvider] Error resolving voice reference: {ex}")
+
             payload = self._transport.prepare_payload(
                 text=text,
                 voice=voice,
                 backend=self.backend,
+                ref_audio_b64=ref_audio_b64,
+                ref_text=ref_text,
+                voice_prompt=voice_prompt,
             )
 
             logger.info(

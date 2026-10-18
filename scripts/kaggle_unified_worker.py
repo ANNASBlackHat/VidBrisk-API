@@ -123,11 +123,11 @@ print("=" * 60, flush=True)
 print("🚀 Launching Kaggle Unified Multi-Task Worker...", flush=True)
 print("=" * 60, flush=True)
 
-# 1. Install necessary dependencies
+# 1. Install necessary dependencies (preserve preinstalled Kaggle PyTorch/CUDA)
 pkgs = [
-    "torch",
-    "torchaudio",
     "soundfile",
+    "pydub",
+    "librosa",
     "numpy",
     "pillow",
     "requests",
@@ -135,6 +135,7 @@ pkgs = [
     "pydantic-settings",
     "python-dotenv",
     "sqlalchemy",
+    "psycopg[binary]",
     "psycopg2-binary",
     "transformers>=4.57.0",
     "sentence-transformers",
@@ -143,12 +144,32 @@ pkgs = [
     "imagekitio",
     "opencv-python-headless",
     "kokoro-onnx",
-    "omnivoice",
 ]
 
 print(f"📦 Installing {{len(pkgs)}} Python packages...", flush=True)
-subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "-U", *pkgs])
-print("✅ Packages installed successfully!\\n", flush=True)
+subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", *pkgs])
+
+# Install OmniVoice without clobbering torch/torchaudio
+print("📦 Installing OmniVoice...", flush=True)
+subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "--no-deps", "omnivoice"])
+
+# Verify and ensure PyTorch & TorchAudio CUDA alignment
+try:
+    import torch
+    import torchaudio
+    print(f"✅ PyTorch: {{torch.__version__}} (CUDA: {{torch.version.cuda}}), TorchAudio: {{torchaudio.__version__}}", flush=True)
+except Exception as e:
+    print(f"⚠️ Detected PyTorch/TorchAudio mismatch: {{e}}. Reinstalling aligned TorchAudio...", flush=True)
+    import torch
+    cuda_tag = f"cu{{torch.version.cuda.replace('.', '')}}" if torch.cuda.is_available() and torch.version.cuda else "cpu"
+    subprocess.check_call([
+        sys.executable, "-m", "pip", "install", "--no-deps", "--force-reinstall",
+        "torchaudio", "--extra-index-url", f"https://download.pytorch.org/whl/{{cuda_tag}}"
+    ])
+    import torchaudio
+    print(f"✅ Re-aligned TorchAudio {{torchaudio.__version__}} successfully!", flush=True)
+
+print("✅ Packages ready!\\n", flush=True)
 
 # 2. Clone repositories
 vidbrisk_dir = "/tmp/vidbrisk"

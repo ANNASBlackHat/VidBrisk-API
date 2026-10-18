@@ -69,7 +69,7 @@ def test_resolve_footage_calls_search_for_narrative(mock_resolver):
 
 
 def test_footage_resolver_orientation_prioritization(monkeypatch):
-    resolver = FootageResolver()
+    resolver = FootageResolver(hybrid_search=False)
 
     class MockChunkResult:
         def __init__(self, chunk_id, orientation):
@@ -137,7 +137,7 @@ def test_footage_resolver_worker_success(monkeypatch):
         }
     )
 
-    resolver = FootageResolver(worker_enabled=True)
+    resolver = FootageResolver(worker_enabled=True, hybrid_search=False)
     resolver._load_footage_engine = MagicMock(return_value=(MagicMock(), MagicMock()))
     resolver._worker_helpers = {
         "count_live_workers": mock_count_live,
@@ -185,7 +185,7 @@ def test_footage_resolver_worker_zero_workers_fallback():
     mock_search_fn = MagicMock(return_value=[MockInProcessResult()])
     mock_filters_cls = MagicMock()
 
-    resolver = FootageResolver(worker_enabled=True)
+    resolver = FootageResolver(worker_enabled=True, hybrid_search=False)
     resolver._search_fn = mock_search_fn
     resolver._search_filters_cls = mock_filters_cls
     resolver._worker_helpers = {
@@ -228,7 +228,7 @@ def test_footage_resolver_worker_error_or_timeout_fallback():
     mock_search_fn = MagicMock(return_value=[MockInProcessResult()])
     mock_filters_cls = MagicMock()
 
-    resolver = FootageResolver(worker_enabled=True)
+    resolver = FootageResolver(worker_enabled=True, hybrid_search=False)
     resolver._search_fn = mock_search_fn
     resolver._search_filters_cls = mock_filters_cls
     resolver._worker_helpers = {
@@ -268,7 +268,7 @@ def test_footage_resolver_worker_disabled():
     mock_search_fn = MagicMock(return_value=[MockInProcessResult()])
     mock_filters_cls = MagicMock()
 
-    resolver = FootageResolver(worker_enabled=False)
+    resolver = FootageResolver(worker_enabled=False, hybrid_search=False)
     resolver._search_fn = mock_search_fn
     resolver._search_filters_cls = mock_filters_cls
     resolver._worker_helpers = {
@@ -309,7 +309,7 @@ def test_footage_resolver_provider_filter():
         }
     )
 
-    resolver = FootageResolver(worker_enabled=True)
+    resolver = FootageResolver(worker_enabled=True, hybrid_search=False)
     resolver._load_footage_engine = MagicMock(return_value=(MagicMock(), MagicMock()))
     resolver._worker_helpers = {
         "count_live_workers": mock_count_live,
