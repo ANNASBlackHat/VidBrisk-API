@@ -110,23 +110,19 @@ def main():
     parser.add_argument(
         "--engine",
         type=str,
+        choices=["remotion", "hyperframes", "native_fast"],
         default="remotion",
         help="Target video generation engine: remotion (default), hyperframes, or native_fast",
     )
 
     args = parser.parse_args()
 
-    engine_name = (args.engine or "remotion").lower()
-    if engine_name in ["hyperframes", "native_fast"]:
-        print(
-            f"Error: Engine '{engine_name}' is scheduled for Phase 2/3 and is not yet available in Phase 1.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
     from pipeline.engines import get_engine
     try:
-        engine = get_engine(engine_name)
+        engine = get_engine(args.engine)
+    except NotImplementedError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
@@ -175,37 +171,14 @@ def main():
         print(f"\n✨ Pipeline execution complete! Timeline saved to '{args.output}'.")
 
         if args.render:
-            print(f"\n▶ Rendering MP4 output to '{args.render}'...")
-            
-            # Check for Remotion headless renderer script
-            frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "video-generation-frontend"))
-            remotion_script = os.path.join(frontend_dir, "scripts", "render_video.mjs")
-
-            if os.path.exists(remotion_script):
-                print(f"[CLI] Launching Headless Remotion Renderer (supporting StatCards, QuoteCards & React animations)...")
-                import subprocess
-                cmd = [
-                    "node",
-                    remotion_script,
-                    "--timeline",
-                    os.path.abspath(args.output),
-                    "--out",
-                    os.path.abspath(args.render),
-                ]
-                if args.no_captions:
-                    cmd.append("--no-captions")
-                res = subprocess.run(cmd, cwd=frontend_dir)
-                if res.returncode != 0:
-                    raise RuntimeError(f"Remotion render failed with exit code {res.returncode}")
-                print(f"🎉 Rendered video ready at: {args.render}")
-            else:
-                renderer = VideoRenderer()
-                out_mp4 = renderer.render_timeline(
-                    timeline=timeline,
-                    output_path=args.render,
-                    fit_mode=args.fit_mode,
-                )
-                print(f"🎉 Rendered video ready at: {out_mp4}")
+            print(f"\n▶ Rendering MP4 output to '{args.render}' using engine '{engine.engine_name}'...")
+            out_mp4 = engine.render(
+                compiled_data=timeline.to_dict(),
+                output_path=args.render,
+                no_captions=args.no_captions,
+                fit_mode=args.fit_mode,
+            )
+            print(f"🎉 Rendered video ready at: {out_mp4}")
 
     except Exception as e:
         print(f"\n❌ Pipeline failed: {e}", file=sys.stderr)
