@@ -71,6 +71,7 @@ class VideoJob(Base):
     # Auto-detected by genre_detector.py during STRUCTURING if not supplied.
     channel: Mapped[str | None] = mapped_column(String(100), nullable=True)
     genre: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    engine: Mapped[str] = mapped_column(String(50), default="remotion", nullable=False)
 
     # Intermediate Stage Outputs (Durable state persistence)
     clean_script: Mapped[str | None] = mapped_column(Text, nullable=True)

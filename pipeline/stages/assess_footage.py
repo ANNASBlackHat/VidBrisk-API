@@ -61,7 +61,7 @@ def assess_beat_candidates(
     semantic_threshold: float = 0.50,
     motion_floor: float = 5.0,
     max_requeries: int = 2,
-    allow_low_motion_cap: bool = False,
+    allow_low_motion_cap: bool = True,
     low_motion_max_duration: float = 2.0,
 ) -> FootageStatus:
     """Assesses the candidate pool for a beat and updates its footage state.

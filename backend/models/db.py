@@ -96,6 +96,11 @@ def _migrate_columns(engine) -> None:
                         conn.execute(text("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS voice VARCHAR(255);"))
                     else:
                         conn.execute(text("ALTER TABLE video_jobs ADD COLUMN voice VARCHAR(255);"))
+                if "engine" not in columns:
+                    if engine.dialect.name == "postgresql":
+                        conn.execute(text("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS engine VARCHAR(50) DEFAULT 'remotion' NOT NULL;"))
+                    else:
+                        conn.execute(text("ALTER TABLE video_jobs ADD COLUMN engine VARCHAR(50) DEFAULT 'remotion' NOT NULL;"))
     except Exception as e:
         logger.warning(f"Database column migration note: {e}")
 

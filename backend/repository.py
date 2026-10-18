@@ -30,6 +30,7 @@ def create_job(session: Session, req: JobCreateRequest) -> VideoJob:
         custom_audio_path=req.custom_audio_path,
         channel=req.channel,
         genre=req.genre,
+        engine=getattr(req, "engine", "remotion") or "remotion",
         stage=JobStage.CLEANING,
         status=JobStatus.PENDING,
     )

@@ -44,6 +44,10 @@ class JobCreateRequest(BaseModel):
             "Takes priority over channel when both are supplied."
         ),
     )
+    engine: str = Field(
+        default="remotion",
+        description="Target video generation engine: remotion (default), hyperframes, or native_fast",
+    )
 
 
 class JobUpdateRequest(BaseModel):
@@ -81,6 +85,7 @@ class JobSummaryResponse(BaseModel):
     custom_audio_path: Optional[str] = None
     channel: Optional[str] = None
     genre: Optional[str] = None
+    engine: str = "remotion"
     created_at: datetime
     updated_at: datetime
     error_message: Optional[str] = None
@@ -105,6 +110,7 @@ class JobResponse(BaseModel):
     custom_audio_path: Optional[str] = None
     channel: Optional[str] = None
     genre: Optional[str] = None
+    engine: str = "remotion"
 
     clean_script: Optional[str] = None
     beats: Optional[list[dict[str, Any]]] = None

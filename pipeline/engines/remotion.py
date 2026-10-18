@@ -23,11 +23,13 @@ class RemotionEngine(BaseVideoEngine):
     def compile(
         self,
         job_or_plan: Union[Any, Dict[str, Any]],
+        orientation: str = "horizontal",
         fps: int = 30,
         **kwargs: Any,
     ) -> Dict[str, Any]:
         """Compiles job outputs into Remotion multi-track timeline JSON."""
-        return compile_timeline(job_or_plan, fps=fps, **kwargs)
+        registry = kwargs.get("registry")
+        return compile_timeline(job_or_plan, registry=registry, fps=fps)
 
     def validate_support(self, job_or_plan: Union[Any, Dict[str, Any]]) -> Tuple[bool, Optional[str]]:
         """Remotion is the full-fidelity reference engine supporting all visual components."""

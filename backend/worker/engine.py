@@ -467,11 +467,19 @@ def worker_tick(
             )
 
         elif job.stage == JobStage.COMPILING:
-            logger.info(f"[{job_prefix}] [COMPILING] Compiling multi-track Remotion timeline...")
+            engine_name = getattr(job, "engine", "remotion") or "remotion"
+            logger.info(f"[{job_prefix}] [COMPILING] Compiling timeline with engine '{engine_name}'...")
             _update_job_progress(
-                session, job, "compiling", 0, 1, "Compiling multi-track Remotion timeline and QA thumbnails..."
+                session, job, "compiling", 0, 1, f"Compiling timeline with engine '{engine_name}'..."
             )
-            compiled_timeline = compile_timeline(job=job)
+            from pipeline.engines import get_engine
+            engine = get_engine(engine_name)
+            compiled_result = engine.compile(job_or_plan=job, orientation=job.target_orientation)
+            compiled_timeline = (
+                compiled_result.get("timeline")
+                if isinstance(compiled_result, dict) and "timeline" in compiled_result
+                else compiled_result
+            )
             try:
                 qa_thumbnails = generate_motion_qa_thumbnails(
                     job_id=str(job.id),
@@ -482,7 +490,7 @@ def worker_tick(
                 logger.warning(f"[{job_prefix}] [COMPILING] QA thumbnail error: {qa_err}")
                 qa_thumbnails = None
 
-            logger.info(f"[{job_prefix}] [COMPILING] Timeline compiled successfully. Job COMPLETE!")
+            logger.info(f"[{job_prefix}] [COMPILING] Timeline compiled successfully with '{engine_name}'. Job COMPLETE!")
             advance_job_stage(
                 session=session,
                 job=job,

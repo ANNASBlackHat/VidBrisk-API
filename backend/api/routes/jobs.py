@@ -39,7 +39,7 @@ async def create_new_job(
 ) -> Any:
     """Submits a new raw script or audio file to be processed asynchronously by the pipeline worker."""
     content_type = request.headers.get("content-type", "")
-    if "multipart/form-data" in content_type:
+    if "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
         form = await request.form()
         raw_input = form.get("raw_input") or form.get("script") or form.get("prompt")
         if not raw_input or not str(raw_input).strip():
@@ -66,6 +66,7 @@ async def create_new_job(
 
         channel = form.get("channel")
         genre = form.get("genre")
+        engine_raw = form.get("engine") or "remotion"
 
         custom_audio_path = None
         audio_file = form.get("audio_file")
@@ -93,6 +94,7 @@ async def create_new_job(
             custom_audio_path=custom_audio_path,
             channel=str(channel).strip() if channel else None,
             genre=str(genre).strip() if genre else None,
+            engine=str(engine_raw).lower().strip(),
         )
     else:
         try:
@@ -103,6 +105,13 @@ async def create_new_job(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Invalid JSON payload: {e}",
             )
+
+    from pipeline.engines import EngineRegistry
+    if req.engine.lower() not in EngineRegistry.list_engines():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid video engine '{req.engine}'. Available engines: {EngineRegistry.list_engines()}",
+        )
 
     job = create_job(session=db, req=req)
     return job
@@ -339,19 +348,36 @@ def render_job_video(
     job.error_message = None
     db.commit()
 
+    render_engine = (payload.get("engine") if payload and "engine" in payload else None) or getattr(job, "engine", "remotion") or "remotion"
+
     run_async_render_task(
         job_id=job_id,
         timeline_data=timeline_data,
         width=width,
         height=height,
         fps=fps,
+        engine_name=render_engine,
     )
 
     return {
         "status": "rendering",
         "job_id": job_id,
-        "message": "Video rendering enqueued in background",
+        "engine": render_engine,
+        "message": f"Video rendering enqueued in background using engine '{render_engine}'",
         "stream_url": f"/jobs/{job_id}/stream",
+    }
+
+
+@router.get(
+    "/engines/list",
+    summary="List available video generation engines",
+)
+def list_available_engines() -> dict[str, Any]:
+    """Returns all registered video generation engines and current default."""
+    from pipeline.engines import EngineRegistry
+    return {
+        "engines": EngineRegistry.list_engines(),
+        "default": "remotion",
     }
 
 
