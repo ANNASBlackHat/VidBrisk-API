@@ -38,7 +38,13 @@ def main():
         "--tts",
         type=str,
         default=None,
-        help="TTS engine: kokoro, chatterbox, or mock (default: from .env / kokoro)",
+        help="TTS engine: omni, kokoro, chatterbox, or mock (default: from .env / kokoro)",
+    )
+    parser.add_argument(
+        "--voice",
+        type=str,
+        default="deep_documentary",
+        help="Voice identifier or clone reference file (default: deep_documentary)",
     )
     parser.add_argument(
         "--aligner",
@@ -96,8 +102,34 @@ def main():
         default=None,
         help="Optional path to automatically render output MP4 file",
     )
+    parser.add_argument(
+        "--no-captions",
+        action="store_true",
+        help="Disable automatic kinetic subtitles/captions overlay",
+    )
+    parser.add_argument(
+        "--engine",
+        type=str,
+        default="remotion",
+        help="Target video generation engine: remotion (default), hyperframes, or native_fast",
+    )
 
     args = parser.parse_args()
+
+    engine_name = (args.engine or "remotion").lower()
+    if engine_name in ["hyperframes", "native_fast"]:
+        print(
+            f"Error: Engine '{engine_name}' is scheduled for Phase 2/3 and is not yet available in Phase 1.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    from pipeline.engines import get_engine
+    try:
+        engine = get_engine(engine_name)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
 
     if not os.path.exists(args.script):
         print(f"Error: Script file '{args.script}' not found.", file=sys.stderr)
@@ -130,7 +162,15 @@ def main():
             footage_provider=args.provider,
             channel=args.channel,
             genre=args.genre,
+            voice=args.voice,
         )
+
+        if args.no_captions:
+            # Mark timeline metadata so renderer and frontend omit captions
+            import json
+            timeline.metadata["no_captions"] = True
+            with open(args.output, "w", encoding="utf-8") as f:
+                json.dump(timeline.to_dict(), f, indent=2)
 
         print(f"\n✨ Pipeline execution complete! Timeline saved to '{args.output}'.")
 
@@ -152,6 +192,8 @@ def main():
                     "--out",
                     os.path.abspath(args.render),
                 ]
+                if args.no_captions:
+                    cmd.append("--no-captions")
                 res = subprocess.run(cmd, cwd=frontend_dir)
                 if res.returncode != 0:
                     raise RuntimeError(f"Remotion render failed with exit code {res.returncode}")
