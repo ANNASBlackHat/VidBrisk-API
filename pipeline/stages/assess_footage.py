@@ -41,8 +41,8 @@ def assess_candidate(
             f"Semantic similarity score {candidate.score:.2f} is below threshold {semantic_threshold:.2f}",
         )
 
-    # Legacy footage handling: if motion_mean is None, do not reject!
-    if candidate.motion_mean is not None and candidate.motion_mean < motion_floor:
+    # Skip motion check if motion_floor is 0 or negative
+    if motion_floor > 0.0 and candidate.motion_mean is not None and candidate.motion_mean < motion_floor:
         if allow_low_motion_cap:
             # Keep clip, but cap its usable duration so it acts as a brief cut
             candidate.duration_sec = min(candidate.duration_sec or low_motion_max_duration, low_motion_max_duration)
@@ -61,7 +61,7 @@ def assess_beat_candidates(
     semantic_threshold: float = 0.50,
     motion_floor: float = 5.0,
     max_requeries: int = 2,
-    allow_low_motion_cap: bool = True,
+    allow_low_motion_cap: bool = False,
     low_motion_max_duration: float = 2.0,
 ) -> FootageStatus:
     """Assesses the candidate pool for a beat and updates its footage state.
@@ -98,7 +98,7 @@ def assess_beat_candidates(
             beat.fallback_reason = "No candidate clips found in footage library after maximum requeries."
         return beat.footage_status
 
-    if allow_low_motion_cap:
+    if allow_low_motion_cap and motion_floor > 0.0:
         for c in candidates:
             if c.motion_mean is not None and c.motion_mean < motion_floor:
                 c.duration_sec = min(c.duration_sec or low_motion_max_duration, low_motion_max_duration)

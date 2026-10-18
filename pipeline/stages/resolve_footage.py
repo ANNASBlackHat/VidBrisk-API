@@ -117,6 +117,16 @@ def resolve_beat_visuals(
         exclude_source_video_ids=exclude_source_video_ids,
         exclude_chunk_ids=exclude_chunk_ids,
     )
+    if not candidates and exclude_source_video_ids:
+        candidates = resolve_footage(
+            beat=beat,
+            resolver=footage_engine,
+            top_k=top_k,
+            target_orientation=target_orientation,
+            provider=provider,
+            exclude_source_video_ids=None,
+            exclude_chunk_ids=exclude_chunk_ids,
+        )
 
     # Stage 4: Assess & Decide
     status = assess_beat_candidates(
@@ -125,6 +135,7 @@ def resolve_beat_visuals(
         semantic_threshold=eff_semantic_threshold,
         motion_floor=eff_motion_floor,
         max_requeries=eff_max_requeries,
+        allow_low_motion_cap=settings.FOOTAGE_ALLOW_LOW_MOTION_CAP,
     )
 
     # Requery loop if needed
@@ -141,6 +152,15 @@ def resolve_beat_visuals(
             exclude_source_video_ids=exclude_source_video_ids,
             exclude_chunk_ids=exclude_chunk_ids,
         )
+        if not candidates and exclude_source_video_ids:
+            candidates = footage_engine.search_candidates(
+                query=new_query,
+                top_k=top_k,
+                target_orientation=target_orientation,
+                provider=provider,
+                exclude_source_video_ids=None,
+                exclude_chunk_ids=exclude_chunk_ids,
+            )
 
         status = assess_beat_candidates(
             beat=beat,
@@ -148,6 +168,7 @@ def resolve_beat_visuals(
             semantic_threshold=eff_semantic_threshold,
             motion_floor=eff_motion_floor,
             max_requeries=eff_max_requeries,
+            allow_low_motion_cap=settings.FOOTAGE_ALLOW_LOW_MOTION_CAP,
         )
 
     # Stage 5: Motion Graphic Fallback if footage is INADEQUATE

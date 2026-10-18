@@ -206,8 +206,10 @@ class FootageResolver:
         if not words:
             return []
 
-        where_clauses = ["c.caption IS NOT NULL", "c.caption != ''"]
-        params: dict[str, Any] = {"words": words, "fetch_k": top_k * 3}
+        where_clauses = [
+            "((c.caption IS NOT NULL AND c.caption != '') OR (c.tags IS NOT NULL AND c.tags::text != '[]') OR (m.item_metadata IS NOT NULL))"
+        ]
+        params: dict[str, Any] = {"words": words, "fetch_k": max(50, top_k * 6)}
 
         if provider:
             where_clauses.append("m.provider = %(provider)s")
@@ -231,11 +233,23 @@ class FootageResolver:
                    (
                      SELECT count(*) 
                      FROM unnest(%(words)s::text[]) w 
-                     WHERE c.caption ILIKE '%%' || w || '%%' OR c.tags::text ILIKE '%%' || w || '%%'
+                     WHERE c.caption ILIKE '%%' || w || '%%' 
+                        OR c.tags::text ILIKE '%%' || w || '%%'
+                        OR m.item_metadata::text ILIKE '%%' || w || '%%'
+                        OR c.storage_path ILIKE '%%' || w || '%%'
                    ) as match_count
             FROM chunks c
             JOIN media_items m ON c.media_item_id = m.id
             WHERE {where_sql}
+              AND (
+                EXISTS (
+                  SELECT 1 FROM unnest(%(words)s::text[]) w
+                  WHERE c.caption ILIKE '%%' || w || '%%' 
+                     OR c.tags::text ILIKE '%%' || w || '%%'
+                     OR m.item_metadata::text ILIKE '%%' || w || '%%'
+                     OR c.storage_path ILIKE '%%' || w || '%%'
+                )
+              )
             ORDER BY match_count DESC, c.start_ts ASC
             LIMIT %(fetch_k)s;
         """
@@ -358,11 +372,11 @@ class FootageResolver:
         eff_provider = provider or self.default_provider
         search_fn, search_filters_cls = self._load_footage_engine()
 
-        # Fetch slightly larger candidate pool to allow orientation and exclusion filtering
-        multiplier = 2
+        # Fetch larger candidate pool to allow orientation and exclusion filtering
+        multiplier = 4
         if exclude_source_video_ids or exclude_chunk_ids:
-            multiplier += 2
-        fetch_k = top_k * multiplier if (target_orientation and target_orientation != "any") or exclude_source_video_ids or exclude_chunk_ids else top_k
+            multiplier = 10
+        fetch_k = max(50, top_k * multiplier) if (target_orientation and target_orientation != "any") or exclude_source_video_ids or exclude_chunk_ids else max(20, top_k * 4)
 
         candidates: Optional[list[CandidateChunk]] = None
 

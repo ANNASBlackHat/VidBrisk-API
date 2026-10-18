@@ -127,6 +127,12 @@ def handle_tts_synthesize_task(
                     os.remove(txt_path)
             except OSError:
                 pass
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
 
 
 def run_queue_worker(database_url: str, backend: str, poll_interval: float = 1.0, idle_exit: int = 0) -> None:

@@ -187,6 +187,7 @@ if not os.path.exists(footage_engine_dir):
 os.environ["DATABASE_URL"] = "{db_url}"
 os.environ["FOOTAGE_ENGINE_PATH"] = footage_engine_dir
 os.environ["STORAGE_BACKEND"] = "local"
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 os.environ["PYTHONPATH"] = f"{{vidbrisk_dir}}:{{footage_engine_dir}}:{{os.environ.get('PYTHONPATH', '')}}"
 
 tasks = "{tasks}"

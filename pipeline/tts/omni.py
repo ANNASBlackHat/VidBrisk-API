@@ -208,21 +208,30 @@ class OmniTTSProvider(TTSProvider):
             logger.info(f"[OmniTTS] Voice design with instruct='{prompt}'")
             audio = model.generate(text=text, instruct=prompt)
 
-        arr = audio[0] if isinstance(audio, (list, tuple)) else audio
-        if hasattr(arr, "cpu"):
-            arr = arr.cpu().numpy()
+        try:
+            arr = audio[0] if isinstance(audio, (list, tuple)) else audio
+            if hasattr(arr, "cpu"):
+                arr = arr.cpu().numpy()
 
-        import numpy as np
-        import soundfile as sf
+            import numpy as np
+            import soundfile as sf
 
-        if isinstance(arr, np.ndarray):
-            arr = arr.squeeze()
+            if isinstance(arr, np.ndarray):
+                arr = arr.squeeze()
 
-        sf.write(dest_path, arr, 24000)
+            sf.write(dest_path, arr, 24000)
 
-        info = sf.info(dest_path)
-        return AudioResult(
-            audio_path=dest_path,
-            duration_sec=round(info.duration, 3),
-            sample_rate=info.samplerate,
-        )
+            info = sf.info(dest_path)
+            return AudioResult(
+                audio_path=dest_path,
+                duration_sec=round(info.duration, 3),
+                sample_rate=info.samplerate,
+            )
+        finally:
+            del audio
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            except Exception:
+                pass
