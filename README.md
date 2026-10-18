@@ -127,29 +127,52 @@ Run the entire unit and integration test suite:
 ```bash
 uv run pytest
 ```
-*Current test suite: **53 passing tests** covering stage functions, ORM state transitions, component registry prop extraction, worker loop checkpoints & crash recovery, FastAPI REST routes, and end-to-end HTTP pipeline runs.*
+*Current test suite: **233 passing tests** covering stage functions, multi-engine compilation and rendering (Remotion, HyperFrames, Native Fast), ORM state transitions, component registry prop extraction, worker loop checkpoints & crash recovery, FastAPI REST routes, and end-to-end HTTP pipeline runs.*
 
 ---
 
-## 💻 Headless CLI Automation
+## 💻 Headless CLI Automation (`run_pipeline.py`)
 
-You can run the entire video generation workflow completely from the command line without opening the web frontend:
+You can run the entire video generation workflow completely from the command line without opening the web frontend. The pipeline supports three pluggable rendering engines:
+
+### Multi-Engine Comparison
+| Engine | Technology | Best For | System Dependencies |
+|---|---|---|---|
+| **`remotion`** *(Default)* | React + Headless Chromium (`@remotion/renderer`) | Full visual fidelity, Remotion component library (StatCards, QuoteCards, Maps), kinetic captions | Node.js |
+| **`hyperframes`** | Declarative HTML5 + GSAP (`npx hyperframes`) | Lightweight DOM motion, live timeline inspection, HyperFrames Studio preview | Node.js >= 22, FFmpeg |
+| **`native_fast`** | Pure Python + FFmpeg Filtergraphs | Instant low-latency exports, sequential cuts, aspect ratio padding/blur without browser overhead | FFmpeg only |
+
+### CLI Usage Examples
 
 ```bash
-# 1. Generate Timeline & Audio only (fast, no rendering)
-python run_pipeline.py \
+# 1. Generate Timeline & Audio Only (Fast, No Video Render)
+uv run python run_pipeline.py \
   --script examples/sample_raw_script.txt \
   --output output/timeline.json \
   --tts kokoro \
   --orientation horizontal
 
-# 2. Auto-export directly to MP4 with Remotion motion components (StatCards, QuoteCards, etc.)
-python run_pipeline.py \
+# 2. Render with Default Remotion Engine (Full React Motion Graphics)
+uv run python run_pipeline.py \
   --script examples/sample_raw_script.txt \
   --output output/timeline.json \
-  --tts kokoro \
-  --render output/final_video.mp4 \
-  --orientation horizontal
+  --engine remotion \
+  --render output/final_remotion.mp4
+
+# 3. Render with HyperFrames Engine (HTML5/GSAP Timeline)
+uv run python run_pipeline.py \
+  --script examples/sample_raw_script.txt \
+  --output output/timeline.json \
+  --engine hyperframes \
+  --render output/final_hyperframes.mp4
+
+# 4. Render with Native Fast Engine (Pure FFmpeg Filtergraph, Instant Cuts)
+uv run python run_pipeline.py \
+  --script examples/sample_raw_script.txt \
+  --output output/timeline.json \
+  --engine native_fast \
+  --fit-mode blur_bg \
+  --render output/final_native.mp4
 ```
 
 ### CLI Options Reference
@@ -157,12 +180,18 @@ python run_pipeline.py \
 |---|---|---|---|
 | `--script` | `-s` | *Required* | Path to raw narration script text file |
 | `--output` | `-o` | `output/timeline.json` | Path to save the compiled timeline JSON |
-| `--tts` | | `kokoro` | TTS engine (`omni`, `kokoro`, `supersonic`, `chatterbox`, `mock`) |
+| `--engine` | | `remotion` | Target rendering engine: `remotion` (default), `hyperframes`, or `native_fast` |
+| `--render` | `-r` | `None` | Output MP4 path. If specified, auto-renders final video using selected `--engine` |
+| `--fit-mode` | | `blur_bg` | Aspect ratio framing mode: `blur_bg` (blurred background), `pad` (black bars), or `crop` |
+| `--orientation` | | `horizontal` | Video aspect ratio: `horizontal` (16:9), `vertical` (9:16), `square` (1:1), or `any` |
+| `--tts` | | `kokoro` | TTS engine (`omni`, `kokoro`, `chatterbox`, `mock`) |
 | `--voice` | | `deep_documentary` | Voice identifier or clone reference file in `data/voices/` |
 | `--aligner` | | `mock` | Alignment engine (`whisperx`, `easytranscriber`, `mock`) |
-| `--orientation` | | `horizontal` | Video aspect ratio (`horizontal` 16:9, `vertical` 9:16, `square` 1:1) |
 | `--no-captions` | | `False` | Disable automatic kinetic subtitles/captions overlay |
-| `--render` | `-r` | `None` | Output MP4 path. If specified, auto-renders final video |
+| `--provider` | | `None` | Optional footage provider filter (`youtube`, `pexels`, `pixabay`, `coverr`) |
+| `--genre` | | `None` | Creative genre slug matching `style_skills/<genre>.md` |
+| `--channel` | | `None` | Channel name matching `style_skills/<channel>.md` |
+| `--audio-dir` | | *Auto-derived* | Directory to save generated per-beat `.wav` audio files |
 | `--single-pass` | | `False` | Use single combined LLM call for script clean + beat structure |
 
 ---
