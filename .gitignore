@@ -21,6 +21,7 @@ ENV/
 *.env
 !.env.example
 kaggle_worker/
+kaggle_unified_worker/
 
 
 # Distribution / Packaging / Eggs

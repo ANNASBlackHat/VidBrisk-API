@@ -278,7 +278,23 @@ uv run python scripts/colab_unified_worker.py --bundle-only
 uv run python scripts/colab_unified_worker.py --dry-run
 ```
 
-### 2. Standalone Unified Worker (Colab, Kaggle, or Local Server)
+### 2. Launch on Kaggle (30h Free GPU / Week, Dedicated T4 x 2 or P100)
+When Colab GPUs are busy or at capacity, you can run the exact same unified worker on Kaggle in the background:
+```bash
+# Push and start the Kaggle GPU worker in the background:
+uv run python scripts/kaggle_unified_worker.py --push
+
+# Check execution status on Kaggle:
+uv run python scripts/kaggle_unified_worker.py --status
+
+# Inspect active workers connected to the PostgreSQL queue:
+uv run python scripts/kaggle_unified_worker.py --check-db
+
+# View latest logs:
+uv run python scripts/kaggle_unified_worker.py --logs
+```
+
+### 3. Standalone Unified Worker (Colab, Kaggle, or Local Server)
 You can also run the unified worker script directly on any machine:
 ```bash
 # Handle TTS and Footage Search on GPU:
