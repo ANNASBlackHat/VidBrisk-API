@@ -342,18 +342,37 @@ def stream_session_worker(
         proc.wait()
 
 
-def ensure_colab_session(session_name: str, gpu_tier: str) -> bool:
-    """Creates a new Colab session or reuses an existing one."""
-    res = subprocess.run(["colab", "status", "-s", session_name], capture_output=True)
-    if res.returncode == 0:
+def ensure_colab_session(
+    session_name: str,
+    gpu_tier: str,
+    max_retries: int = 3,
+    retry_delay: float = 5.0,
+) -> bool:
+    """Creates a new Colab session or reuses an existing one with automatic retries."""
+    res = subprocess.run(["colab", "status", "-s", session_name], capture_output=True, text=True)
+    combined = (res.stdout or "") + (res.stderr or "")
+    if res.returncode == 0 and "not found" not in combined.lower():
         print(f"[session] Reusing existing session '{session_name}'", flush=True)
         return True
 
     cmd = ["colab", "new", "-s", session_name]
     if gpu_tier and gpu_tier.lower() != "none":
         cmd += ["--gpu", gpu_tier]
-    sh(*cmd)
-    return False
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            print(f"[session] Requesting session '{session_name}' (attempt {attempt}/{max_retries})...", flush=True)
+            sh(*cmd)
+            return False
+        except subprocess.CalledProcessError:
+            if attempt < max_retries:
+                print(f"[session] Colab assignment failed (likely temporary capacity/503). Retrying in {retry_delay}s...", flush=True)
+                time.sleep(retry_delay)
+            else:
+                print(f"[session] Failed to provision '{session_name}' after {max_retries} attempts.")
+                print("[hint] If Colab returned 'Service Unavailable', Google's free T4 GPU pool is temporarily full.")
+                print("[hint] You can wait a few minutes, or run CPU rendering with '--gpu none'.")
+                raise
 
 
 def main() -> int:
