@@ -101,32 +101,75 @@ def handle_render_video_task(
     out_filename = f"{job_id}_{width}x{height}_{fps}fps.mp4"
     out_path = os.path.join(base_dir, out_filename)
 
-    # 3. Locate Remotion render script
-    if not remotion_script:
-        candidates = [
-            os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "video-generation-frontend", "scripts", "render_video.mjs")),
-            os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "video-generation-frontend", "scripts", "render_video.mjs")),
-            "/content/remotion_bundle/scripts/render_video.mjs",
-        ]
-        for c in candidates:
-            if os.path.exists(c):
-                remotion_script = c
-                break
-
-    if not remotion_script or not os.path.exists(remotion_script):
-        raise FileNotFoundError(f"Remotion script not found. Looked in: {candidates}")
-
-    frontend_dir = os.path.dirname(os.path.dirname(os.path.abspath(remotion_script)))
-
-    cmd = ["node", "--preserve-symlinks", remotion_script, "--timeline", timeline_path, "--out", out_path]
+    engine_name = str(
+        payload.get("engine")
+        or timeline_data.get("metadata", {}).get("render_engine")
+        or "remotion"
+    ).lower().strip()
 
     t0 = time.time()
 
-    def _on_frame(frame: int, total: int, pct: int, msg: str):
-        if progress_cb:
-            progress_cb(pct, msg)
+    if engine_name == "native_fast":
+        from pipeline.engines.native_fast import NativeFastEngine
+        native_engine = NativeFastEngine()
 
-    _run_remotion_subprocess(cmd=cmd, cwd=frontend_dir, progress_cb=_on_frame)
+        def _on_engine_progress(p: dict[str, Any]):
+            if progress_cb:
+                pct = int(p.get("percent", 0))
+                msg = p.get("message", "Rendering video...")
+                progress_cb(pct, msg)
+
+        native_engine.render(
+            compiled_data=timeline_data,
+            output_path=out_path,
+            width=width,
+            height=height,
+            fps=fps,
+            progress_callback=_on_engine_progress,
+        )
+    elif engine_name == "hyperframes":
+        from pipeline.engines.hyperframes import HyperFramesEngine
+        hf_engine = HyperFramesEngine()
+
+        def _on_engine_progress(p: dict[str, Any]):
+            if progress_cb:
+                pct = int(p.get("percent", 0))
+                msg = p.get("message", "Rendering video...")
+                progress_cb(pct, msg)
+
+        hf_engine.render(
+            compiled_data=timeline_data,
+            output_path=out_path,
+            width=width,
+            height=height,
+            fps=fps,
+            progress_callback=_on_engine_progress,
+        )
+    else:
+        # Default: Remotion
+        if not remotion_script:
+            candidates = [
+                os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "video-generation-frontend", "scripts", "render_video.mjs")),
+                os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "video-generation-frontend", "scripts", "render_video.mjs")),
+                "/content/remotion_bundle/scripts/render_video.mjs",
+            ]
+            for c in candidates:
+                if os.path.exists(c):
+                    remotion_script = c
+                    break
+
+        if not remotion_script or not os.path.exists(remotion_script):
+            raise FileNotFoundError(f"Remotion script not found. Looked in: {candidates}")
+
+        frontend_dir = os.path.dirname(os.path.dirname(os.path.abspath(remotion_script)))
+
+        cmd = ["node", "--preserve-symlinks", remotion_script, "--timeline", timeline_path, "--out", out_path]
+
+        def _on_frame(frame: int, total: int, pct: int, msg: str):
+            if progress_cb:
+                progress_cb(pct, msg)
+
+        _run_remotion_subprocess(cmd=cmd, cwd=frontend_dir, progress_cb=_on_frame)
 
     if not os.path.exists(out_path):
         raise FileNotFoundError(f"Render output MP4 file was not created: '{out_path}'")
@@ -136,6 +179,7 @@ def handle_render_video_task(
 
     result_data: dict[str, Any] = {
         "status": "success",
+        "engine": engine_name,
         "transport": transport,
         "filename": out_filename,
         "duration_sec": dur,
@@ -159,6 +203,7 @@ def run_render_queue_worker(
     transport: str = "base64",
     poll_interval: float = 1.0,
     idle_exit: int = 0,
+    engine_backend: str = "all",
 ) -> None:
     """Runs PostgreSQL polling loop for 'render_video' tasks."""
     try:
@@ -175,22 +220,35 @@ def run_render_queue_worker(
         logger.error(f"Cannot run render queue worker: footage_engine queue helpers not available: {e}")
         return
 
-    worker_id = make_worker_id("remotion_renderer")
-    register_worker(database_url=database_url, worker_id=worker_id, backend="remotion")
-    logger.info(f"Worker '{worker_id}' registered for 'render_video' tasks (transport={transport}).")
+    worker_id = make_worker_id(f"renderer_{engine_backend}")
+    backend_val = engine_backend if engine_backend != "all" else "remotion"
+    register_worker(database_url=database_url, worker_id=worker_id, backend=backend_val)
+    if engine_backend == "all":
+        for extra in ("native_fast", "hyperframes", "render"):
+            try:
+                register_worker(database_url=database_url, worker_id=f"{worker_id}:{extra}", backend=extra)
+            except Exception:
+                pass
+
+    logger.info(f"Worker '{worker_id}' registered for 'render_video' tasks (engine={engine_backend}, transport={transport}).")
 
     last_active = time.time()
+    backends_to_poll = ["remotion", "native_fast", "hyperframes", "render"] if engine_backend == "all" else [engine_backend]
 
     try:
         while True:
             heartbeat_worker(database_url=database_url, worker_id=worker_id)
-            job = claim_job(
-                database_url=database_url,
-                worker_id=worker_id,
-                tasks=["render_video"],
-                backend="remotion",
-                lease_sec=7200,
-            )
+            job = None
+            for b in backends_to_poll:
+                job = claim_job(
+                    database_url=database_url,
+                    worker_id=worker_id,
+                    tasks=["render_video"],
+                    backend=b,
+                    lease_sec=7200,
+                )
+                if job:
+                    break
 
             if job:
                 last_active = time.time()
@@ -241,11 +299,18 @@ def run_render_queue_worker(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Standalone Remotion Render Worker")
+    parser = argparse.ArgumentParser(description="Standalone Multi-Engine Render Worker")
     parser.add_argument("--database-url", type=str, default=None, help="Postgres database URL")
     parser.add_argument("--transport", type=str, choices=["base64", "ngrok"], default="base64")
     parser.add_argument("--interval", type=float, default=1.0, help="Polling interval in seconds")
     parser.add_argument("--idle-exit", type=int, default=0, help="Exit after N seconds of idle")
+    parser.add_argument(
+        "--engine",
+        type=str,
+        default="all",
+        choices=["all", "remotion", "hyperframes", "native_fast"],
+        help="Supported video engine (default: all)",
+    )
     args = parser.parse_args()
 
     db_url = args.database_url or os.getenv("DATABASE_URL")
@@ -258,6 +323,7 @@ def main():
         transport=args.transport,
         poll_interval=args.interval,
         idle_exit=args.idle_exit,
+        engine_backend=args.engine,
     )
 
 

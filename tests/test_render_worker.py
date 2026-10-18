@@ -143,10 +143,94 @@ def test_handle_render_video_task_mock_render():
 
             assert result["status"] == "success"
             assert result["transport"] == "base64"
+            assert result["engine"] == "remotion"
             assert "video_b64" in result
             decoded = base64.b64decode(result["video_b64"])
             assert decoded == b"MOCK_MP4_OUTPUT"
             assert len(progress_calls) > 0
+
+
+def test_handle_render_video_task_native_fast():
+    from unittest.mock import MagicMock, patch
+    from scripts.run_render_worker import handle_render_video_task
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        payload = {
+            "job_id": "job-native",
+            "timeline": {"total_duration": 8},
+            "width": 1280,
+            "height": 720,
+            "fps": 24,
+            "transport": "base64",
+            "engine": "native_fast",
+            "audio_manifest": {},
+        }
+
+        progress_calls = []
+
+        mock_engine = MagicMock()
+        def fake_render(compiled_data, output_path, width, height, fps, progress_callback=None, **kwargs):
+            if progress_callback:
+                progress_callback({"percent": 75, "message": "Rendering FFmpeg filtergraphs..."})
+            with open(output_path, "wb") as f:
+                f.write(b"NATIVE_FAST_OUTPUT")
+            return output_path
+
+        mock_engine.render.side_effect = fake_render
+
+        with patch("pipeline.engines.native_fast.NativeFastEngine", return_value=mock_engine):
+            result = handle_render_video_task(
+                payload=payload,
+                work_dir=tmpdir,
+                progress_cb=lambda pct, msg: progress_calls.append((pct, msg)),
+            )
+
+            assert result["status"] == "success"
+            assert result["engine"] == "native_fast"
+            assert result["transport"] == "base64"
+            assert "video_b64" in result
+            decoded = base64.b64decode(result["video_b64"])
+            assert decoded == b"NATIVE_FAST_OUTPUT"
+            assert (75, "Rendering FFmpeg filtergraphs...") in progress_calls
+
+
+def test_handle_render_video_task_hyperframes():
+    from unittest.mock import MagicMock, patch
+    from scripts.run_render_worker import handle_render_video_task
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        payload = {
+            "job_id": "job-hf",
+            "timeline": {"total_duration": 6},
+            "width": 1280,
+            "height": 720,
+            "fps": 24,
+            "transport": "base64",
+            "engine": "hyperframes",
+            "audio_manifest": {},
+        }
+
+        mock_engine = MagicMock()
+        def fake_render(compiled_data, output_path, width, height, fps, progress_callback=None, **kwargs):
+            if progress_callback:
+                progress_callback({"percent": 90, "message": "Chromium frame capture..."})
+            with open(output_path, "wb") as f:
+                f.write(b"HYPERFRAMES_OUTPUT")
+            return output_path
+
+        mock_engine.render.side_effect = fake_render
+
+        with patch("pipeline.engines.hyperframes.HyperFramesEngine", return_value=mock_engine):
+            result = handle_render_video_task(
+                payload=payload,
+                work_dir=tmpdir,
+            )
+
+            assert result["status"] == "success"
+            assert result["engine"] == "hyperframes"
+            assert "video_b64" in result
+            decoded = base64.b64decode(result["video_b64"])
+            assert decoded == b"HYPERFRAMES_OUTPUT"
 
 
 def test_dispatch_render_to_worker_no_workers_returns_false():
@@ -191,6 +275,49 @@ def test_dispatch_render_to_worker_success():
             assert os.path.exists(out_file)
             with open(out_file, "rb") as f:
                 assert f.read() == b"VIDEO"
+
+
+def test_dispatch_render_to_worker_native_fast():
+    from unittest.mock import MagicMock, patch
+    from backend.worker.renderer_task import _dispatch_render_to_worker
+
+    mock_helpers = {
+        "count_live_workers": MagicMock(return_value=2),
+        "submit_job": MagicMock(return_value="remote-job-fast"),
+        "wait_for_job": MagicMock(return_value={
+            "status": "done",
+            "result": {
+                "status": "success",
+                "engine": "native_fast",
+                "transport": "base64",
+                "video_b64": base64.b64encode(b"FAST_VIDEO").decode("ascii"),
+            },
+        }),
+    }
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out_file = os.path.join(tmpdir, "out_fast.mp4")
+        with patch("backend.worker.renderer_task._get_worker_helpers", return_value=mock_helpers):
+            handled = _dispatch_render_to_worker(
+                job_id="job-fast-1",
+                timeline_data={"total_duration": 12},
+                out_path=out_file,
+                engine_name="native_fast",
+            )
+            assert handled is True
+            assert os.path.exists(out_file)
+            with open(out_file, "rb") as f:
+                assert f.read() == b"FAST_VIDEO"
+
+        # Verify backend="native_fast" was queried and submitted
+        mock_helpers["count_live_workers"].assert_called_with(
+            database_url=mock_helpers["count_live_workers"].call_args[1]["database_url"],
+            within_sec=60,
+            backend="native_fast",
+        )
+        submit_args = mock_helpers["submit_job"].call_args[1]
+        assert submit_args["backend"] == "native_fast"
+        assert submit_args["payload"]["engine"] == "native_fast"
 
 
 def test_build_render_bundle():

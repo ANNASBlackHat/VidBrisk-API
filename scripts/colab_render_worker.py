@@ -65,7 +65,10 @@ with tarfile.open("/content/render_worker.tar.gz", "r:gz") as tf:
     tf.extractall("/content/render_repo")
 
 frontend_dir = "/content/render_repo/video-generation-frontend"
-if os.path.exists(frontend_dir):
+is_native_only = "--engine" in EXTRA_ARGV and "native_fast" in EXTRA_ARGV
+if is_native_only:
+    print("[run] Native Fast engine selected. Skipping npm dependency installation.", flush=True)
+elif os.path.exists(frontend_dir):
     target_nm = os.path.join(frontend_dir, "node_modules")
     cache_nm = "/content/frontend_node_modules"
     if os.path.islink(target_nm):
@@ -163,12 +166,18 @@ def build_render_bundle(tmpdir: str) -> Tuple[str, str, str]:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Run the async Remotion Render worker on a Colab VM.")
+    ap = argparse.ArgumentParser(description="Run the async Multi-Engine Render worker on a Colab VM.")
     ap.add_argument("--session", "-s", default="render-worker", help="Colab session name")
     ap.add_argument("--gpu", default="none", help="GPU type ('none' for CPU, 'T4' for GPU)")
     ap.add_argument("--transport", default="base64", choices=["base64", "ngrok"], help="Transport mode")
     ap.add_argument("--idle-exit", type=int, default=900, help="Exit after N idle seconds (0 = run forever)")
     ap.add_argument("--ngrok-token", default=None, help="ngrok auth token if using ngrok transport")
+    ap.add_argument(
+        "--engine",
+        default="all",
+        choices=["all", "remotion", "hyperframes", "native_fast"],
+        help="Supported video engine (default: all)",
+    )
     ap.add_argument("--keep", action="store_true", help="Leave the VM running afterwards")
     ap.add_argument("--skip-setup", action="store_true", help="Reuse session, skip system package install")
     ap.add_argument("--bundle-only", action="store_true", help="Only build bundle, do not connect to Colab")
@@ -183,7 +192,7 @@ def main() -> int:
         print(f"[bundle] env keys: {sorted(json.load(open(env_path)).keys())}")
         return 0
 
-    extra_argv = ["--transport", args.transport, "--idle-exit", str(args.idle_exit)]
+    extra_argv = ["--transport", args.transport, "--idle-exit", str(args.idle_exit), "--engine", args.engine]
 
     run_path = os.path.join(tmpdir, "render_remote_run.py")
     with open(run_path, "w", encoding="utf-8") as f:

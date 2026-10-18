@@ -267,9 +267,10 @@ uv run python scripts/run_tts_worker.py --http --port 8005
 For high-throughput batch video rendering, the pipeline supports opportunistic distributed rendering across your local machine and remote workers (such as Google Colab CPU runtimes or secondary machines).
 
 ### Key Highlights
-- **CPU-Friendly**: Rendering does not require heavy GPUs; runs seamlessly on free Colab CPU runtimes (`--gpu none`).
+- **Multi-Engine Support**: Offloads rendering across all supported engines (`remotion`, `hyperframes`, `native_fast`, or `all`).
+- **CPU-Friendly**: Rendering does not require heavy GPUs; runs seamlessly on free Colab CPU runtimes (`--gpu none`). Native Fast engine requires zero npm/Node dependencies and boots in seconds.
 - **Opportunistic Offload & Zero Regression**:
-  - If a render worker is active in the queue, render jobs are offloaded to it.
+  - If a render worker is active in the queue for the requested engine (or generic render), render jobs are offloaded to it.
   - If no workers are online, or if a worker disconnects/times out, **it automatically falls back to in-process local rendering**.
 - **Dual Transports**:
   - **`base64`** (Default): MP4 is embedded directly into the database job result. Zero external cloud storage required.
@@ -277,8 +278,11 @@ For high-throughput batch video rendering, the pipeline supports opportunistic d
 
 ### 1. Launch Render Worker on Google Colab
 ```bash
-# Launch CPU worker with base64 transport (exits after 15m idle)
-uv run python scripts/colab_render_worker.py --transport base64 --idle-exit 900
+# Launch multi-engine CPU worker with base64 transport (supports Remotion, HyperFrames, and Native Fast)
+uv run python scripts/colab_render_worker.py --transport base64 --idle-exit 900 --engine all
+
+# Launch dedicated ultra-fast Native Fast worker (skips Node/npm setup, boots in seconds)
+uv run python scripts/colab_render_worker.py --engine native_fast --transport base64
 
 # Launch with ngrok direct download transport
 uv run python scripts/colab_render_worker.py --transport ngrok --ngrok-token <YOUR_TOKEN>
@@ -289,8 +293,11 @@ uv run python scripts/colab_render_worker.py --bundle-only
 
 ### 2. Run Local Render Worker Daemon
 ```bash
-# Queue mode connected to PostgreSQL
-uv run python scripts/run_render_worker.py --transport base64 --interval 1.0
+# Queue mode connected to PostgreSQL (handling all engines)
+uv run python scripts/run_render_worker.py --transport base64 --interval 1.0 --engine all
+
+# Dedicated Native Fast worker daemon
+uv run python scripts/run_render_worker.py --engine native_fast --interval 1.0
 ```
 
 ---

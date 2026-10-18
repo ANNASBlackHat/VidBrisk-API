@@ -37,6 +37,7 @@ def _dispatch_render_to_worker(
     width: int = 1280,
     height: int = 720,
     fps: int = 24,
+    engine_name: str = "remotion",
     database_url: Optional[str] = None,
     timeout_sec: float = 600.0,
     progress_callback: Optional[Callable[[dict[str, Any]], None]] = None,
@@ -50,17 +51,29 @@ def _dispatch_render_to_worker(
         return False
 
     db_url = database_url or os.getenv("DATABASE_URL")
+    target_backend = (engine_name or "remotion").lower().strip()
     try:
-        live_workers = helpers["count_live_workers"](database_url=db_url, within_sec=60, backend="remotion")
+        live_workers = helpers["count_live_workers"](database_url=db_url, within_sec=60, backend=target_backend)
+        if live_workers <= 0 and target_backend != "remotion":
+            # Check for generic 'render' workers
+            live_workers = helpers["count_live_workers"](database_url=db_url, within_sec=60, backend="render")
+            if live_workers > 0:
+                target_backend = "render"
+        if live_workers <= 0 and target_backend != "remotion":
+            # Check for 'remotion' workers (which also support multi-engine)
+            live_workers = helpers["count_live_workers"](database_url=db_url, within_sec=60, backend="remotion")
+            if live_workers > 0:
+                target_backend = "remotion"
+
         if live_workers <= 0:
             return False
 
-        logger.info(f"Dispatching render for job {job_id[:8]} to remote worker (live_workers={live_workers})...")
+        logger.info(f"Dispatching render for job {job_id[:8]} (engine={engine_name}) to remote worker (backend={target_backend}, live_workers={live_workers})...")
         if progress_callback:
             progress_callback({
                 "percent": 5,
                 "is_rendering": True,
-                "message": f"Dispatched to remote render worker (pool size: {live_workers})...",
+                "message": f"Dispatched to remote render worker (engine: {engine_name}, pool size: {live_workers})...",
             })
 
         transport = os.getenv("RENDER_WORKER_TRANSPORT", "base64")
@@ -71,13 +84,14 @@ def _dispatch_render_to_worker(
             height=height,
             fps=fps,
             transport=transport,
+            engine=engine_name,
         )
 
         remote_job_id = helpers["submit_job"](
             task="render_video",
             payload=payload,
             database_url=db_url,
-            backend="remotion",
+            backend=target_backend,
         )
 
         remote_job = helpers["wait_for_job"](
@@ -156,39 +170,39 @@ def _execute_render(
         out_filename = f"{job_id}_{width}x{height}_{fps}fps.mp4"
         out_path = os.path.join(out_dir, out_filename)
 
-        # 1. Opportunistic remote dispatch (Remotion only, if remote workers are live)
-        if engine_name == "remotion":
-            remote_success = _dispatch_render_to_worker(
+        # 1. Opportunistic remote dispatch (across any engine if remote workers are live)
+        remote_success = _dispatch_render_to_worker(
+            job_id=job_id,
+            timeline_data=timeline_data,
+            out_path=out_path,
+            width=width,
+            height=height,
+            fps=fps,
+            engine_name=engine_name,
+            progress_callback=lambda p: update_job_progress(session=session, job_id=job_id, progress=p),
+        )
+
+        if remote_success:
+            video_url = f"http://localhost:8000/static/output/rendered/{out_filename}"
+            try:
+                from backend.repository_footage import record_timeline_footage_usage
+                record_timeline_footage_usage(db=session, timeline=timeline_data)
+            except Exception:
+                pass
+
+            update_job_progress(
+                session=session,
                 job_id=job_id,
-                timeline_data=timeline_data,
-                out_path=out_path,
-                width=width,
-                height=height,
-                fps=fps,
-                progress_callback=lambda p: update_job_progress(session=session, job_id=job_id, progress=p),
+                video_url=video_url,
+                progress={
+                    "percent": 100,
+                    "is_rendering": False,
+                    "message": "Export complete!",
+                    "video_url": video_url,
+                    "render_engine": f"remote-worker ({engine_name})",
+                },
             )
-
-            if remote_success:
-                video_url = f"http://localhost:8000/static/output/rendered/{out_filename}"
-                try:
-                    from backend.repository_footage import record_timeline_footage_usage
-                    record_timeline_footage_usage(db=session, timeline=timeline_data)
-                except Exception:
-                    pass
-
-                update_job_progress(
-                    session=session,
-                    job_id=job_id,
-                    video_url=video_url,
-                    progress={
-                        "percent": 100,
-                        "is_rendering": False,
-                        "message": "Export complete!",
-                        "video_url": video_url,
-                        "render_engine": "remote-worker",
-                    },
-                )
-                return
+            return
 
         # 2. Local rendering execution through EngineRegistry
         from pipeline.engines import get_engine

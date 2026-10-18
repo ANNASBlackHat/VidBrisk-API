@@ -18,6 +18,7 @@ def build_render_payload(
     fps: int = 24,
     transport: str = "base64",
     base_dir: Optional[str] = None,
+    engine: str = "remotion",
 ) -> dict[str, Any]:
     """Inspects timeline data, gathers referenced audio files, and builds self-contained payload."""
     root_dir = base_dir or os.getcwd()
@@ -33,7 +34,6 @@ def build_render_payload(
         elif isinstance(obj, list):
             for item in obj:
                 _collect_audio_paths(item)
-
 
     _collect_audio_paths(timeline_data)
 
@@ -61,6 +61,7 @@ def build_render_payload(
         "fps": fps,
         "transport": transport,
         "audio_manifest": audio_manifest,
+        "engine": engine,
     }
 
 
