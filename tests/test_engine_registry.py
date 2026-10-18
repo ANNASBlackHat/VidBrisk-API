@@ -3,6 +3,7 @@ from pipeline.engines.base import BaseVideoEngine
 from pipeline.engines.registry import EngineRegistry, get_engine, list_engines
 import pipeline.engines.remotion  # Ensure Remotion is registered as default
 import pipeline.engines.hyperframes  # Ensure HyperFrames is registered as default
+import pipeline.engines.native_fast  # Ensure NativeFast is registered as default
 
 
 @pytest.fixture(autouse=True)
@@ -56,7 +57,13 @@ def test_registry_hyperframes_active():
     assert engine.engine_name == "hyperframes"
 
 
-def test_registry_future_scheduled_engine():
+def test_registry_native_fast_active():
+    engine = get_engine("native_fast")
+    assert engine.engine_name == "native_fast"
+
+
+def test_registry_future_scheduled_engine(monkeypatch):
+    monkeypatch.setitem(EngineRegistry._future_engines, "future_preview", "Phase 9")
     with pytest.raises(NotImplementedError) as excinfo:
-        get_engine("native_fast")
-    assert "Phase 3" in str(excinfo.value)
+        get_engine("future_preview")
+    assert "Phase 9" in str(excinfo.value)

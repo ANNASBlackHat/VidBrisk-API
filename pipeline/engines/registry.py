@@ -9,9 +9,7 @@ class EngineRegistry:
 
     _engines: Dict[str, Type[BaseVideoEngine]] = {}
     _default_engines: Dict[str, Type[BaseVideoEngine]] = {}
-    _future_engines: Dict[str, str] = {
-        "native_fast": "Phase 3",
-    }
+    _future_engines: Dict[str, str] = {}
 
     @classmethod
     def register(cls, name: str, engine_cls: Type[BaseVideoEngine], is_default: bool = False) -> None:

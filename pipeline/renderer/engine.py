@@ -6,7 +6,7 @@ import re
 import shutil
 import subprocess
 import tempfile
-from typing import Any, Literal, Optional, Union
+from typing import Any, Callable, Literal, Optional, Union
 from pipeline.models import TimelinePlan
 
 FitMode = Literal["blur_bg", "pad", "crop"]
@@ -55,6 +55,7 @@ class VideoRenderer:
         height: int = 720,
         fps: int = 24,
         fit_mode: FitMode = "blur_bg",
+        progress_callback: Optional[Callable[[dict[str, Any]], None]] = None,
     ) -> str:
         """Renders a timeline into a standalone MP4 file with aspect ratio fit support."""
         if isinstance(timeline, str):
@@ -121,6 +122,9 @@ class VideoRenderer:
         self._log(f"Starting render -> Canvas: {width}x{height} @ {fps}fps, Fit Mode: {fit_mode}")
         self._log(f"Found {len(video_items)} video item(s), {len(text_items)} text item(s), {len(audio_items)} audio item(s).")
 
+        if progress_callback:
+            progress_callback({"percent": 5, "is_rendering": True, "message": "Initializing FFmpeg renderer..."})
+
         try:
             # 1. Build Visual Segments
             rendered_video_segments = []
@@ -139,7 +143,15 @@ class VideoRenderer:
                 self._create_color_clip(blank_clip, duration=3.0, width=width, height=height, fps=fps)
                 rendered_video_segments.append(blank_clip)
             else:
+                total_vis = len(all_visual_items)
                 for idx, item in enumerate(all_visual_items, start=1):
+                    if progress_callback:
+                        pct = int(10 + (idx / total_vis) * 60)
+                        progress_callback({
+                            "percent": pct,
+                            "is_rendering": True,
+                            "message": f"Processing visual segment {idx}/{total_vis}...",
+                        })
                     t_start = float(item.get("trackStart", 0.0))
                     t_end = float(item.get("trackEnd", 0.0))
                     dur = max(0.1, t_end - t_start)
@@ -223,6 +235,8 @@ class VideoRenderer:
                     rendered_video_segments.append(seg_out)
 
             # Concatenate visual segments (all have identical resolution and no audio)
+            if progress_callback:
+                progress_callback({"percent": 75, "is_rendering": True, "message": "Concatenating video segments..."})
             self._log(f"Concatenating {len(rendered_video_segments)} visual segment(s)...")
             concat_list_file = os.path.join(temp_dir, "concat_list.txt")
             with open(concat_list_file, "w", encoding="utf-8") as f:
@@ -236,10 +250,14 @@ class VideoRenderer:
             ])
 
             # 2. Build Audio Master Track
-            valid_audio_files = [
-                item.get("assetId") for item in audio_items
-                if item.get("assetId") and os.path.exists(item.get("assetId"))
-            ]
+            if progress_callback:
+                progress_callback({"percent": 85, "is_rendering": True, "message": "Building audio master track..."})
+            valid_audio_files = []
+            for item in audio_items:
+                path = item.get("storagePath") or item.get("assetId") or item.get("path")
+                if path and os.path.exists(path):
+                    valid_audio_files.append(os.path.abspath(path))
+
             self._log(f"Processing audio master track ({len(valid_audio_files)} VO files)...")
 
             temp_audio = os.path.join(temp_dir, "temp_audio.wav")
@@ -265,6 +283,8 @@ class VideoRenderer:
                 ])
 
             # 3. Final Mux: Explicitly map Video (0:v:0) and Audio (1:a:0) -> Output MP4
+            if progress_callback:
+                progress_callback({"percent": 95, "is_rendering": True, "message": "Muxing final video and audio..."})
             self._log(f"Muxing final video and VO audio to: {output_path}")
             self._run_cmd([
                 self.ffmpeg_bin, "-y",
@@ -280,6 +300,8 @@ class VideoRenderer:
             ])
 
             self._log(f"✅ Render complete: {output_path} ({os.path.getsize(output_path) / (1024*1024):.2f} MB)")
+            if progress_callback:
+                progress_callback({"percent": 100, "is_rendering": False, "message": "Render complete!"})
             return os.path.abspath(output_path)
 
         finally:
