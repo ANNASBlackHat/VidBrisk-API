@@ -372,11 +372,13 @@ class FootageResolver:
         eff_provider = provider or self.default_provider
         search_fn, search_filters_cls = self._load_footage_engine()
 
-        # Fetch larger candidate pool to allow orientation and exclusion filtering
-        multiplier = 4
+        # Fetch larger candidate pool when exclusions are active to prevent candidate starvation
         if exclude_source_video_ids or exclude_chunk_ids:
-            multiplier = 10
-        fetch_k = max(50, top_k * multiplier) if (target_orientation and target_orientation != "any") or exclude_source_video_ids or exclude_chunk_ids else max(20, top_k * 4)
+            fetch_k = max(50, top_k * 10)
+        elif target_orientation and target_orientation != "any":
+            fetch_k = top_k * 2
+        else:
+            fetch_k = top_k
 
         candidates: Optional[list[CandidateChunk]] = None
 
