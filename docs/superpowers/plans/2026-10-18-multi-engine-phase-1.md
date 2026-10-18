@@ -40,7 +40,7 @@
 - Consumes: `pipeline.models.BeatAssetPlan`
 - Produces: `BaseVideoEngine`, `EngineRegistry`, `get_engine(name: str) -> BaseVideoEngine`, `list_engines() -> list[str]`
 
-- [ ] **Step 1: Write the failing tests for BaseVideoEngine and EngineRegistry**
+- [x] **Step 1: Write the failing tests for BaseVideoEngine and EngineRegistry**
 
 Create `tests/test_engine_registry.py`:
 ```python
@@ -82,12 +82,12 @@ def test_registry_unknown_engine():
     assert "Unknown video engine: 'unknown_engine_xyz'" in str(excinfo.value)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/test_engine_registry.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pipeline.engines'`
 
-- [ ] **Step 3: Implement `BaseVideoEngine`, `EngineRegistry`, and `__init__.py`**
+- [x] **Step 3: Implement `BaseVideoEngine`, `EngineRegistry`, and `__init__.py`**
 
 Create `pipeline/engines/base.py`:
 ```python
@@ -192,12 +192,12 @@ from pipeline.engines.registry import EngineRegistry, get_engine, list_engines
 __all__ = ["BaseVideoEngine", "EngineRegistry", "get_engine", "list_engines"]
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/test_engine_registry.py -v`
 Expected: PASS (3 tests passed)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pipeline/engines/ tests/test_engine_registry.py
@@ -217,7 +217,7 @@ git commit -m "feat(engines): add BaseVideoEngine and EngineRegistry"
 - Consumes: `backend.compiler.timeline_compiler.compile_timeline`, `backend.worker.renderer_task.run_async_render_task`
 - Produces: `RemotionEngine(BaseVideoEngine)` registered as `"remotion"`
 
-- [ ] **Step 1: Write the parity and contract test for `RemotionEngine`**
+- [x] **Step 1: Write the parity and contract test for `RemotionEngine`**
 
 Create `tests/test_remotion_engine_parity.py`:
 ```python
@@ -289,12 +289,12 @@ def test_remotion_engine_render_dispatch():
         mock_exec.assert_called_once()
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/test_remotion_engine_parity.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'pipeline.engines.remotion'`
 
-- [ ] **Step 3: Implement `RemotionEngine`**
+- [x] **Step 3: Implement `RemotionEngine`**
 
 Create `pipeline/engines/remotion.py`:
 ```python
@@ -425,12 +425,12 @@ import pipeline.engines.remotion  # Ensure auto-registration
 __all__ = ["BaseVideoEngine", "EngineRegistry", "get_engine", "list_engines"]
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/test_remotion_engine_parity.py -v`
 Expected: PASS (4 tests passed)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pipeline/engines/ tests/test_remotion_engine_parity.py
@@ -449,7 +449,7 @@ git commit -m "feat(engines): implement RemotionEngine with compile parity"
 - Consumes: `pipeline.engines.get_engine`, `pipeline.engines.list_engines`
 - Produces: CLI `--engine` argument with default `"remotion"`
 
-- [ ] **Step 1: Write CLI test for `--engine` flag**
+- [x] **Step 1: Write CLI test for `--engine` flag**
 
 Create `tests/test_run_pipeline_cli.py`:
 ```python
@@ -481,12 +481,12 @@ def test_cli_unsupported_engine_error():
     assert "unsupported_xyz" in result.stderr or "unsupported_xyz" in result.stdout
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/test_run_pipeline_cli.py -v`
 Expected: FAIL because `--engine` is not yet a known argument.
 
-- [ ] **Step 3: Update `run_pipeline.py` with `--engine` support**
+- [x] **Step 3: Update `run_pipeline.py` with `--engine` support**
 
 Modify `run_pipeline.py`:
 1. Add argument `--engine` in `argparse` with choices `["remotion", "hyperframes", "native_fast"]` and default `"remotion"`.
@@ -495,12 +495,12 @@ Modify `run_pipeline.py`:
    - If `args.engine in ["hyperframes", "native_fast"]`, raise `NotImplementedError(f"Engine '{args.engine}' will be available in Phase 2/3.")`.
    - If `--render` is set, invoke `engine.render(timeline_data, args.render)`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/test_run_pipeline_cli.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add run_pipeline.py tests/test_run_pipeline_cli.py
@@ -514,17 +514,17 @@ git commit -m "feat(cli): add --engine flag with remotion default"
 **Files:**
 - Run all test suites
 
-- [ ] **Step 1: Run all engine-related tests**
+- [x] **Step 1: Run all engine-related tests**
 
 Run: `uv run pytest tests/test_engine_registry.py tests/test_remotion_engine_parity.py tests/test_run_pipeline_cli.py -v`
 Expected: All tests PASS.
 
-- [ ] **Step 2: Run full regression test suite**
+- [x] **Step 2: Run full regression test suite**
 
 Run: `uv run pytest`
 Expected: All 196+ tests PASS with zero regressions.
 
-- [ ] **Step 3: Verification commit**
+- [x] **Step 3: Verification commit**
 
 ```bash
 git commit --allow-empty -m "chore(verification): all 200+ unit and parity tests passing cleanly"
