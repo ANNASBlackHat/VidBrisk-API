@@ -75,6 +75,7 @@ def resolve_beat_visuals(
     llm_client: Optional[GeminiLLMClient] = None,
     exclude_source_video_ids: Optional[list[str]] = None,
     exclude_chunk_ids: Optional[list[str]] = None,
+    engine: str = "remotion",
 ) -> tuple[Beat, list[CandidateChunk]]:
     """Executes the full staged Beat -> Search -> Assess/Requery -> Concept loop.
 
@@ -101,7 +102,7 @@ def resolve_beat_visuals(
 
     # If it's a non-narrative beat and does NOT need background footage, run motion concepting directly
     if not is_overlay and beat.beat_type != "narrative":
-        concept_motion_graphic(beat, is_fallback=False, client=llm_client)
+        concept_motion_graphic(beat, is_fallback=False, client=llm_client, engine=engine)
         beat.footage_status = FootageStatus.ACCEPTED
         return beat, []
 
@@ -173,6 +174,6 @@ def resolve_beat_visuals(
 
     # Stage 5: Motion Graphic Fallback if footage is INADEQUATE
     if status == FootageStatus.INADEQUATE:
-        concept_motion_graphic(beat, is_fallback=True, client=llm_client)
+        concept_motion_graphic(beat, is_fallback=True, client=llm_client, engine=engine)
 
     return beat, candidates

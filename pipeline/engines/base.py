@@ -39,3 +39,11 @@ class BaseVideoEngine(ABC):
         Returns (is_supported, reason_if_not).
         """
         pass
+
+    def get_motion_prompt_block(self) -> str:
+        """Returns the formatted prompt block defining motion components supported by this engine."""
+        return ""
+
+    def get_supported_components(self) -> list[str]:
+        """Returns the list of component IDs or motion types supported by this engine."""
+        return []

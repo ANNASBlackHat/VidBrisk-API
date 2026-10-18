@@ -158,13 +158,17 @@ def worker_tick(
                     channel=job.channel,
                     genre=job.genre,
                     rag_session=rag_session,
+                    engine=getattr(job, "engine", "remotion") or "remotion",
                 )
             except TypeError:
                 # Fallback if a mock with simpler signature (e.g. lambda script_text:) was monkeypatched in tests
                 try:
-                    beats = structure_beats(clean_text)
+                    beats = structure_beats(clean_text, engine=getattr(job, "engine", "remotion") or "remotion")
                 except TypeError:
-                    beats = structure_beats(clean_text, client=None)
+                    try:
+                        beats = structure_beats(clean_text)
+                    except TypeError:
+                        beats = structure_beats(clean_text, client=None)
             finally:
                 if rag_session is not None:
                     try:
@@ -386,6 +390,7 @@ def worker_tick(
                         semantic_threshold=settings.FOOTAGE_SEMANTIC_THRESHOLD,
                         motion_floor=settings.FOOTAGE_MOTION_FLOOR,
                         max_requeries=settings.FOOTAGE_MAX_REQUERIES,
+                        engine=getattr(job, "engine", "remotion") or "remotion",
                     )
                 except Exception as ex:
                     logger.warning(f"[{job_prefix}] [RESOLVING] Footage error for {beat.id}: {ex}")

@@ -8,7 +8,6 @@ import re
 import subprocess
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from backend.models.job import VideoJob
 from pipeline.engines.base import BaseVideoEngine
 from pipeline.engines.registry import EngineRegistry
 
@@ -94,6 +93,7 @@ class HyperFramesEngine(BaseVideoEngine):
         raw_asset_plans: List[Any] = []
         raw_tracks: List[Any] = []
 
+        from backend.models.job import VideoJob
         if isinstance(job_or_plan, VideoJob):
             job_id = job_or_plan.id
             raw_voice_clips = job_or_plan.voice_clips or []
@@ -375,6 +375,55 @@ class HyperFramesEngine(BaseVideoEngine):
     def validate_support(self, job_or_plan: Union[Any, Dict[str, Any]]) -> Tuple[bool, Optional[str]]:
         """HyperFrames supports video cuts, images, audio sync, and GSAP DOM motion."""
         return True, None
+
+    def get_supported_components(self) -> list[str]:
+        """Returns visual component and block types supported by HyperFramesEngine."""
+        return [
+            "DataAnimations/StatCard",
+            "TextAnimations/QuoteCard",
+            "TextAnimations/KineticText",
+            "ListAnimations/SwipeDeck",
+            "Layouts/SplitScreen",
+        ]
+
+    def get_motion_prompt_block(self) -> str:
+        """Returns prompt block tailored for HyperFrames HTML5/CSS/GSAP scene rendering."""
+        return (
+            "4. `beat_type`: Choose one of:\n"
+            "   - \"narrative\": Concrete storytelling, actions, physical subjects, or documentary footage scenes. (Default)\n"
+            "   - \"stat\": Prominent metrics, numbers, or percentages suitable for an animated GSAP stat counter.\n"
+            "   - \"quote\": Key philosophical quotes or statements highlighted over background.\n"
+            "   - \"kinetic\": Punchy statements with dynamic synchronized word-by-word typography.\n"
+            "   - \"swipe_deck\": 3–5 takeaways or key bullet points swiped as stacked card elements.\n"
+            "   - \"split_screen\": Comparative concepts or dual perspectives shown side-by-side.\n"
+            "5. `motion_props`: (Required if beat_type is not \"narrative\"; null otherwise):\n"
+            "   - If \"stat\":\n"
+            "     - `component`: \"DataAnimations/StatCard\"\n"
+            "     - `primary_value`: Standout metric string (e.g., \"$25.4B\", \"650M+\", \"4.0%\")\n"
+            "     - `kicker`: Short 2-4 word uppercase category label\n"
+            "     - `subtext`: 1 brief contextual sentence explaining the metric\n"
+            "     - `display_mode`: \"overlay\" | \"takeover\"\n"
+            "   - If \"quote\":\n"
+            "     - `component`: \"TextAnimations/QuoteCard\"\n"
+            "     - `quote`: The key quoted sentence or thought\n"
+            "     - `author`: Attributed speaker or context\n"
+            "     - `display_mode`: \"overlay\" | \"takeover\"\n"
+            "   - If \"kinetic\":\n"
+            "     - `component`: \"TextAnimations/KineticText\"\n"
+            "     - `text`: Narration phrase for dynamic reveal\n"
+            "     - `display_mode`: \"takeover\" | \"overlay\"\n"
+            "   - If \"swipe_deck\":\n"
+            "     - `component`: \"ListAnimations/SwipeDeck\"\n"
+            "     - `items`: 3–5 short bullet points\n"
+            "     - `title`: Short uppercase title\n"
+            "     - `display_mode`: \"takeover\"\n"
+            "   - If \"split_screen\":\n"
+            "     - `component`: \"Layouts/SplitScreen\"\n"
+            "     - `leftTitle`: Left entity title\n"
+            "     - `leftContent`: Left entity summary\n"
+            "     - `rightTitle`: Right entity title\n"
+            "     - `rightContent`: Right entity summary"
+        )
 
 
 # Auto-register HyperFramesEngine as default engine

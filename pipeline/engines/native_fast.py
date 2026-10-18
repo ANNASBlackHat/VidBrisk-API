@@ -4,7 +4,6 @@ import logging
 import os
 from typing import Any, Callable, Dict, Optional, Tuple, Union
 
-from backend.compiler.timeline_compiler import compile_timeline
 from pipeline.engines.base import BaseVideoEngine
 from pipeline.engines.registry import EngineRegistry
 from pipeline.renderer.engine import FitMode, RenderEngineMismatchError, VideoRenderer
@@ -35,6 +34,7 @@ class NativeFastEngine(BaseVideoEngine):
             timeline_dict = job_or_plan.to_dict()
         else:
             # Delegate to standard timeline compiler
+            from backend.compiler.timeline_compiler import compile_timeline
             timeline_dict = compile_timeline(job_or_plan, fps=fps)
 
         duration = float(timeline_dict.get("total_duration", 0.0))
@@ -158,6 +158,37 @@ class NativeFastEngine(BaseVideoEngine):
                     )
 
         return True, None
+
+    def get_supported_components(self) -> list[str]:
+        """Returns visual component types supported by NativeFastEngine."""
+        return [
+            "title_overlay",
+            "lower_third",
+            "quote",
+        ]
+
+    def get_motion_prompt_block(self) -> str:
+        """Returns prompt block tailored for fast headless FFmpeg rendering."""
+        return (
+            "4. `beat_type`: Choose one of:\n"
+            "   - \"narrative\": Concrete storytelling, actions, physical subjects, or documentary footage scenes. (STRONGLY PREFERRED DEFAULT)\n"
+            "   - \"quote\": Key quotation phrase or thought shown as clean text over blurred background.\n"
+            "   - \"title_overlay\": Bold uppercase category title or headline banner over footage.\n"
+            "   - \"lower_third\": Speaker name or location banner over footage.\n"
+            "   (CRITICAL CONSTRAINT: Animated charts, canvas maps, swipe decks, and React components are NOT supported by this fast headless engine. Always prioritize \"narrative\" footage cuts!)\n"
+            "5. `motion_props`: (Required only if beat_type is \"quote\", \"title_overlay\", or \"lower_third\"; null otherwise):\n"
+            "   - If \"quote\":\n"
+            "     - `quote`: The key quoted sentence or thought.\n"
+            "     - `author`: Attributed speaker or context.\n"
+            "     - `display_mode`: \"takeover\" | \"overlay\"\n"
+            "   - If \"title_overlay\":\n"
+            "     - `title`: Short uppercase title or headline (max 6 words).\n"
+            "     - `display_mode`: \"overlay\"\n"
+            "   - If \"lower_third\":\n"
+            "     - `title`: Speaker name or location (e.g. \"DR. ROBERT BALLARD\").\n"
+            "     - `subtext`: Role or context (e.g. \"OCEANOGRAPHER\").\n"
+            "     - `display_mode`: \"overlay\""
+        )
 
 
 # Auto-register NativeFastEngine as default

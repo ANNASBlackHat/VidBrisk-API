@@ -22,13 +22,30 @@ def _load_motion_skill() -> str:
     return ""
 
 
-def _heuristic_concept_graphic(beat: Beat, is_fallback: bool) -> tuple[BeatType, dict[str, Any]]:
+def _heuristic_concept_graphic(
+    beat: Beat,
+    is_fallback: bool,
+    engine: str = "remotion",
+) -> tuple[BeatType, dict[str, Any]]:
     """Rule-based fallback when LLM is unavailable or for deterministic testing."""
     text = beat.text.strip()
     lower = text.lower()
     display_mode = "takeover" if is_fallback else (
         (beat.motion_props or {}).get("display_mode", "takeover")
     )
+
+    if engine == "native_fast":
+        if '"' in text or "said" in lower or "stated" in lower or beat.beat_type == "quote":
+            clean_q = text.strip('"')
+            return "quote", {
+                "quote": clean_q,
+                "author": "RECORDED STATEMENT",
+                "display_mode": display_mode,
+            }
+        return "title_overlay", {
+            "title": text[:50].upper(),
+            "display_mode": "overlay",
+        }
 
     # 1. Stat detection
     has_digits = any(c.isdigit() for c in text)
@@ -107,6 +124,7 @@ def concept_motion_graphic(
     beat: Beat,
     is_fallback: bool = False,
     client: Optional[GeminiLLMClient] = None,
+    engine: str = "remotion",
 ) -> Beat:
     """Concepts or refines motion graphics properties for a beat.
 
@@ -114,6 +132,7 @@ def concept_motion_graphic(
         beat: The Beat to concept motion graphics for.
         is_fallback: True if triggered because footage was INADEQUATE.
         client: Optional pre-initialised GeminiLLMClient.
+        engine: Video generation engine name (e.g. 'remotion', 'native_fast', 'hyperframes').
 
     Returns:
         The updated Beat with beat_type and motion_props configured.
@@ -122,25 +141,41 @@ def concept_motion_graphic(
     if not is_fallback and beat.motion_props and beat.motion_props.get("component"):
         return beat
 
-    skill_doc = _load_motion_skill()
-    system_instruction = (
-        f"{skill_doc}\n\n"
-        "You are an expert broadcast motion designer. "
-        "Your task is to select the single best Remotion motion component for this narration beat "
-        "and return valid JSON with 'beat_type' and 'motion_props'."
-    )
-
-    context_prompt = (
-        f"Narration text: \"{beat.text}\"\n"
-        f"Visual intent: \"{beat.visual_intent}\"\n"
-        f"Is fallback due to missing footage: {is_fallback}\n"
-        f"Fallback reason: {beat.fallback_reason or 'None'}\n\n"
-        "Return a JSON object with:\n"
-        "{\n"
-        "  \"beat_type\": \"stat\" | \"kinetic\" | \"typewriter\" | \"quote\" | \"swipe_deck\" | \"chat_bubbles\" | \"split_screen\" | \"map_route\" | \"audio_waveform\",\n"
-        "  \"motion_props\": { ... }\n"
-        "}"
-    )
+    if engine == "native_fast":
+        system_instruction = (
+            "You are an expert video director creating visuals for a fast headless video engine. "
+            "Your task is to select a simple text visual mode ('quote', 'title_overlay', or 'lower_third') "
+            "for this narration beat and return valid JSON with 'beat_type' and 'motion_props'."
+        )
+        context_prompt = (
+            f"Narration text: \"{beat.text}\"\n"
+            f"Visual intent: \"{beat.visual_intent}\"\n"
+            f"Is fallback due to missing footage: {is_fallback}\n\n"
+            "Return a JSON object with:\n"
+            "{\n"
+            "  \"beat_type\": \"quote\" | \"title_overlay\" | \"lower_third\",\n"
+            "  \"motion_props\": { ... }\n"
+            "}"
+        )
+    else:
+        skill_doc = _load_motion_skill()
+        system_instruction = (
+            f"{skill_doc}\n\n"
+            "You are an expert broadcast motion designer. "
+            f"Your task is to select the single best motion component for engine '{engine}' "
+            "and return valid JSON with 'beat_type' and 'motion_props'."
+        )
+        context_prompt = (
+            f"Narration text: \"{beat.text}\"\n"
+            f"Visual intent: \"{beat.visual_intent}\"\n"
+            f"Is fallback due to missing footage: {is_fallback}\n"
+            f"Fallback reason: {beat.fallback_reason or 'None'}\n\n"
+            "Return a JSON object with:\n"
+            "{\n"
+            "  \"beat_type\": \"stat\" | \"kinetic\" | \"typewriter\" | \"quote\" | \"swipe_deck\" | \"chat_bubbles\" | \"split_screen\" | \"map_route\" | \"audio_waveform\",\n"
+            "  \"motion_props\": { ... }\n"
+            "}"
+        )
 
     try:
         llm = client or GeminiLLMClient()
@@ -150,7 +185,7 @@ def concept_motion_graphic(
         if beat_type and props and isinstance(props, dict):
             if is_fallback:
                 props["display_mode"] = "takeover"
-            if not props.get("component"):
+            if engine != "native_fast" and not props.get("component"):
                 props["component"] = COMPONENT_MAP.get(beat_type, "TextAnimations/KineticText")
             beat.beat_type = beat_type
             beat.motion_props = props
@@ -159,7 +194,7 @@ def concept_motion_graphic(
         pass
 
     # Heuristic fallback if LLM is unavailable or unconfigured
-    h_type, h_props = _heuristic_concept_graphic(beat, is_fallback=is_fallback)
+    h_type, h_props = _heuristic_concept_graphic(beat, is_fallback=is_fallback, engine=engine)
     beat.beat_type = h_type
     beat.motion_props = h_props
     return beat

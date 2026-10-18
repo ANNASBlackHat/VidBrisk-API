@@ -159,6 +159,7 @@ def main():
             channel=args.channel,
             genre=args.genre,
             voice=args.voice,
+            engine=args.engine,
         )
 
         if args.no_captions:

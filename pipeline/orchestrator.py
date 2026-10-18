@@ -30,6 +30,7 @@ def run_pipeline(
     channel: Optional[str] = None,
     genre: Optional[str] = None,
     voice: Optional[str] = None,
+    engine: str = "remotion",
 ) -> TimelinePlan:
     """Executes stages [1] to [6] end-to-end on raw script text.
 
@@ -47,9 +48,16 @@ def run_pipeline(
                 channel=channel,
                 genre=genre,
                 client=llm_client,
+                engine=engine,
             )
         except TypeError:
-            beats = clean_and_structure_beats(raw_script, client=llm_client)
+            try:
+                beats = clean_and_structure_beats(raw_script, client=llm_client, engine=engine)
+            except TypeError:
+                try:
+                    beats = clean_and_structure_beats(raw_script, engine=engine)
+                except TypeError:
+                    beats = clean_and_structure_beats(raw_script)
     else:
         cleaned_text = clean_script(raw_script, client=llm_client)
         try:
@@ -58,9 +66,16 @@ def run_pipeline(
                 channel=channel,
                 genre=genre,
                 client=llm_client,
+                engine=engine,
             )
         except TypeError:
-            beats = structure_beats(cleaned_text, client=llm_client)
+            try:
+                beats = structure_beats(cleaned_text, client=llm_client, engine=engine)
+            except TypeError:
+                try:
+                    beats = structure_beats(cleaned_text, engine=engine)
+                except TypeError:
+                    beats = structure_beats(cleaned_text)
 
     if not beats:
         raise ValueError("Failed to extract any beats from the input script.")
@@ -109,6 +124,7 @@ def run_pipeline(
                     provider=footage_provider,
                     exclude_chunk_ids=selected_chunk_ids or None,
                     exclude_source_video_ids=recent_media or None,
+                    engine=engine,
                 )
                 beats[idx - 1] = updated_beat
             except Exception as e:
@@ -158,6 +174,7 @@ def run_pipeline(
                     provider=footage_provider,
                     exclude_chunk_ids=selected_chunk_ids or None,
                     exclude_source_video_ids=recent_media or None,
+                    engine=engine,
                 )
                 beats[idx - 1] = updated_beat
             except Exception as e:

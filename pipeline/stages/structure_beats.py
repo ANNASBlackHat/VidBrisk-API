@@ -24,91 +24,75 @@ from pipeline.rag.exemplars import format_exemplars_block, retrieve_exemplars
 from pipeline.stages.clean_script import clean_script
 
 
-STRUCTURE_BEATS_SYSTEM_PROMPT = """You are an expert broadcast video director and motion graphics designer.
+CORE_DIRECTOR_RULES = """You are an expert broadcast video director and motion graphics designer.
 Your task is to take spoken narration prose and segment it into atomic visual beats.
 
 For each beat:
 1. `id`: A sequential identifier like "b1", "b2", "b3", etc.
 2. `text`: 1 short sentence or clause. STRICT LIMIT: 12–18 words maximum per beat (roughly 3–6 seconds of speech). If a sentence has multiple clauses or is longer than 18 words, YOU MUST SPLIT IT into multiple consecutive beats so the visuals can cut frequently.
-3. `visual_intent`: A vivid, concrete, semantic search prompt describing the ideal footage or visual to accompany this beat. Focus on physical actions, environments, lighting, and subjects.
-4. `beat_type`: Choose one of:
-   - "narrative": Concrete storytelling, actions, physical subjects, or documentary footage scenes. (Default)
-   - "stat": Standout numbers, percentages, dollar amounts, metrics, or data points suitable for an animated stat card or chart.
-   - "abstract": High-level conceptual quotes, philosophical thoughts, or thematic transitions.
-   - "swipe_deck": Sequential 3–5 takeaways, key bullet points, or ordered steps best presented as stacked cards swiping one at a time.
-   - "chat_bubbles": Conversational dialogue, exchanges, or message notifications building up in a chat thread format.
-   - "kinetic": High-energy, rhythmic keywords or slogans where synchronized word-by-word kinetic typography excels.
-   - "typewriter": Terminal, retro narrative, or mechanical character-by-character typewriter exposition.
-   - "split_screen": Comparative concepts, dual perspectives, or before/after entities shown side-by-side.
-   - "map_route": Geographic journeys, travel trajectories between 2 locations, flight paths, or city/landmark locator pins.
-   - "audio_waveform": Direct speech quotes, podcast radio comms, or significant transmissions where a reactive equalizer visualizer excels.
-5. `motion_props`: (Required if beat_type is not "narrative", or when a multi-layer composition recipe applies; null otherwise):
-   - Optional `layout_recipe`:
-     - "stat_over_footage": Pairs standout stat motion typography with background footage or photography.
-     - "quote_over_footage": Pairs key kinetic quote cards over contextual background imagery.
-     - "split_screen": Pairs two distinct entities or comparative subjects side-by-side.
-   - If "stat":
-     - `component`: "DataAnimations/StatCard"
-     - `primary_value`: Standout metric string (e.g., "$25.4B", "650M+", "4.0%")
-     - `kicker`: Short 2-4 word uppercase category label (e.g., "TOTAL INVESTMENT", "AUDIENCE SHARE")
-     - `visual_type`: "chart" (for financial/time trends), "ring" (for % / shares), or "bar" (for comparisons)
-     - `subtext`: 1 brief contextual sentence explaining the metric.
-     - `display_mode`: "overlay" (if visual intent pairs with footage) or "takeover" (pure full-screen graphic).
-   - If "abstract" or "quote":
-     - `component`: "TextAnimations/QuoteCard"
-     - `quote`: The key quoted sentence or thought.
-     - `emphasis`: 2-5 words within the quote for highlight styling.
-     - `author`: Attributed speaker or context (e.g., "Neil Armstrong" or "Mission Overview").
-     - `display_mode`: "overlay" | "takeover"
-   - If "swipe_deck":
-     - `component`: "ListAnimations/SwipeDeck"
-     - `items`: 3–5 short, punchy bullet points or steps extracted from the beat text (each under 12 words).
-     - `title`: Short uppercase category title (e.g., "MISSION MILESTONES", "KEY FINDINGS").
-     - `display_mode`: "takeover" | "overlay"
-   - If "chat_bubbles":
-     - `component`: "ListAnimations/ChatBubbles"
-     - `messages`: Array of 2–4 messages, e.g. [{"text": "...", "sender": "system"}, {"text": "...", "sender": "user"}].
-     - `title`: Header label (e.g., "MISSION CONTROL LOG", "LIVE DIALOGUE").
-     - `display_mode`: "takeover" | "overlay"
-   - If "kinetic":
-     - `component`: "TextAnimations/KineticText"
-     - `text`: Narration phrase for dynamic word reveal.
-     - `mode`: "reveal" | "karaoke"
-     - `display_mode`: "takeover" | "overlay"
-   - If "typewriter":
-     - `component`: "TextAnimations/Typewriter"
-     - `text`: Narration phrase.
-     - `display_mode`: "takeover"
-   - If "split_screen":
-     - `component`: "Layouts/SplitScreen"
-     - `layout_recipe`: "split_screen"
-     - `leftTitle`: Left entity title.
-     - `leftContent`: Left entity summary.
-     - `rightTitle`: Right entity title.
-     - `rightContent`: Right entity summary.
-   - If "map_route":
-     - `component`: "GeoAnimations/MapExplainer"
-     - `origin`: Starting city or site (e.g. "Cape Canaveral")
-     - `destination`: Ending city or site (e.g. "Pacific Ocean")
-     - `mode`: "route" (for 2 locations) or "pin" (for single location)
-     - `title`: Header label (e.g. "FLIGHT TRAJECTORY")
-     - `display_mode`: "takeover" | "overlay"
-   - If "audio_waveform":
-     - `component`: "AudioAnimations/AudioWaveform"
-     - `speaker`: Speaker name or callsign (e.g. "NEIL ARMSTRONG")
-     - `quote`: Key quote phrase
-     - `title`: Category header (e.g. "MISSION VOICE FEED")
-     - `display_mode`: "takeover" | "overlay"
-6. `mood` (optional): one of "tense", "hopeful", "triumphant", "somber", "urgent", "neutral" — only set when the beat has a clear emotional register; omit for beats with no strong tone.
-7. `pause_after` (float, default: 0.0): Add breathing room (silence on narration) after this beat when context demands it:
-   - 1.0–1.5s: Dramatic reveals or cliffhangers before the answer (e.g. "What they saw defied explanation...").
-   - 1.5–2.0s: Post-impact absorption after a heavy statistic, tragedy, or shocking twist.
-   - 1.5–2.5s: Chapter/scene transitions to reset narrative rhythm.
-   - 0.0s: Standard narrative flow (default).
+3. `visual_intent`: A vivid, concrete, semantic search prompt describing the ideal footage or visual to accompany this beat. Focus on physical actions, environments, lighting, and subjects."""
 
-Output JSON format:
-{
-  "beats": [
+
+def build_structure_beats_prompt(engine_name: str = "remotion") -> str:
+    """Builds the complete beat structuring system prompt dynamically for the given engine."""
+    from pipeline.engines import get_engine
+    try:
+        engine = get_engine(engine_name)
+        motion_block = engine.get_motion_prompt_block()
+    except Exception:
+        from pipeline.engines.remotion import RemotionEngine
+        motion_block = RemotionEngine().get_motion_prompt_block()
+
+    if engine_name == "native_fast":
+        example_beats = """[
+    {
+      "id": "b1",
+      "text": "...",
+      "visual_intent": "...",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "mood": "hopeful",
+      "pause_after": 1.5
+    },
+    {
+      "id": "b2",
+      "text": "...",
+      "visual_intent": "...",
+      "beat_type": "title_overlay",
+      "motion_props": {
+        "title": "MISSION MILESTONE",
+        "display_mode": "overlay"
+      },
+      "mood": "urgent"
+    }
+  ]"""
+    elif engine_name == "hyperframes":
+        example_beats = """[
+    {
+      "id": "b1",
+      "text": "...",
+      "visual_intent": "...",
+      "beat_type": "narrative",
+      "motion_props": null,
+      "mood": "hopeful"
+    },
+    {
+      "id": "b2",
+      "text": "...",
+      "visual_intent": "...",
+      "beat_type": "stat",
+      "motion_props": {
+        "component": "DataAnimations/StatCard",
+        "primary_value": "$25.4B",
+        "kicker": "PROGRAM INVESTMENT",
+        "subtext": "Peak federal funding reach.",
+        "display_mode": "overlay"
+      },
+      "mood": "triumphant"
+    }
+  ]"""
+    else:
+        example_beats = """[
     {
       "id": "b1",
       "text": "...",
@@ -147,9 +131,27 @@ Output JSON format:
       },
       "mood": "neutral"
     }
-  ]
-}
+  ]"""
+
+    return f"""{CORE_DIRECTOR_RULES}
+
+{motion_block}
+6. `mood` (optional): one of "tense", "hopeful", "triumphant", "somber", "urgent", "neutral" — only set when the beat has a clear emotional register; omit for beats with no strong tone.
+7. `pause_after` (float, default: 0.0): Add breathing room (silence on narration) after this beat when context demands it:
+   - 1.0–1.5s: Dramatic reveals or cliffhangers before the answer (e.g. "What they saw defied explanation...").
+   - 1.5–2.0s: Post-impact absorption after a heavy statistic, tragedy, or shocking twist.
+   - 1.5–2.5s: Chapter/scene transitions to reset narrative rhythm.
+   - 0.0s: Standard narrative flow (default).
+
+Output JSON format:
+{{
+  "beats": {example_beats}
+}}
 """
+
+
+# Backward compatibility alias
+STRUCTURE_BEATS_SYSTEM_PROMPT = build_structure_beats_prompt("remotion")
 
 COMBINED_CLEAN_AND_STRUCTURE_SYSTEM_PROMPT = """You are an expert video director and script editor.
 Your task is to take a raw, messy video script (which may contain visual cues, bracketed directions, headers, and sound notes), clean out all non-spoken elements, and segment the pure narration into atomic visual beats.
@@ -250,16 +252,17 @@ def _build_system_instruction(
     channel: Optional[str],
     rag_session: Any,
     clean_text: str,
+    engine: str = "remotion",
 ) -> str:
     """Composes the three-layer system instruction for beat structuring.
 
-    Layer 1 (always):   STRUCTURE_BEATS_SYSTEM_PROMPT (base schema + beat types)
+    Layer 1 (always):   build_structure_beats_prompt(engine) (base schema + engine motion)
     Layer 2 (if found): Style skill file for the genre/channel
     Layer 3 (if avail): RAG exemplar block from beat_exemplars table
 
     All optional layers degrade silently — never raises.
     """
-    system_instruction = STRUCTURE_BEATS_SYSTEM_PROMPT
+    system_instruction = build_structure_beats_prompt(engine)
 
     # Layer 2: style skill
     try:
@@ -289,6 +292,7 @@ def structure_beats(
     genre: Optional[str] = None,
     client: Optional[GeminiLLMClient] = None,
     rag_session: Any = None,
+    engine: str = "remotion",
 ) -> list[Beat]:
     """Segments cleaned narration text into a structured list of Beat objects.
 
@@ -300,6 +304,7 @@ def structure_beats(
         client: Optional pre-initialised GeminiLLMClient.
         rag_session: Optional SQLAlchemy Session for RAG exemplar retrieval.
                      Pass None (default) to skip RAG entirely.
+        engine: Video generation engine name (e.g. 'remotion', 'native_fast', 'hyperframes').
 
     Returns:
         List of Beat objects. Returns [] for empty input.
@@ -309,7 +314,7 @@ def structure_beats(
 
     llm = client or GeminiLLMClient()
     prompt = f"Segment this cleaned narration into beats:\n\n{clean_text}"
-    system_instruction = _build_system_instruction(genre, channel, rag_session, clean_text)
+    system_instruction = _build_system_instruction(genre, channel, rag_session, clean_text, engine=engine)
     data = llm.generate_json(prompt=prompt, system_instruction=system_instruction)
 
     raw_beats: list[dict[str, Any]] = data.get("beats", [])
@@ -322,6 +327,7 @@ def clean_and_structure_beats(
     genre: Optional[str] = None,
     client: Optional[GeminiLLMClient] = None,
     rag_session: Any = None,
+    engine: str = "remotion",
 ) -> list[Beat]:
     """Single-pass LLM call that cleans a raw script and structures it into beats.
 
@@ -354,4 +360,5 @@ def clean_and_structure_beats(
         genre=genre,
         client=llm,
         rag_session=rag_session,
+        engine=engine,
     )
