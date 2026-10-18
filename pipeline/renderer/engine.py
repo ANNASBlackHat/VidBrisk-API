@@ -1,5 +1,4 @@
-"""Headless Video Rendering Engine using FFmpeg with aspect ratio and blurred background support."""
-
+import hashlib
 import json
 import os
 import re
@@ -46,6 +45,109 @@ class VideoRenderer:
             if clean_url.endswith(ext):
                 return ext
         return default_ext
+
+    def _resolve_asset_media(
+        self,
+        item: dict[str, Any],
+        idx: int,
+        asset_type: str,
+    ) -> Optional[str]:
+        """Resolves an asset to an absolute local file path, downloading and caching remote assets if needed."""
+        storage_path = str(item.get("storagePath") or "").strip()
+        storage_url = str(item.get("storageUrl") or "").strip()
+        asset_id = str(item.get("assetId") or "").strip()
+        path_field = str(item.get("path") or "").strip()
+
+        # 1. Check if an explicit local file already exists on disk
+        for candidate in [storage_path, asset_id, path_field]:
+            if candidate and os.path.exists(candidate) and os.path.isfile(candidate):
+                self._log(f"  ✓ Local file found: {candidate}")
+                return os.path.abspath(candidate)
+
+        # 2. Determine remote download URL
+        download_url: Optional[str] = None
+        if storage_url.startswith(("http://", "https://")):
+            download_url = storage_url
+        elif storage_path.startswith(("http://", "https://")):
+            download_url = storage_path
+        elif asset_id.startswith(("http://", "https://")):
+            download_url = asset_id
+        elif storage_path and len(storage_path) >= 20 and "/" not in storage_path and "\\" not in storage_path and " " not in storage_path:
+            # Google Drive File ID string
+            download_url = f"https://drive.google.com/uc?export=download&id={storage_path}"
+
+        if not download_url:
+            self._log(f"  ⚠️ No valid local file or download URL found for asset: {storage_path or asset_id}")
+            return None
+
+        # 3. Locate persistent cache
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        cache_dir = os.path.join(repo_root, "data", "cache", "footage")
+        os.makedirs(cache_dir, exist_ok=True)
+
+        url_hash = hashlib.md5(download_url.encode("utf-8")).hexdigest()
+        default_ext = ".jpg" if asset_type == "image" else ".mp4"
+        ext = self._get_extension_from_url(download_url, default_ext)
+        cached_file = os.path.join(cache_dir, f"{url_hash}{ext}")
+
+        if os.path.exists(cached_file) and os.path.getsize(cached_file) > 1024:
+            size_mb = os.path.getsize(cached_file) / (1024 * 1024)
+            self._log(f"  ✓ Cache hit ({size_mb:.2f} MB): {cached_file}")
+            return cached_file
+
+        # 4. Stream download remote asset with Google Drive virus-warning handling
+        self._log(f"  ↳ Downloading remote asset: {download_url[:70]}...")
+        temp_dest = cached_file + ".part"
+        try:
+            import requests
+            session = requests.Session()
+            r = session.get(download_url, headers=DEFAULT_HEADERS, stream=True, timeout=60)
+
+            # Check if Google Drive returned a virus scan confirmation page
+            if "confirm=" not in download_url and "text/html" in r.headers.get("Content-Type", "").lower():
+                for k, v in session.cookies.items():
+                    if k.startswith("download_warning"):
+                        r = session.get(f"{download_url}&confirm={v}", headers=DEFAULT_HEADERS, stream=True, timeout=60)
+                        break
+
+            if r.status_code == 200:
+                content_type = r.headers.get("Content-Type", "").lower()
+                with open(temp_dest, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=65536):
+                        if chunk:
+                            f.write(chunk)
+
+                size = os.path.getsize(temp_dest)
+                if size < 1024:
+                    self._log(f"  ❌ Download incomplete / empty ({size} bytes)")
+                    if os.path.exists(temp_dest):
+                        os.remove(temp_dest)
+                    return None
+
+                if "text/html" in content_type:
+                    with open(temp_dest, "rb") as f:
+                        header_sample = f.read(200).decode("utf-8", errors="ignore").lower()
+                    if "<html" in header_sample or "<!doctype" in header_sample:
+                        self._log(f"  ❌ Received HTML page instead of media file from {download_url[:60]}")
+                        if os.path.exists(temp_dest):
+                            os.remove(temp_dest)
+                        return None
+
+                os.replace(temp_dest, cached_file)
+                size_mb = size / (1024 * 1024)
+                self._log(f"  ✓ Downloaded & cached ({size_mb:.2f} MB)")
+                return cached_file
+            else:
+                self._log(f"  ❌ Download failed: HTTP {r.status_code}")
+                return None
+        except Exception as e:
+            self._log(f"  ❌ Download error: {e}")
+            if os.path.exists(temp_dest):
+                try:
+                    os.remove(temp_dest)
+                except OSError:
+                    pass
+            return None
 
     def render_timeline(
         self,
@@ -126,6 +228,18 @@ class VideoRenderer:
             progress_callback({"percent": 5, "is_rendering": True, "message": "Initializing FFmpeg renderer..."})
 
         try:
+            # Build beat_id -> narrative text lookup from metadata if available
+            metadata = data.get("metadata", {}) if isinstance(data, dict) else {}
+            resolved_beats = metadata.get("resolved_beats") or []
+            beat_text_map: dict[str, str] = {}
+            for rb in resolved_beats:
+                if isinstance(rb, dict):
+                    b = rb.get("beat") or {}
+                    b_id = b.get("id")
+                    b_txt = b.get("text")
+                    if b_id and b_txt:
+                        beat_text_map[str(b_id)] = str(b_txt)
+
             # 1. Build Visual Segments
             rendered_video_segments = []
 
@@ -179,40 +293,18 @@ class VideoRenderer:
                             props=props,
                         )
                     else:
-                        asset_path = item.get("storagePath") or item.get("storageUrl") or item.get("assetId") or ""
+                        asset_type = item.get("assetType", "video")
                         source_in = float(item.get("sourceIn", 0.0))
                         source_out = float(item.get("sourceOut", source_in + dur))
-                        asset_type = item.get("assetType", "video")
+                        asset_repr = str(item.get("storageUrl") or item.get("storagePath") or item.get("assetId") or "")
 
-                        self._log(f"• Segment {idx}: [{asset_type.upper()}] {t_start:.2f}s-{t_end:.2f}s ({dur:.2f}s) - Source: [{source_in:.2f}s-{source_out:.2f}s] - Asset: {asset_path[:60]}...")
+                        self._log(f"• Segment {idx}: [{asset_type.upper()}] {t_start:.2f}s-{t_end:.2f}s ({dur:.2f}s) - Source: [{source_in:.2f}s-{source_out:.2f}s] - Asset: {asset_repr[:60]}...")
 
-                        local_asset_file = None
-                        if asset_path.startswith("http://") or asset_path.startswith("https://"):
-                            default_ext = ".jpg" if asset_type == "image" else ".mp4"
-                            ext = self._get_extension_from_url(asset_path, default_ext)
-                            local_asset_file = os.path.join(temp_dir, f"asset_{idx:03d}{ext}")
-                            try:
-                                import requests
-                                self._log(f"  ↳ Downloading remote asset...")
-                                r = requests.get(asset_path, headers=DEFAULT_HEADERS, stream=True, timeout=45)
-                                if r.status_code == 200:
-                                    with open(local_asset_file, "wb") as f:
-                                        for chunk in r.iter_content(chunk_size=32768):
-                                            if chunk:
-                                                f.write(chunk)
-                                    size_mb = os.path.getsize(local_asset_file) / (1024 * 1024)
-                                    self._log(f"  ✓ Downloaded ({size_mb:.2f} MB)")
-                                else:
-                                    self._log(f"  ❌ Download failed: HTTP {r.status_code}")
-                                    local_asset_file = None
-                            except Exception as e:
-                                self._log(f"  ❌ Download error: {e}")
-                                local_asset_file = None
-                        elif os.path.exists(asset_path):
-                            local_asset_file = asset_path
-                            self._log(f"  ✓ Local file found: {local_asset_file}")
-                        else:
-                            self._log(f"  ⚠️ Asset path not found on disk: {asset_path}")
+                        local_asset_file = self._resolve_asset_media(
+                            item=item,
+                            idx=idx,
+                            asset_type=asset_type,
+                        )
 
                         if local_asset_file and os.path.exists(local_asset_file):
                             if asset_type == "image":
@@ -225,11 +317,12 @@ class VideoRenderer:
                                 )
                             self._log(f"  ✓ Processed visual segment with {fit_mode} framing")
                         else:
-                            # Fallback placeholder card showing asset info
-                            label = f"[{item.get('assetId', 'Missing Clip')}]"
-                            self._log(f"  ↳ Using placeholder card for missing asset: {label}")
+                            # Fallback placeholder card showing beat text
+                            beat_id = str(item.get("id", "")).replace("clip_", "").split("_")[0]
+                            display_text = beat_text_map.get(beat_id) or item.get("content") or f"Scene {beat_id.upper()}"
+                            self._log(f"  ↳ Using placeholder card for scene: {display_text[:50]}")
                             self._create_text_card_clip(
-                                seg_out, content=label, style="fallback", duration=dur, width=width, height=height, fps=fps
+                                seg_out, content=display_text, style="fallback", duration=dur, width=width, height=height, fps=fps
                             )
 
                     rendered_video_segments.append(seg_out)
@@ -422,18 +515,27 @@ class VideoRenderer:
 
         props = props or {}
         hero_val = str(props.get("value") or "").strip()
-        label = str(props.get("label") or "STATISTICAL HIGHLIGHT").strip()
+        label = str(props.get("label") or "").strip()
         subtext = str(props.get("subtext") or content).strip()
 
-        if not hero_val:
-            import re
-            m = re.search(r"(\$?\d+(?:\.\d+)?\s*(?:billion|million|thousand|percent|%|k|m|b)?|\d+%)", content, re.I)
-            if m:
-                hero_val = m.group(1).upper()
-            else:
-                hero_val = "APOLLO 11"
+        if style == "fallback":
+            card_type = "quote"
+            label = label or "SCENE HIGHLIGHT"
+            hero_val = content
+            subtext = ""
+        else:
+            if not label:
+                label = "STATISTICAL HIGHLIGHT"
+            if not hero_val:
+                import re
+                m = re.search(r"(\$?\d+(?:\.\d+)?\s*(?:billion|million|thousand|percent|%|k|m|b)?|\d+%)", content, re.I)
+                if m:
+                    hero_val = m.group(1).upper()
+                else:
+                    hero_val = "APOLLO 11"
 
-        card_type = "stat" if (style == "stat-callout" or bool(hero_val)) else "quote"
+            card_type = "stat" if (style == "stat-callout" or bool(hero_val)) else "quote"
+
         temp_img = output_path.replace(".mp4", "_card.png")
 
         generate_motion_card_image(
