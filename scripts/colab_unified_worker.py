@@ -107,6 +107,7 @@ with open("/content/unified_env.json") as f:
 
 env = os.environ.copy()
 env.update(env_vars)
+env["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 env["PYTHONPATH"] = f"/content/unified_repo:{env.get('PYTHONPATH', '')}"
 if os.path.exists(frontend_dir):
     env["NODE_PATH"] = os.path.join(frontend_dir, "node_modules")

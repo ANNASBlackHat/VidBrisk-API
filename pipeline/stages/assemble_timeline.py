@@ -96,12 +96,19 @@ def assemble_timeline(
         Track(type="audio", items=audio_items),
     ]
 
+    try:
+        from pipeline.footage.audit import get_audit_collector
+        audit_dict = get_audit_collector().to_dict()
+    except Exception:
+        audit_dict = {}
+
     timeline = TimelinePlan(
         tracks=tracks,
         total_duration=total_duration,
         metadata={
             "beat_count": len(beats),
             "resolved_beats": [rb.model_dump(exclude_none=True) for rb in resolved_beats],
+            "footage_audit": audit_dict,
         },
     )
 

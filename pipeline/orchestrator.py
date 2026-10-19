@@ -88,6 +88,12 @@ def run_pipeline(
     aligner = aligner_provider or get_aligner_provider()
     resolver = footage_resolver or FootageResolver()
 
+    from pipeline.footage.audit import FootageDecisionAuditCollector, set_audit_collector
+    audit = FootageDecisionAuditCollector()
+    set_audit_collector(audit)
+    for b in beats:
+        audit.get_or_create(b.id, script_text=b.text, beat_type=b.beat_type, visual_intent=b.visual_intent)
+
     voice_clips: list[VoiceClip] = []
     timings_map: dict[str, list[WordTiming]] = {}
     candidates_map: dict[str, list[CandidateChunk]] = {}
@@ -182,12 +188,13 @@ def run_pipeline(
                 candidates = []
             candidates_map[beat.id] = candidates
             if candidates:
-                top_cand = candidates[0]
-                if top_cand.chunk_id:
-                    selected_chunk_ids.append(top_cand.chunk_id)
-                if top_cand.media_item_id:
-                    selected_media_ids.append(top_cand.media_item_id)
+                for c in candidates:
+                    if c.chunk_id and c.chunk_id not in selected_chunk_ids:
+                        selected_chunk_ids.append(c.chunk_id)
+                    if c.media_item_id and c.media_item_id not in selected_media_ids:
+                        selected_media_ids.append(c.media_item_id)
             print(f"    - Footage candidates resolved: {len(candidates)} match(es) (status: {getattr(beats[idx - 1].footage_status, 'value', str(beats[idx - 1].footage_status))})")
+            audit.log_beat_summary(beat.id)
 
     # Stage 6: Assemble timeline
     print("\n▶ [6] Assembling timeline plan and gap-filling...")
@@ -200,6 +207,10 @@ def run_pipeline(
     )
     print(f"  ✓ Timeline generated: {timeline.total_duration:.2f}s total duration across {len(timeline.tracks)} tracks.")
     if output_json_path:
-        print(f"  ✓ Exported to {output_json_path}")
+        print(f"  ✓ Exported timeline to {output_json_path}")
+        base, ext = os.path.splitext(output_json_path)
+        audit_path = f"{base}_audit.json"
+        audit.save_json(audit_path)
+        print(f"  ✓ Exported footage decision audit to {audit_path}")
 
     return timeline

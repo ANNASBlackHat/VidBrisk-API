@@ -29,56 +29,41 @@ def send_video(video_path: str, caption: str = ""):
     file_size_mb = os.path.getsize(video_path) / (1024 * 1024)
     print(f"Original video size: {file_size_mb:.2f} MB")
     
-    upload_path = video_path
-    if file_size_mb > 48.0:
-        print("File exceeds Telegram 50MB bot upload limit. Encoding optimized version for Telegram...")
+    # If video is larger than 10MB, compress for speedy Telegram upload
+    if file_size_mb > 10.0:
+        print("File is larger than 10MB. Optimizing for quick Telegram dispatch...")
         base, ext = os.path.splitext(video_path)
         upload_path = f"{base}_telegram.mp4"
 
-        # Probe duration
-        dur_cmd = ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", video_path]
-        try:
-            dur = float(subprocess.check_output(dur_cmd).decode().strip())
-        except Exception:
-            dur = 60.0
-
-        # Target 42 MB total to stay safely under 50MB
-        target_bitrate_kbps = max(500, int((42 * 8192) / dur) - 128)
-        print(f"Targeting bitrate {target_bitrate_kbps}k for {dur:.1f}s video (<45MB)...")
-
         cmd = [
             "ffmpeg", "-y", "-i", video_path,
-            "-c:v", "libx264", "-b:v", f"{target_bitrate_kbps}k",
-            "-maxrate", f"{int(target_bitrate_kbps * 1.2)}k",
-            "-bufsize", f"{target_bitrate_kbps * 2}k",
+            "-c:v", "libx264", "-crf", "28",
             "-preset", "faster",
-            "-c:a", "aac", "-b:a", "128k",
+            "-c:a", "aac", "-b:a", "96k",
             "-movflags", "+faststart",
             upload_path
         ]
         subprocess.run(cmd, check=True)
         new_size_mb = os.path.getsize(upload_path) / (1024 * 1024)
-        print(f"Compressed video size: {new_size_mb:.2f} MB")
+        print(f"Optimized video size: {new_size_mb:.2f} MB")
 
     url = f"https://api.telegram.org/bot{token}/sendVideo"
-    print(f"Uploading {upload_path} to Telegram chat {chat_id}...")
+    print(f"Uploading {upload_path} to Telegram chat {chat_id} via IPv4 curl...")
     
-    with open(upload_path, "rb") as video_file:
-        files = {"video": video_file}
-        data = {
-            "chat_id": chat_id,
-            "caption": caption,
-            "supports_streaming": True,
-            "parse_mode": "Markdown"
-        }
-        resp = requests.post(url, data=data, files=files, timeout=300)
-    
-    if resp.status_code == 200:
+    # Use curl with -4 for rock-solid IPv4 network throughput
+    curl_cmd = [
+        "curl", "-4", "-s", "-X", "POST", url,
+        "-F", f"chat_id={chat_id}",
+        "-F", f"caption={caption}",
+        "-F", f"video=@{upload_path}"
+    ]
+    res = subprocess.run(curl_cmd, capture_output=True, text=True)
+    if res.returncode == 0 and '"ok":true' in res.stdout:
         print("✅ Successfully sent video to Telegram!")
-        return resp.json()
+        return res.stdout
     else:
-        print(f"❌ Failed to send video: {resp.status_code} {resp.text}")
-        resp.raise_for_status()
+        print(f"❌ Failed to send video: {res.stderr or res.stdout}")
+        raise RuntimeError(f"Telegram upload failed: {res.stderr or res.stdout}")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

@@ -31,8 +31,8 @@ class Settings(BaseSettings):
     ZILLIZ_TOKEN: Optional[str] = None
     ZILLIZ_COLLECTION_NAME: str = "footage_chunks"
     FOOTAGE_ENGINE_PATH: str = "/Users/annasblackhat/Documents/Experiment/footage-engine"
-    FOOTAGE_WORKER_ENABLED: bool = True
-    FOOTAGE_WORKER_TIMEOUT_SEC: float = 15.0
+    FOOTAGE_WORKER_ENABLED: bool = False
+    FOOTAGE_WORKER_TIMEOUT_SEC: float = 60.0
     FOOTAGE_WORKER_BACKEND: Optional[str] = None
     FOOTAGE_PROVIDER: Optional[str] = None
     FOOTAGE_SEMANTIC_THRESHOLD: float = 0.50
@@ -59,7 +59,7 @@ class Settings(BaseSettings):
     # TTS Worker & Remote GPU settings
     TTS_WORKER_ENABLED: bool = False
     TTS_WORKER_TRANSPORT: Literal["base64", "ngrok", "imagekit", "storage"] = "base64"
-    TTS_WORKER_TIMEOUT_SEC: float = 30.0
+    TTS_WORKER_TIMEOUT_SEC: float = 90.0
     TTS_WORKER_BACKEND: str = "omni"
     TTS_FALLBACK_PROVIDER: str = "kokoro"
     TTS_NGROK_URL: Optional[str] = None

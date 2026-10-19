@@ -240,6 +240,23 @@ def plan_beat_assets(
             storageUrl=top_cand.storage_url,
             props=bg_props,
         )
+        try:
+            from pipeline.footage.audit import get_audit_collector
+            audit = get_audit_collector()
+            audit.record_selection(
+                beat.id,
+                [{
+                    "clip_id": video_item.id,
+                    "asset_id": video_item.assetId,
+                    "track_start": video_item.trackStart,
+                    "track_end": video_item.trackEnd,
+                    "duration": round(video_item.trackEnd - video_item.trackStart, 2),
+                    "storage_path": video_item.storagePath,
+                }],
+                [f"Image Ken-Burns strategy: top candidate is an image ({top_cand.chunk_id})."],
+            )
+        except Exception as e:
+            logger.debug(f"[DurationMatcher] Audit recording note: {e}")
         return plan, [video_item], []
 
     # --------------------------------------------------------------------------
@@ -303,6 +320,23 @@ def plan_beat_assets(
             storageUrl=top_cand.storage_url,
             props=bg_props,
         )
+        try:
+            from pipeline.footage.audit import get_audit_collector
+            audit = get_audit_collector()
+            audit.record_selection(
+                beat.id,
+                [{
+                    "clip_id": video_item.id,
+                    "asset_id": video_item.assetId,
+                    "track_start": video_item.trackStart,
+                    "track_end": video_item.trackEnd,
+                    "duration": round(video_item.trackEnd - video_item.trackStart, 2),
+                    "storage_path": video_item.storagePath,
+                }],
+                [f"Single clip strategy: top candidate ({top_cand.chunk_id}, {cand_duration:.2f}s) fully covers visual duration ({visual_duration:.2f}s)."],
+            )
+        except Exception as e:
+            logger.debug(f"[DurationMatcher] Audit recording note: {e}")
         return plan, [video_item], []
 
     # --------------------------------------------------------------------------
@@ -314,9 +348,43 @@ def plan_beat_assets(
     remaining_duration = visual_duration
     current_track_pos = beat_start
     bg_props = apply_mood_effects_to_props(None, beat)
+    used_media_ids: set[str] = set()
+    used_storage_paths: set[str] = set()
+    selection_notes: list[str] = []
+    MIN_SPLICE_DURATION = 1.0  # seconds: guard against jarring micro-cuts
 
     for idx, cand in enumerate(candidates):
         if remaining_duration <= 0.05:
+            break
+
+        # Disallow reusing the same physical video file within the same beat
+        if cand.media_item_id and cand.media_item_id in used_media_ids:
+            selection_notes.append(
+                f"Skipped candidate #{idx+1} ({cand.chunk_id}): media_item_id '{cand.media_item_id}' already used in beat."
+            )
+            continue
+        if cand.storage_path and cand.storage_path in used_storage_paths:
+            selection_notes.append(
+                f"Skipped candidate #{idx+1} ({cand.chunk_id}): storage_path '{cand.storage_path}' already used in beat."
+            )
+            continue
+
+        # If a primary clip is already placed and the remaining deficit is tiny (< 1.0s),
+        # extend the primary clip rather than flashing a sub-second micro-cut.
+        if len(video_items) > 0 and remaining_duration < MIN_SPLICE_DURATION:
+            selection_notes.append(
+                f"Avoided micro-cut ({remaining_duration:.2f}s < {MIN_SPLICE_DURATION}s): extended clip '{video_items[-1].id}' instead of splicing candidate #{idx+1}."
+            )
+            video_items[-1].trackEnd = beat_end
+            if plan_items:
+                plan_items[-1].source_out = round(
+                    (plan_items[-1].source_out or 0.0) + remaining_duration, 2
+                )
+            if plan_layers:
+                plan_layers[-1].source_out = round(
+                    (plan_layers[-1].source_out or 0.0) + remaining_duration, 2
+                )
+            remaining_duration = 0.0
             break
 
         c_dur = cand.duration_sec or (cand.end_ts - cand.start_ts if cand.end_ts else remaining_duration)
@@ -332,7 +400,7 @@ def plan_beat_assets(
 
         video_items.append(
             TrackItem(
-                id=f"clip_{beat.id}_{idx+1}",
+                id=f"clip_{beat.id}_{len(video_items)+1}",
                 assetId=cand.chunk_id,
                 trackStart=t_start,
                 trackEnd=t_end,
@@ -373,6 +441,11 @@ def plan_beat_assets(
             )
         )
 
+        if cand.media_item_id:
+            used_media_ids.add(cand.media_item_id)
+        if cand.storage_path:
+            used_storage_paths.add(cand.storage_path)
+
         current_track_pos += use_dur
         remaining_duration -= use_dur
 
@@ -387,6 +460,26 @@ def plan_beat_assets(
             plan_layers[-1].source_out = round(
                 (plan_layers[-1].source_out or 0.0) + remaining_duration, 2
             )
+        selection_notes.append(f"Extended final clip '{video_items[-1].id}' by {remaining_duration:.2f}s to reach voiceover end.")
+
+    # Record selection into audit collector
+    try:
+        from pipeline.footage.audit import get_audit_collector
+        audit = get_audit_collector()
+        final_clips_summary = [
+            {
+                "clip_id": item.id,
+                "asset_id": item.assetId,
+                "track_start": item.trackStart,
+                "track_end": item.trackEnd,
+                "duration": round(item.trackEnd - item.trackStart, 2),
+                "storage_path": item.storagePath,
+            }
+            for item in video_items
+        ]
+        audit.record_selection(beat.id, final_clips_summary, selection_notes)
+    except Exception as e:
+        logger.debug(f"[DurationMatcher] Audit recording note: {e}")
 
     plan = AssetPlan(strategy="concat_clips", items=plan_items, layers=plan_layers)
     return plan, video_items, []

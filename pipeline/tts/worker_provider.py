@@ -84,11 +84,8 @@ class WorkerTTSProvider:
                 sys.path.insert(0, self.engine_path)
 
         try:
-            from footage_engine.worker import (
-                count_live_workers,
-                submit_job,
-                wait_for_job,
-            )
+            from footage_engine.worker.client import submit_job
+            from footage_engine.worker.queue import count_live_workers, wait_for_job
             self._worker_helpers = {
                 "count_live_workers": count_live_workers,
                 "submit_job": submit_job,

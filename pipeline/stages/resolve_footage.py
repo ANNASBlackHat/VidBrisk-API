@@ -53,6 +53,7 @@ def resolve_footage(
         "query": query,
         "top_k": top_k,
         "target_orientation": target_orientation,
+        "beat_id": beat.id,
     }
     if provider is not None:
         kwargs["provider"] = provider
@@ -152,6 +153,7 @@ def resolve_beat_visuals(
             provider=provider,
             exclude_source_video_ids=exclude_source_video_ids,
             exclude_chunk_ids=exclude_chunk_ids,
+            beat_id=beat.id,
         )
         if not candidates and exclude_source_video_ids:
             candidates = footage_engine.search_candidates(
@@ -161,6 +163,7 @@ def resolve_beat_visuals(
                 provider=provider,
                 exclude_source_video_ids=None,
                 exclude_chunk_ids=exclude_chunk_ids,
+                beat_id=beat.id,
             )
 
         status = assess_beat_candidates(

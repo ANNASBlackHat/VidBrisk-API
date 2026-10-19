@@ -24,6 +24,7 @@ class FootageResolver:
         worker_backend: Optional[str] = None,
         default_provider: Optional[str] = None,
         hybrid_search: Optional[bool] = None,
+        active_embedding_model: Optional[str] = None,
     ):
         settings = get_settings()
         self.engine_path = footage_engine_path or settings.FOOTAGE_ENGINE_PATH
@@ -44,6 +45,11 @@ class FootageResolver:
         )
         self.hybrid_search = (
             hybrid_search if hybrid_search is not None else getattr(settings, "FOOTAGE_HYBRID_SEARCH", True)
+        )
+        self.active_embedding_model = (
+            active_embedding_model
+            if active_embedding_model is not None
+            else getattr(settings, "DEFAULT_EMBEDDING_MODEL", "microsoft/xclip-base-patch32")
         )
         self._search_fn = None
         self._search_filters_cls = None
@@ -70,11 +76,8 @@ class FootageResolver:
 
         # Attempt to load worker helpers
         try:
-            from footage_engine.worker import (
-                count_live_workers,
-                submit_search_footage,
-                wait_for_job,
-            )
+            from footage_engine.worker.client import submit_search_footage
+            from footage_engine.worker.queue import count_live_workers, wait_for_job
             self._worker_helpers = {
                 "count_live_workers": count_live_workers,
                 "submit_search_footage": submit_search_footage,
@@ -186,8 +189,9 @@ class FootageResolver:
         provider: Optional[str] = None,
         exclude_source_video_ids: Optional[list[str]] = None,
         exclude_chunk_ids: Optional[list[str]] = None,
+        active_embedding_model: Optional[str] = None,
     ) -> list[CandidateChunk]:
-        """Searches PostgreSQL chunks table by ranking caption and tags text overlap."""
+        """Searches PostgreSQL chunks table by ranking caption and tags text overlap with model filter and segment dedup."""
         if not query or not query.strip():
             return []
 
@@ -206,69 +210,88 @@ class FootageResolver:
         if not words:
             return []
 
-        where_clauses = [
-            "((c.caption IS NOT NULL AND c.caption != '') OR (c.tags IS NOT NULL AND c.tags::text != '[]') OR (m.item_metadata IS NOT NULL))"
-        ]
-        params: dict[str, Any] = {"words": words, "fetch_k": max(50, top_k * 6)}
+        active_model = active_embedding_model or self.active_embedding_model
 
-        if provider:
-            where_clauses.append("m.provider = %(provider)s")
-            params["provider"] = provider
-        if media_type:
-            where_clauses.append("c.media_type = %(media_type)s")
-            params["media_type"] = media_type
+        def execute_query(filter_model: Optional[str]):
+            where_clauses = [
+                "((c.caption IS NOT NULL AND c.caption != '') OR (c.tags IS NOT NULL AND c.tags::text != '[]') OR (m.item_metadata IS NOT NULL))"
+            ]
+            params: dict[str, Any] = {"words": words, "fetch_k": max(50, top_k * 6)}
 
-        if exclude_source_video_ids:
-            where_clauses.append("c.media_item_id != ALL(%(ex_media)s)")
-            params["ex_media"] = list(exclude_source_video_ids)
-        if exclude_chunk_ids:
-            where_clauses.append("c.id != ALL(%(ex_chunks)s)")
-            params["ex_chunks"] = list(exclude_chunk_ids)
+            if filter_model:
+                where_clauses.append("(c.embedding_model = %(active_model)s OR c.embedding_model IS NULL)")
+                params["active_model"] = filter_model
+            if provider:
+                where_clauses.append("m.provider = %(provider)s")
+                params["provider"] = provider
+            if media_type:
+                where_clauses.append("c.media_type = %(media_type)s")
+                params["media_type"] = media_type
 
-        where_sql = " AND ".join(where_clauses)
-        sql = f"""
-            SELECT c.id, c.media_item_id, m.provider, c.start_ts, c.end_ts,
-                   c.storage_path, c.media_type, c.motion_mean, c.motion_std,
-                   c.caption, c.tags,
-                   (
-                     SELECT count(*) 
-                     FROM unnest(%(words)s::text[]) w 
-                     WHERE c.caption ILIKE '%%' || w || '%%' 
-                        OR c.tags::text ILIKE '%%' || w || '%%'
-                        OR m.item_metadata::text ILIKE '%%' || w || '%%'
-                        OR c.storage_path ILIKE '%%' || w || '%%'
-                   ) as match_count
-            FROM chunks c
-            JOIN media_items m ON c.media_item_id = m.id
-            WHERE {where_sql}
-              AND (
-                EXISTS (
-                  SELECT 1 FROM unnest(%(words)s::text[]) w
-                  WHERE c.caption ILIKE '%%' || w || '%%' 
-                     OR c.tags::text ILIKE '%%' || w || '%%'
-                     OR m.item_metadata::text ILIKE '%%' || w || '%%'
-                     OR c.storage_path ILIKE '%%' || w || '%%'
-                )
-              )
-            ORDER BY match_count DESC, c.start_ts ASC
-            LIMIT %(fetch_k)s;
-        """
+            if exclude_source_video_ids:
+                where_clauses.append("c.media_item_id != ALL(%(ex_media)s)")
+                params["ex_media"] = list(exclude_source_video_ids)
+            if exclude_chunk_ids:
+                where_clauses.append("c.id != ALL(%(ex_chunks)s)")
+                params["ex_chunks"] = list(exclude_chunk_ids)
 
-        try:
-            conn = psycopg2.connect(self.database_url)
-            with conn.cursor() as cur:
-                cur.execute(sql, params)
-                rows = cur.fetchall()
-            conn.close()
-        except Exception as e:
-            logger.warning(f"[FootageResolver] Caption search error: {e}")
-            return []
+            where_sql = " AND ".join(where_clauses)
+            sql = f"""
+                SELECT c.id, c.media_item_id, m.provider, c.start_ts, c.end_ts,
+                       c.storage_path, c.media_type, c.motion_mean, c.motion_std,
+                       c.caption, c.tags,
+                       (
+                         SELECT count(*) 
+                         FROM unnest(%(words)s::text[]) w 
+                         WHERE c.caption ILIKE '%%' || w || '%%' 
+                            OR c.tags::text ILIKE '%%' || w || '%%'
+                            OR m.item_metadata::text ILIKE '%%' || w || '%%'
+                            OR c.storage_path ILIKE '%%' || w || '%%'
+                       ) as match_count
+                FROM chunks c
+                JOIN media_items m ON c.media_item_id = m.id
+                WHERE {where_sql}
+                  AND (
+                    EXISTS (
+                      SELECT 1 FROM unnest(%(words)s::text[]) w
+                      WHERE c.caption ILIKE '%%' || w || '%%' 
+                         OR c.tags::text ILIKE '%%' || w || '%%'
+                         OR m.item_metadata::text ILIKE '%%' || w || '%%'
+                         OR c.storage_path ILIKE '%%' || w || '%%'
+                    )
+                  )
+                ORDER BY match_count DESC, c.start_ts ASC
+                LIMIT %(fetch_k)s;
+            """
+            try:
+                conn = psycopg2.connect(self.database_url)
+                with conn.cursor() as cur:
+                    cur.execute(sql, params)
+                    res_rows = cur.fetchall()
+                conn.close()
+                return res_rows
+            except Exception as e:
+                logger.warning(f"[FootageResolver] Caption search error: {e}")
+                return []
 
-        candidates = []
+        # 1. Attempt query filtered by active embedding model
+        rows = execute_query(active_model)
+        # 2. Fallback to unconstrained search if active model yielded zero results
+        if not rows and active_model:
+            logger.debug(f"[FootageResolver] Zero results with model '{active_model}'. Retrying unconstrained search.")
+            rows = execute_query(None)
+
+        seen_segments: dict[Any, CandidateChunk] = {}
         for r in rows:
             cid, mid, provider_val, s_ts, e_ts, storage_path, mtype, m_mean, m_std, cap, tags, match_cnt = r
             if match_cnt <= 0:
                 continue
+
+            # Deduplicate by canonical segment key to eliminate identical clips across embedding runs
+            seg_key = (mid, round(s_ts or 0.0, 1), round(e_ts or 0.0, 1)) if mid else cid
+            if seg_key in seen_segments:
+                continue
+
             norm_score = min(1.0, 0.40 + 0.15 * match_cnt)
             storage_url = ""
             if storage_path:
@@ -277,25 +300,24 @@ class FootageResolver:
                 else:
                     storage_url = f"https://drive.google.com/uc?export=download&id={storage_path}"
 
-            candidates.append(
-                CandidateChunk(
-                    chunk_id=cid,
-                    media_item_id=mid,
-                    score=norm_score,
-                    start_ts=s_ts,
-                    end_ts=e_ts,
-                    duration_sec=(e_ts - s_ts) if (e_ts is not None and s_ts is not None) else None,
-                    media_type=str(mtype) if mtype else "video",
-                    provider=provider_val or "unknown",
-                    storage_path=storage_path or "",
-                    storage_url=storage_url,
-                    caption=cap,
-                    tags=tags or [],
-                    motion_mean=m_mean,
-                    motion_std=m_std,
-                )
+            seen_segments[seg_key] = CandidateChunk(
+                chunk_id=cid,
+                media_item_id=mid,
+                score=norm_score,
+                start_ts=s_ts,
+                end_ts=e_ts,
+                duration_sec=(e_ts - s_ts) if (e_ts is not None and s_ts is not None) else None,
+                media_type=str(mtype) if mtype else "video",
+                provider=provider_val or "unknown",
+                storage_path=storage_path or "",
+                storage_url=storage_url,
+                caption=cap,
+                tags=tags or [],
+                motion_mean=m_mean,
+                motion_std=m_std,
             )
 
+        candidates = list(seen_segments.values())
         return candidates[:top_k]
 
     def search_candidates(
@@ -308,8 +330,9 @@ class FootageResolver:
         exclude_source_video_ids: Optional[list[str]] = None,
         exclude_chunk_ids: Optional[list[str]] = None,
         hybrid: Optional[bool] = None,
+        beat_id: Optional[str] = None,
     ) -> list[CandidateChunk]:
-        """Queries Footage Engine (Worker with in-process fallback) with orientation prioritization and optional hybrid search."""
+        """Queries Footage Engine with segment-level deduplication, orientation prioritization, and decision logging."""
         if not query or not query.strip():
             return []
 
@@ -325,6 +348,7 @@ class FootageResolver:
                 exclude_source_video_ids=exclude_source_video_ids,
                 exclude_chunk_ids=exclude_chunk_ids,
                 hybrid=False,
+                beat_id=beat_id,
             )
             cap_candidates = self.search_by_caption(
                 query=query,
@@ -334,38 +358,79 @@ class FootageResolver:
                 provider=provider,
                 exclude_source_video_ids=exclude_source_video_ids,
                 exclude_chunk_ids=exclude_chunk_ids,
+                active_embedding_model=self.active_embedding_model,
             )
 
-            rrf_scores: dict[str, float] = {}
-            chunk_map: dict[str, CandidateChunk] = {}
+            rrf_scores: dict[Any, float] = {}
+            segment_map: dict[Any, CandidateChunk] = {}
+            dedup_actions: list[dict[str, Any]] = []
+
+            def get_seg_key(c: CandidateChunk) -> Any:
+                if c.media_item_id and c.start_ts is not None and c.end_ts is not None:
+                    return (c.media_item_id, round(c.start_ts, 1), round(c.end_ts, 1))
+                if c.storage_path:
+                    return c.storage_path
+                return c.chunk_id
 
             for rank, c in enumerate(vec_candidates, 1):
-                rrf_scores[c.chunk_id] = rrf_scores.get(c.chunk_id, 0.0) + (1.0 / (60.0 + rank))
-                chunk_map[c.chunk_id] = c
+                key = get_seg_key(c)
+                rrf_scores[key] = rrf_scores.get(key, 0.0) + (1.0 / (60.0 + rank))
+                if key not in segment_map:
+                    segment_map[key] = c
+                else:
+                    if c.chunk_id != segment_map[key].chunk_id:
+                        dedup_actions.append({
+                            "reason": "Duplicate segment in vector hits",
+                            "dropped_chunk_id": c.chunk_id,
+                            "kept_chunk_id": segment_map[key].chunk_id,
+                            "media_item_id": c.media_item_id,
+                        })
 
             for rank, c in enumerate(cap_candidates, 1):
+                key = get_seg_key(c)
                 # Verified caption matches carry higher precision than uncaptioned dense search
-                rrf_scores[c.chunk_id] = rrf_scores.get(c.chunk_id, 0.0) + 1.5 * (1.0 / (60.0 + rank))
-                if c.chunk_id not in chunk_map:
-                    chunk_map[c.chunk_id] = c
+                rrf_scores[key] = rrf_scores.get(key, 0.0) + 1.5 * (1.0 / (60.0 + rank))
+                if key not in segment_map:
+                    segment_map[key] = c
                 else:
-                    chunk_map[c.chunk_id].score = max(chunk_map[c.chunk_id].score, c.score)
-                    if not chunk_map[c.chunk_id].caption and c.caption:
-                        chunk_map[c.chunk_id].caption = c.caption
-                        chunk_map[c.chunk_id].tags = c.tags
-                    if not chunk_map[c.chunk_id].storage_url and c.storage_url:
-                        chunk_map[c.chunk_id].storage_url = c.storage_url
+                    if c.chunk_id != segment_map[key].chunk_id:
+                        dedup_actions.append({
+                            "reason": "Merged duplicate chunk across search passes / embedding models",
+                            "dropped_chunk_id": c.chunk_id,
+                            "kept_chunk_id": segment_map[key].chunk_id,
+                            "media_item_id": c.media_item_id,
+                        })
+                    segment_map[key].score = max(segment_map[key].score, c.score)
+                    if not segment_map[key].caption and c.caption:
+                        segment_map[key].caption = c.caption
+                        segment_map[key].tags = c.tags
+                    if not segment_map[key].storage_url and c.storage_url:
+                        segment_map[key].storage_url = c.storage_url
 
             fused = sorted(
-                chunk_map.values(),
-                key=lambda c: rrf_scores.get(c.chunk_id, 0.0),
+                segment_map.values(),
+                key=lambda c: rrf_scores.get(get_seg_key(c), 0.0),
                 reverse=True,
             )
             if fused and rrf_scores:
                 max_rrf = max(rrf_scores.values())
                 for c in fused:
-                    rel = rrf_scores[c.chunk_id] / max_rrf
+                    rel = rrf_scores[get_seg_key(c)] / max_rrf
                     c.score = max(c.score, round(0.55 + 0.40 * rel, 3))
+
+            # Audit trail recording
+            try:
+                from pipeline.footage.audit import get_audit_collector
+                audit = get_audit_collector()
+                if beat_id:
+                    stop_words = {"with", "from", "that", "this", "shot", "macro", "view", "scene", "close", "dark"}
+                    tokens = [w.strip(".,;:\"'()[]{}!?-").lower() for w in query.split() if len(w) >= 3 and w.lower() not in stop_words]
+                    audit.record_query(beat_id, query, tokens, active_model=self.active_embedding_model)
+                    audit.record_vector_hits(beat_id, vec_candidates)
+                    audit.record_caption_hits(beat_id, cap_candidates)
+                    audit.record_fused(beat_id, fused[:top_k], dedup_actions)
+            except Exception as e:
+                logger.debug(f"[FootageResolver] Audit recording error: {e}")
 
             return fused[:top_k]
 

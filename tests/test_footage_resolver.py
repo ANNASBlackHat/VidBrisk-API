@@ -65,6 +65,7 @@ def test_resolve_footage_calls_search_for_narrative(mock_resolver):
         query="scuba diver descending deep blue underwater trench",
         top_k=3,
         target_orientation="horizontal",
+        beat_id="b3",
     )
 
 
