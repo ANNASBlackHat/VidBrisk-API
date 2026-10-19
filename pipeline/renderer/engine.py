@@ -313,7 +313,7 @@ class VideoRenderer:
                                 )
                             else:
                                 self._trim_scale_video_clip(
-                                    seg_out, video_path=local_asset_file, start_ts=source_in, duration=dur, width=width, height=height, fps=fps, fit_mode=fit_mode
+                                    seg_out, video_path=local_asset_file, start_ts=source_in, duration=dur, width=width, height=height, fps=fps, fit_mode=fit_mode, props=item.get("props")
                                 )
                             self._log(f"  ✓ Processed visual segment with {fit_mode} framing")
                         else:
@@ -407,14 +407,15 @@ class VideoRenderer:
             "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", output_path
         ])
 
-    def _get_filter_complex(self, width: int, height: int, fit_mode: FitMode) -> str:
+    def _get_filter_complex(self, width: int, height: int, fit_mode: FitMode, pts_factor: float = 1.0) -> str:
+        setpts_str = f"setpts={pts_factor:.4f}*PTS," if abs(pts_factor - 1.0) > 0.001 else ""
         if fit_mode == "crop":
-            return f"scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height}"
+            return f"{setpts_str}scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height}"
         elif fit_mode == "pad":
-            return f"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black"
+            return f"{setpts_str}scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black"
         else:
             return (
-                f"[0:v]split=2[bg_raw][fg_raw];"
+                f"[0:v]{setpts_str}split=2[bg_raw][fg_raw];"
                 f"[bg_raw]scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},boxblur=20:5[bg];"
                 f"[fg_raw]scale={width}:{height}:force_original_aspect_ratio=decrease[fg];"
                 f"[bg][fg]overlay=(W-w)/2:(H-h)/2"
@@ -462,18 +463,46 @@ class VideoRenderer:
         return None
 
     def _trim_scale_video_clip(
-        self, output_path: str, video_path: str, start_ts: float, duration: float, width: int, height: int, fps: int, fit_mode: FitMode = "blur_bg"
+        self,
+        output_path: str,
+        video_path: str,
+        start_ts: float,
+        duration: float,
+        width: int,
+        height: int,
+        fps: int,
+        fit_mode: FitMode = "blur_bg",
+        props: Optional[dict[str, Any]] = None,
     ) -> None:
+        props = props or {}
         media_dur = self._get_media_duration(video_path)
+        is_slowmo = props.get("retime_strategy") == "slowmo"
+        is_continuous = bool(props.get("continuous_window"))
+
         if media_dur is not None and (start_ts >= media_dur or start_ts + 0.05 > media_dur):
             surplus = max(0.0, media_dur - duration)
             start_ts = round(surplus / 2.0, 2)
             self._log(f"  ↳ [Sanitize] Video start_ts clamped to {start_ts}s (media duration: {media_dur:.2f}s)")
 
-        loop_args = ["-stream_loop", "-1"] if (media_dur is not None and duration > media_dur) else []
+        pts_factor = 1.0
+        loop_args: list[str] = []
+
+        if is_slowmo:
+            avail_dur = max(0.1, (media_dur - start_ts) if media_dur is not None else duration)
+            pts_factor = max(0.2, min(5.0, duration / avail_dur))
+            self._log(f"  ↳ [Slowmo] Retiming video with setpts factor {pts_factor:.3f}x (no loops)")
+        elif is_continuous:
+            if media_dur is not None and (start_ts + duration) > media_dur:
+                avail_dur = max(0.1, media_dur - start_ts)
+                pts_factor = max(0.2, min(5.0, duration / avail_dur))
+                self._log(f"  ↳ [Continuous-Slowmo] Raw source ended; retimed factor {pts_factor:.3f}x (no loops)")
+        else:
+            if media_dur is not None and duration > media_dur:
+                pts_factor = duration / max(0.1, media_dur - start_ts)
+                self._log(f"  ↳ [Retiming] Overcoming deficit with setpts factor {pts_factor:.3f}x (avoiding stream_loop repeat)")
 
         if fit_mode == "blur_bg":
-            filter_str = self._get_filter_complex(width, height, fit_mode)
+            filter_str = self._get_filter_complex(width, height, fit_mode, pts_factor=pts_factor)
             cmd = [
                 self.ffmpeg_bin, "-y",
                 "-ss", str(start_ts),
@@ -486,7 +515,7 @@ class VideoRenderer:
             ]
             self._run_cmd(cmd)
         else:
-            vf = self._get_filter_complex(width, height, fit_mode)
+            vf = self._get_filter_complex(width, height, fit_mode, pts_factor=pts_factor)
             cmd = [
                 self.ffmpeg_bin, "-y",
                 "-ss", str(start_ts),
