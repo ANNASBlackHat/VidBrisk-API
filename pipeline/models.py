@@ -29,6 +29,9 @@ StrategyType = Literal[
     "stat_over_footage",
     "quote_over_footage",
     "pip_takeover",
+    "balanced_splice",
+    "slowmo_retime",
+    "continuous_window",
 ]
 TrackType = Literal["video", "text", "audio"]
 LayerRole = Literal["background", "midground", "overlay", "caption"]

@@ -341,14 +341,252 @@ def plan_beat_assets(
         return plan, [video_item], []
 
     # --------------------------------------------------------------------------
-    # Case 4: Video clip shorter than required duration -> concat_clips fallback
+    # Case 4: Video clip shorter than required duration -> handle via deficit_strategy
     # --------------------------------------------------------------------------
+    bg_props = apply_mood_effects_to_props(None, beat) or {}
+    c1 = top_cand
+    c1_dur = c1.duration_sec or (c1.end_ts - c1.start_ts if c1.end_ts else visual_duration)
+    if c1.motion_mean is not None and c1.motion_mean < 5.0:
+        c1_dur = min(c1_dur, 2.0)
+
+    # 1. Continuous Strategy
+    if deficit_strategy == "continuous":
+        s_in = round(c1.start_ts or 0.0, 2)
+        s_out = round(s_in + visual_duration, 2)
+        props = {**bg_props, "continuous_window": True}
+        plan = AssetPlan(
+            strategy="continuous_window",
+            items=[
+                AssetItem(
+                    type="video",
+                    chunk_id=c1.chunk_id,
+                    source_in=s_in,
+                    source_out=s_out,
+                    storage_path=c1.storage_path,
+                    storage_url=c1.storage_url,
+                    props=props,
+                )
+            ],
+            layers=[
+                Layer(
+                    role="background",
+                    z=0,
+                    type="video",
+                    layout="full",
+                    chunk_id=c1.chunk_id,
+                    source_in=s_in,
+                    source_out=s_out,
+                    storage_path=c1.storage_path,
+                    storage_url=c1.storage_url,
+                    props=props,
+                )
+            ],
+        )
+        item = TrackItem(
+            id=f"clip_{beat.id}",
+            assetId=c1.chunk_id,
+            trackStart=beat_start,
+            trackEnd=beat_end,
+            zIndex=0,
+            layerRole="background",
+            layout="full",
+            sourceIn=s_in,
+            sourceOut=s_out,
+            assetType="video",
+            storagePath=c1.storage_path,
+            storageUrl=c1.storage_url,
+            props=props,
+        )
+        try:
+            from pipeline.footage.audit import get_audit_collector
+            audit = get_audit_collector()
+            audit.record_selection(
+                beat.id,
+                [{
+                    "clip_id": item.id,
+                    "asset_id": item.assetId,
+                    "track_start": item.trackStart,
+                    "track_end": item.trackEnd,
+                    "duration": visual_duration,
+                    "storage_path": item.storagePath,
+                }],
+                [f"Continuous strategy: extended source window [{s_in:.2f}s - {s_out:.2f}s] to cover visual duration ({visual_duration:.2f}s)."],
+            )
+        except Exception as e:
+            logger.debug(f"[DurationMatcher] Audit recording note: {e}")
+        return plan, [item], []
+
+    # 2. Find distinct candidates for balanced_splice or multi-clip
+    distinct_cands: list[CandidateChunk] = []
+    seen_media: set[str] = set()
+    seen_paths: set[str] = set()
+    for c in candidates:
+        m_id = c.media_item_id
+        s_path = c.storage_path
+        if m_id and m_id in seen_media:
+            continue
+        if s_path and s_path in seen_paths:
+            continue
+        distinct_cands.append(c)
+        if m_id:
+            seen_media.add(m_id)
+        if s_path:
+            seen_paths.add(s_path)
+
+    # 3. Slowmo Strategy (explicit, or as fallback when only 1 distinct candidate exists)
+    if deficit_strategy == "slowmo" or (deficit_strategy == "balanced_splice" and len(distinct_cands) < 2):
+        retime_factor = round(visual_duration / max(0.1, c1_dur), 3)
+        props = {**bg_props, "retime_strategy": "slowmo", "retime_factor": retime_factor}
+        plan = AssetPlan(
+            strategy="slowmo_retime",
+            items=[
+                AssetItem(
+                    type="video",
+                    chunk_id=c1.chunk_id,
+                    source_in=0.0,
+                    source_out=round(c1_dur, 2),
+                    storage_path=c1.storage_path,
+                    storage_url=c1.storage_url,
+                    props=props,
+                )
+            ],
+            layers=[
+                Layer(
+                    role="background",
+                    z=0,
+                    type="video",
+                    layout="full",
+                    chunk_id=c1.chunk_id,
+                    source_in=0.0,
+                    source_out=round(c1_dur, 2),
+                    storage_path=c1.storage_path,
+                    storage_url=c1.storage_url,
+                    props=props,
+                )
+            ],
+        )
+        item = TrackItem(
+            id=f"clip_{beat.id}",
+            assetId=c1.chunk_id,
+            trackStart=beat_start,
+            trackEnd=beat_end,
+            zIndex=0,
+            layerRole="background",
+            layout="full",
+            sourceIn=0.0,
+            sourceOut=round(c1_dur, 2),
+            assetType="video",
+            storagePath=c1.storage_path,
+            storageUrl=c1.storage_url,
+            props=props,
+        )
+        note = (
+            f"Slowmo strategy: retiming candidate {c1.chunk_id} ({c1_dur:.2f}s -> {visual_duration:.2f}s, factor {retime_factor:.3f}x)."
+            if deficit_strategy == "slowmo"
+            else f"Balanced splice fallback to slowmo: only 1 distinct candidate available. Retimed {c1.chunk_id} ({c1_dur:.2f}s -> {visual_duration:.2f}s)."
+        )
+        try:
+            from pipeline.footage.audit import get_audit_collector
+            audit = get_audit_collector()
+            audit.record_selection(
+                beat.id,
+                [{
+                    "clip_id": item.id,
+                    "asset_id": item.assetId,
+                    "track_start": item.trackStart,
+                    "track_end": item.trackEnd,
+                    "duration": visual_duration,
+                    "storage_path": item.storagePath,
+                }],
+                [note],
+            )
+        except Exception as e:
+            logger.debug(f"[DurationMatcher] Audit recording note: {e}")
+        return plan, [item], []
+
+    # 4. Balanced Splice Strategy (when >= 2 distinct candidates are available)
+    if deficit_strategy == "balanced_splice" and len(distinct_cands) >= 2 and visual_duration >= 3.0:
+        c1, c2 = distinct_cands[0], distinct_cands[1]
+        c1_dur = c1.duration_sec or (c1.end_ts - c1.start_ts if c1.end_ts else visual_duration)
+        c2_dur = c2.duration_sec or (c2.end_ts - c2.start_ts if c2.end_ts else visual_duration)
+        if c1.motion_mean is not None and c1.motion_mean < 5.0:
+            c1_dur = min(c1_dur, 2.0)
+        if c2.motion_mean is not None and c2.motion_mean < 5.0:
+            c2_dur = min(c2_dur, 2.0)
+
+        target_split = round(visual_duration / 2.0, 2)
+        dur1 = min(c1_dur, target_split)
+        dur2 = round(visual_duration - dur1, 2)
+        if dur2 > c2_dur:
+            dur2 = c2_dur
+            dur1 = round(visual_duration - dur2, 2)
+
+        dur1 = round(dur1, 2)
+        dur2 = round(dur2, 2)
+
+        items = [
+            TrackItem(
+                id=f"clip_{beat.id}_1",
+                assetId=c1.chunk_id,
+                trackStart=beat_start,
+                trackEnd=round(beat_start + dur1, 2),
+                zIndex=0,
+                layerRole="background",
+                layout="full",
+                sourceIn=0.0,
+                sourceOut=dur1,
+                assetType="video",
+                storagePath=c1.storage_path,
+                storageUrl=c1.storage_url,
+                props=bg_props,
+            ),
+            TrackItem(
+                id=f"clip_{beat.id}_2",
+                assetId=c2.chunk_id,
+                trackStart=round(beat_start + dur1, 2),
+                trackEnd=beat_end,
+                zIndex=0,
+                layerRole="background",
+                layout="full",
+                sourceIn=0.0,
+                sourceOut=dur2,
+                assetType="video",
+                storagePath=c2.storage_path,
+                storageUrl=c2.storage_url,
+                props=bg_props,
+            ),
+        ]
+        plan = AssetPlan(
+            strategy="balanced_splice",
+            items=[
+                AssetItem(type="video", chunk_id=c1.chunk_id, source_in=0.0, source_out=dur1, storage_path=c1.storage_path, storage_url=c1.storage_url, props=bg_props),
+                AssetItem(type="video", chunk_id=c2.chunk_id, source_in=0.0, source_out=dur2, storage_path=c2.storage_path, storage_url=c2.storage_url, props=bg_props),
+            ],
+            layers=[
+                Layer(role="background", z=0, type="video", layout="full", chunk_id=c1.chunk_id, source_in=0.0, source_out=dur1, storage_path=c1.storage_path, storage_url=c1.storage_url, props=bg_props),
+                Layer(role="background", z=0, type="video", layout="full", chunk_id=c2.chunk_id, source_in=0.0, source_out=dur2, storage_path=c2.storage_path, storage_url=c2.storage_url, props=bg_props),
+            ],
+        )
+        try:
+            from pipeline.footage.audit import get_audit_collector
+            audit = get_audit_collector()
+            audit.record_selection(
+                beat.id,
+                [
+                    {"clip_id": items[0].id, "asset_id": items[0].assetId, "track_start": items[0].trackStart, "track_end": items[0].trackEnd, "duration": dur1, "storage_path": items[0].storagePath},
+                    {"clip_id": items[1].id, "asset_id": items[1].assetId, "track_start": items[1].trackStart, "track_end": items[1].trackEnd, "duration": dur2, "storage_path": items[1].storagePath},
+                ],
+                [f"Balanced splice applied: 50/50 split ({dur1:.2f}s + {dur2:.2f}s) between '{c1.chunk_id}' and '{c2.chunk_id}'."],
+            )
+        except Exception as e:
+            logger.debug(f"[DurationMatcher] Audit recording note: {e}")
+        return plan, items, []
+
     video_items: list[TrackItem] = []
     plan_items: list[AssetItem] = []
     plan_layers: list[Layer] = []
     remaining_duration = visual_duration
     current_track_pos = beat_start
-    bg_props = apply_mood_effects_to_props(None, beat)
     used_media_ids: set[str] = set()
     used_storage_paths: set[str] = set()
     selection_notes: list[str] = []
