@@ -265,7 +265,8 @@ class UnifiedWorker:
         if self.use_mock:
             backend = "mock"
         payload["backend"] = backend
-        return handle_tts_synthesize_task(payload=payload, tmp_dir=self.work_dir)
+        engine = self._get_tts_engine(backend)
+        return handle_tts_synthesize_task(payload=payload, tmp_dir=self.work_dir, engine=engine)
 
     def _handle_search(self, task: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Executes footage search task via footage_engine."""

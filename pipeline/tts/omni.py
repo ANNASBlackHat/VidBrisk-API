@@ -9,7 +9,7 @@ Supports:
 import logging
 import os
 import time
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from pipeline.tts.base import AudioResult, TTSProvider
 
@@ -142,6 +142,9 @@ def resolve_voice_reference(voice: Optional[str]) -> Tuple[Optional[str], Option
     return None, None, voice
 
 
+_SHARED_OMNI_MODELS: dict[tuple[str, str], Any] = {}
+
+
 class OmniTTSProvider(TTSProvider):
     """Zero-shot voice cloning and voice design using k2-fsa/OmniVoice."""
 
@@ -164,19 +167,27 @@ class OmniTTSProvider(TTSProvider):
         self._model = None
 
     def _init_model(self):
+        cache_key = (self.model_name, str(self.device))
+        if cache_key in _SHARED_OMNI_MODELS:
+            self._model = _SHARED_OMNI_MODELS[cache_key]
+            return self._model
+
         if self._model is not None:
+            _SHARED_OMNI_MODELS[cache_key] = self._model
             return self._model
 
         import torch
         from omnivoice import OmniVoice
 
-        dtype = torch.float16 if "cuda" in self.device else torch.float32
+        dtype = torch.float16 if "cuda" in str(self.device) else torch.float32
         logger.info(f"Loading OmniVoice model '{self.model_name}' on {self.device} (dtype={dtype})...")
-        self._model = OmniVoice.from_pretrained(
+        model = OmniVoice.from_pretrained(
             self.model_name,
             device_map=self.device,
             dtype=dtype,
         )
+        _SHARED_OMNI_MODELS[cache_key] = model
+        self._model = model
         return self._model
 
     def synthesize(
@@ -197,18 +208,20 @@ class OmniTTSProvider(TTSProvider):
         dest_path = output_path or f"synthesized_omni_{int(time.time() * 1000)}.wav"
         os.makedirs(os.path.dirname(os.path.abspath(dest_path)), exist_ok=True)
 
-        if ref_audio:
-            logger.info(f"[OmniTTS] Voice cloning with ref_audio={ref_audio}")
-            kwargs = {"text": text, "ref_audio": ref_audio}
-            if ref_text:
-                kwargs["ref_text"] = ref_text
-            audio = model.generate(**kwargs)
-        else:
-            prompt = normalize_instruct(instruct or self.default_instruct)
-            logger.info(f"[OmniTTS] Voice design with instruct='{prompt}'")
-            audio = model.generate(text=text, instruct=prompt)
-
         try:
+            import torch
+            with torch.inference_mode():
+                if ref_audio:
+                    logger.info(f"[OmniTTS] Voice cloning with ref_audio={ref_audio}")
+                    kwargs = {"text": text, "ref_audio": ref_audio}
+                    if ref_text:
+                        kwargs["ref_text"] = ref_text
+                    audio = model.generate(**kwargs)
+                else:
+                    prompt = normalize_instruct(instruct or self.default_instruct)
+                    logger.info(f"[OmniTTS] Voice design with instruct='{prompt}'")
+                    audio = model.generate(text=text, instruct=prompt)
+
             arr = audio[0] if isinstance(audio, (list, tuple)) else audio
             if hasattr(arr, "cpu"):
                 arr = arr.cpu().numpy()
@@ -228,7 +241,10 @@ class OmniTTSProvider(TTSProvider):
                 sample_rate=info.samplerate,
             )
         finally:
-            del audio
+            if "audio" in locals():
+                del audio
+            import gc
+            gc.collect()
             try:
                 import torch
                 if torch.cuda.is_available():

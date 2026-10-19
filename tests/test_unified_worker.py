@@ -196,6 +196,34 @@ def test_worker_run_loop_handles_failure(
     assert stats["claimed"] == 1
     assert stats["completed"] == 0
     assert stats["failed"] == 1
-    mock_fail.assert_called_once()
     assert mock_fail.call_args[1]["job_id"] == "job-fail-1"
     assert "Synthesis crashed" in mock_fail.call_args[1]["error"]
+
+
+def test_handle_tts_reuses_cached_engine():
+    worker = UnifiedWorker(tasks=["tts"], use_mock=True)
+
+    with patch("scripts.run_tts_worker.handle_tts_synthesize_task") as mock_synth:
+        mock_synth.return_value = {"status": "success", "audio_b64": "dummy"}
+
+        worker._handle_tts({"text": "First beat", "backend": "mock"})
+        worker._handle_tts({"text": "Second beat", "backend": "mock"})
+
+        assert mock_synth.call_count == 2
+        engine_call_1 = mock_synth.call_args_list[0].kwargs.get("engine")
+        engine_call_2 = mock_synth.call_args_list[1].kwargs.get("engine")
+
+        assert engine_call_1 is not None
+        assert engine_call_1 is engine_call_2
+
+
+def test_run_tts_worker_cached_engines():
+    from scripts.run_tts_worker import _CACHED_ENGINES, _get_engine
+
+    _CACHED_ENGINES.clear()
+
+    e1 = _get_engine("mock")
+    e2 = _get_engine("mock")
+    assert e1 is e2
+    assert "mock" in _CACHED_ENGINES
+

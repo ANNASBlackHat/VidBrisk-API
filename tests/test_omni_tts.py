@@ -70,3 +70,25 @@ def test_omni_tts_provider_synthesize_mocked(tmp_path):
     assert result.sample_rate == 24000
     assert result.duration_sec > 0
     mock_model.generate.assert_called_once()
+
+
+def test_omni_tts_shared_model_cache():
+    from pipeline.tts.omni import _SHARED_OMNI_MODELS
+    _SHARED_OMNI_MODELS.clear()
+
+    mock_omni_class = MagicMock()
+    mock_model_instance = MagicMock()
+    mock_omni_class.from_pretrained.return_value = mock_model_instance
+
+    with patch.dict("sys.modules", {"omnivoice": MagicMock(OmniVoice=mock_omni_class)}):
+        p1 = OmniTTSProvider(device="cpu")
+        m1 = p1._init_model()
+
+        p2 = OmniTTSProvider(device="cpu")
+        m2 = p2._init_model()
+
+        assert m1 is m2
+        assert m1 is mock_model_instance
+        mock_omni_class.from_pretrained.assert_called_once()
+        assert ("k2-fsa/OmniVoice", "cpu") in _SHARED_OMNI_MODELS
+

@@ -21,44 +21,55 @@ if not logger.handlers:
     logger.setLevel(logging.INFO)
 
 
-def _get_engine(backend: str):
-    """Instantiates the requested synthesis engine."""
+_CACHED_ENGINES: dict[str, Any] = {}
+
+
+def _get_engine(backend: str, allow_fallback: bool = True):
+    """Instantiates and caches the requested synthesis engine."""
     b = backend.lower().strip()
+    if b in _CACHED_ENGINES:
+        return _CACHED_ENGINES[b]
+
+    engine = None
     if b == "mock":
         from pipeline.tts.mock import MockTTSProvider
-        return MockTTSProvider()
+        engine = MockTTSProvider()
     elif b == "kokoro":
         from pipeline.tts.kokoro import KokoroTTSProvider
-        return KokoroTTSProvider()
+        engine = KokoroTTSProvider()
     elif b == "chatterbox":
         from pipeline.tts.chatterbox import ChatterboxTTSProvider
-        return ChatterboxTTSProvider()
+        engine = ChatterboxTTSProvider()
     elif b in ("supersonic", "supertonic"):
         from pipeline.tts.supersonic import SuperSonicTTSProvider
-        return SuperSonicTTSProvider()
+        engine = SuperSonicTTSProvider()
     elif b in ("omni", "omnivoice"):
         try:
             from pipeline.tts.omni import OmniTTSProvider
             logger.info("Initializing OmniVoice engine on GPU...")
-            return OmniTTSProvider()
+            engine = OmniTTSProvider()
         except Exception as e:
             if not allow_fallback:
                 raise
             logger.warning(f"OmniVoice failed to initialize ({e}). Using Kokoro fallback.")
             from pipeline.tts.kokoro import KokoroTTSProvider
-            return KokoroTTSProvider()
+            engine = KokoroTTSProvider()
     elif b in ("xtts", "cosyvoice"):
         # Placeholder for other experimental engines
         from pipeline.tts.kokoro import KokoroTTSProvider
-        return KokoroTTSProvider()
+        engine = KokoroTTSProvider()
     else:
         raise ValueError(f"Unknown or unsupported TTS backend: '{backend}'")
+
+    _CACHED_ENGINES[b] = engine
+    return engine
 
 
 def handle_tts_synthesize_task(
     payload: dict[str, Any],
     tmp_dir: Optional[str] = None,
     allow_fallback: bool = True,
+    engine: Optional[Any] = None,
 ) -> dict[str, Any]:
     """Core handler that executes TTS synthesis and packages output using requested transport."""
     from pipeline.tts.transports import get_audio_transport
@@ -91,14 +102,15 @@ def handle_tts_synthesize_task(
         voice = voice_prompt
 
     try:
-        try:
-            engine = _get_engine(backend)
-        except Exception as e:
-            if not allow_fallback:
-                raise
-            logger.warning(f"Backend '{backend}' failed to load ({e}). Using Kokoro fallback.")
-            from pipeline.tts.kokoro import KokoroTTSProvider
-            engine = KokoroTTSProvider()
+        if engine is None:
+            try:
+                engine = _get_engine(backend, allow_fallback=allow_fallback)
+            except Exception as e:
+                if not allow_fallback:
+                    raise
+                logger.warning(f"Backend '{backend}' failed to load ({e}). Using Kokoro fallback.")
+                from pipeline.tts.kokoro import KokoroTTSProvider
+                engine = KokoroTTSProvider()
 
         audio_res = engine.synthesize(text=text, voice=voice, output_path=temp_wav_path)
 
@@ -127,12 +139,15 @@ def handle_tts_synthesize_task(
                     os.remove(txt_path)
             except OSError:
                 pass
+        import gc
+        gc.collect()
         try:
             import torch
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
         except Exception:
             pass
+
 
 
 def run_queue_worker(database_url: str, backend: str, poll_interval: float = 1.0, idle_exit: int = 0) -> None:
@@ -159,6 +174,12 @@ def run_queue_worker(database_url: str, backend: str, poll_interval: float = 1.0
 
     logger.info(f"Worker '{worker_id}' registered successfully. Polling for 'tts_synthesize' jobs...")
 
+    engine = None
+    try:
+        engine = _get_engine(backend)
+    except Exception as e:
+        logger.warning(f"Engine preload for '{backend}' deferred or failed ({e}).")
+
     try:
         while True:
             heartbeat_worker(database_url=database_url, worker_id=worker_id)
@@ -177,7 +198,7 @@ def run_queue_worker(database_url: str, backend: str, poll_interval: float = 1.0
                 set_worker_status(database_url=database_url, worker_id=worker_id, status="busy", job_id=job_id)
 
                 try:
-                    result = handle_tts_synthesize_task(job.get("payload", {}))
+                    result = handle_tts_synthesize_task(job.get("payload", {}), engine=engine)
                     complete_job(database_url=database_url, job_id=job_id, result=result)
                     logger.info(f"Completed job '{job_id}' successfully.")
                 except Exception as ex:

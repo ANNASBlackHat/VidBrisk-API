@@ -116,8 +116,9 @@ class WorkerTTSProvider:
             h_resp = requests.get(health_url, headers=headers, timeout=2.0)
             if h_resp.status_code != 200:
                 logger.warning(
-                    f"[WorkerTTSProvider] ngrok endpoint '{self.ngrok_url}' returned health={h_resp.status_code}. Using fallback."
+                    f"[WorkerTTSProvider] ngrok endpoint '{self.ngrok_url}' returned health={h_resp.status_code}. Disabling ngrok endpoint."
                 )
+                self.ngrok_url = ""
                 return None
 
             # Resolve reference audio or prompt if provided
@@ -173,7 +174,8 @@ class WorkerTTSProvider:
             )
 
         except Exception as e:
-            logger.warning(f"[WorkerTTSProvider] Direct HTTP error: {e}. Falling back to local engine.")
+            logger.warning(f"[WorkerTTSProvider] Direct HTTP error: {e}. Disabling ngrok endpoint.")
+            self.ngrok_url = ""
             return None
 
     def _synthesize_via_queue(
