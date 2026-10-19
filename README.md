@@ -182,6 +182,7 @@ uv run python run_pipeline.py \
 | `--output` | `-o` | `output/timeline.json` | Path to save the compiled timeline JSON |
 | `--engine` | | `remotion` | Target rendering engine: `remotion` (default), `hyperframes`, or `native_fast` |
 | `--render` | `-r` | `None` | Output MP4 path. If specified, auto-renders final video using selected `--engine` |
+| `--deficit-strategy` | | `balanced_splice` | Deficit strategy when footage < beat: `balanced_splice` (default), `slowmo`, or `continuous` |
 | `--fit-mode` | | `blur_bg` | Aspect ratio framing mode: `blur_bg` (blurred background), `pad` (black bars), or `crop` |
 | `--orientation` | | `horizontal` | Video aspect ratio: `horizontal` (16:9), `vertical` (9:16), `square` (1:1), or `any` |
 | `--tts` | | `kokoro` | TTS engine (`omni`, `kokoro`, `chatterbox`, `mock`) |
@@ -193,6 +194,21 @@ uv run python run_pipeline.py \
 | `--channel` | | `None` | Channel name matching `style_skills/<channel>.md` |
 | `--audio-dir` | | *Auto-derived* | Directory to save generated per-beat `.wav` audio files |
 | `--single-pass` | | `False` | Use single combined LLM call for script clean + beat structure |
+
+### ⏱️ Footage Deficit Handling Strategies
+
+When retrieved video footage is shorter than the spoken voiceover beat duration, the pipeline handles the deficit according to `--deficit-strategy` (or environment variable `DEFICIT_STRATEGY`):
+
+1. **`balanced_splice` (Default)**:
+   - When a beat requires more duration than Candidate 1 and at least 2 distinct footage assets exist in the candidate pool, it splits the duration **50/50 across both clips** (e.g. `2.4s + 2.4s` for a `4.8s` beat) to give each shot balanced breathing room.
+   - **Micro-cut guard**: If the deficit is `< 1.0s`, Candidate 1 is extended rather than slicing an awkwardly brief secondary clip.
+   - **Smart Fallback**: If only 1 distinct candidate exists (e.g. other candidates belong to the same source video `media_item_id`), it automatically falls back to clean `slowmo` retiming, eliminating identical repeating clips.
+2. **`slowmo`**:
+   - Retimes Candidate 1 dynamically using FFmpeg `setpts=(target_duration / clip_duration) * PTS`.
+   - Eliminates rewind/stream-loop artifacts completely for a smooth, cinematic cadence.
+3. **`continuous`**:
+   - Extends the source playback window beyond the database chunk boundary into the underlying raw footage (`source_out = source_in + beat_duration`).
+
 
 ---
 
