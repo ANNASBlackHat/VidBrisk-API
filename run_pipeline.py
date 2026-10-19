@@ -114,6 +114,13 @@ def main():
         default="remotion",
         help="Target video generation engine: remotion (default), hyperframes, or native_fast",
     )
+    parser.add_argument(
+        "--deficit-strategy",
+        type=str,
+        choices=["balanced_splice", "slowmo", "continuous"],
+        default=None,
+        help="Strategy to handle footage shorter than speech beat: balanced_splice (default), slowmo, or continuous",
+    )
 
     args = parser.parse_args()
 
@@ -160,6 +167,7 @@ def main():
             genre=args.genre,
             voice=args.voice,
             engine=args.engine,
+            deficit_strategy=args.deficit_strategy,
         )
 
         if args.no_captions:

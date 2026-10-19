@@ -23,6 +23,7 @@ def plan_beat_assets(
     voice_clip: VoiceClip,
     candidates: list[CandidateChunk],
     track_cursor: float,
+    deficit_strategy: str = "balanced_splice",
 ) -> tuple[AssetPlan, list[TrackItem], list[TrackItem]]:
     """Determines the visual asset plan and produces video & text TrackItems for a single beat.
 

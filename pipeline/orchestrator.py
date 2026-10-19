@@ -31,6 +31,7 @@ def run_pipeline(
     genre: Optional[str] = None,
     voice: Optional[str] = None,
     engine: str = "remotion",
+    deficit_strategy: Optional[str] = None,
 ) -> TimelinePlan:
     """Executes stages [1] to [6] end-to-end on raw script text.
 
@@ -204,6 +205,7 @@ def run_pipeline(
         timings=timings_map,
         footage_candidates=candidates_map,
         output_json_path=output_json_path,
+        deficit_strategy=deficit_strategy,
     )
     print(f"  ✓ Timeline generated: {timeline.total_duration:.2f}s total duration across {len(timeline.tracks)} tracks.")
     if output_json_path:

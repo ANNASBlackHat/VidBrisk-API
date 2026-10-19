@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     STORAGE_BACKEND: Literal["local", "imagekit"] = "local"
     LOCAL_STORAGE_DIR: str = "./data/storage"
     OUTPUT_DIR: str = "./output"
+    DEFICIT_STRATEGY: Literal["balanced_splice", "slowmo", "continuous"] = "balanced_splice"
 
     # TTS Settings
     DEFAULT_TTS_PROVIDER: Literal[
