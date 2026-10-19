@@ -27,6 +27,7 @@ def assemble_timeline(
     footage_candidates: Optional[dict[str, list[CandidateChunk]]] = None,
     output_json_path: Optional[str] = None,
     deficit_strategy: Optional[str] = None,
+    engine: Optional[str] = None,
 ) -> TimelinePlan:
     """Assembles all intermediate stage results into a final TimelinePlan."""
     from pipeline.config import get_settings
@@ -75,6 +76,7 @@ def assemble_timeline(
             candidates=beat_candidates,
             track_cursor=current_time,
             deficit_strategy=strategy,
+            engine=engine,
         )
 
         video_items.extend(beat_video_items)

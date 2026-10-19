@@ -24,6 +24,7 @@ def plan_beat_assets(
     candidates: list[CandidateChunk],
     track_cursor: float,
     deficit_strategy: str = "balanced_splice",
+    engine: Optional[str] = None,
 ) -> tuple[AssetPlan, list[TrackItem], list[TrackItem]]:
     """Determines the visual asset plan and produces video & text TrackItems for a single beat.
 
@@ -42,21 +43,22 @@ def plan_beat_assets(
     # --------------------------------------------------------------------------
     # Case 0: Explicit Multi-Layer Layout Recipes or Overlay Modes
     # --------------------------------------------------------------------------
-    if layout_recipe == "split_screen":
-        return plan_split_screen(beat, voice_clip, candidates, track_cursor)
-    elif layout_recipe == "stat_over_footage" or (
-        beat.beat_type == "stat" and candidates and motion_props.get("display_mode") == "overlay"
-    ):
-        return plan_stat_over_footage(beat, voice_clip, candidates, track_cursor)
-    elif layout_recipe == "quote_over_footage" or (
-        beat.beat_type == "abstract" and candidates and motion_props.get("display_mode") == "overlay"
-    ):
-        return plan_quote_over_footage(beat, voice_clip, candidates, track_cursor)
+    if engine != "native_fast":
+        if layout_recipe == "split_screen":
+            return plan_split_screen(beat, voice_clip, candidates, track_cursor)
+        elif layout_recipe == "stat_over_footage" or (
+            beat.beat_type == "stat" and candidates and motion_props.get("display_mode") == "overlay"
+        ):
+            return plan_stat_over_footage(beat, voice_clip, candidates, track_cursor)
+        elif layout_recipe == "quote_over_footage" or (
+            beat.beat_type == "abstract" and candidates and motion_props.get("display_mode") == "overlay"
+        ):
+            return plan_quote_over_footage(beat, voice_clip, candidates, track_cursor)
 
     # --------------------------------------------------------------------------
     # Case 1: 'stat' or 'abstract' beats -> motion_text strategy
     # --------------------------------------------------------------------------
-    if beat.beat_type == "stat":
+    if engine != "native_fast" and beat.beat_type == "stat":
         motion_props = beat.motion_props or {}
         comp_id = motion_props.get("component", "DataAnimations/StatCard")
         plan = AssetPlan(
@@ -97,24 +99,31 @@ def plan_beat_assets(
         )
         return plan, [], [text_item]
 
-    if (
-        beat.beat_type
-        in (
-            "abstract",
-            "kinetic",
-            "quote",
-            "typewriter",
-            "swipe_deck",
-            "chat_bubbles",
-            "map_route",
-            "audio_waveform",
+    # For native_fast: if candidates exist, prefer video footage over motion text
+    should_use_motion = (
+        not candidates
+        if engine == "native_fast"
+        else (
+            beat.beat_type
+            in (
+                "abstract",
+                "kinetic",
+                "quote",
+                "typewriter",
+                "swipe_deck",
+                "chat_bubbles",
+                "map_route",
+                "audio_waveform",
+            )
+            or not candidates
+            or getattr(beat, "footage_status", None) == "inadequate"
         )
-        or not candidates
-        or getattr(beat, "footage_status", None) == "inadequate"
-    ):
+    )
+
+    if should_use_motion:
         motion_props = beat.motion_props or {}
         comp_id = motion_props.get("component")
-        if not comp_id:
+        if not comp_id and engine != "native_fast":
             if beat.beat_type == "swipe_deck":
                 comp_id = "ListAnimations/SwipeDeck"
             elif beat.beat_type == "chat_bubbles":
@@ -133,32 +142,40 @@ def plan_beat_assets(
                 comp_id = "TextAnimations/QuoteCard"
 
         # Determine style identifier
-        if "SwipeDeck" in comp_id:
+        if comp_id and "SwipeDeck" in comp_id:
             style = "swipe-deck"
-        elif "ChatBubbles" in comp_id:
+        elif comp_id and "ChatBubbles" in comp_id:
             style = "chat-reveal"
-        elif "KineticText" in comp_id or "Typewriter" in comp_id:
+        elif comp_id and ("KineticText" in comp_id or "Typewriter" in comp_id):
             style = "kinetic-title"
-        elif "StatCard" in comp_id:
+        elif comp_id and "StatCard" in comp_id:
             style = "stat-callout"
-        elif "MapExplainer" in comp_id:
+        elif comp_id and "MapExplainer" in comp_id:
             style = "map-route"
-        elif "AudioWaveform" in comp_id:
+        elif comp_id and "AudioWaveform" in comp_id:
             style = "audio-waveform"
         else:
             style = "quote-card"
 
-        layout_role = motion_props.get("display_mode", "takeover")
-        if layout_role == "overlay":
-            layout_role = "overlay-lower-third"
-        elif layout_role not in ("full", "takeover", "overlay-lower-third"):
-            layout_role = "takeover"
+        if engine == "native_fast":
+            comp_id = None
+            layout_role = "full"
+            layer_role = "background"
+            asset_type = "text"
+        else:
+            layout_role = motion_props.get("display_mode", "takeover")
+            if layout_role == "overlay":
+                layout_role = "overlay-lower-third"
+            elif layout_role not in ("full", "takeover", "overlay-lower-third"):
+                layout_role = "takeover"
+            layer_role = "overlay"
+            asset_type = "motion"
 
         plan = AssetPlan(
-            strategy="motion_text",
+            strategy="text_card" if engine == "native_fast" else "motion_text",
             items=[
                 AssetItem(
-                    type="motion",
+                    type=asset_type,
                     content=beat.text,
                     style=style,
                     component_id=comp_id,
@@ -167,9 +184,9 @@ def plan_beat_assets(
             ],
             layers=[
                 Layer(
-                    role="overlay",
+                    role=layer_role,
                     z=0,
-                    type="motion",
+                    type=asset_type,
                     layout=layout_role,
                     component_id=comp_id,
                     content=beat.text,
@@ -183,12 +200,13 @@ def plan_beat_assets(
             trackStart=beat_start,
             trackEnd=beat_end,
             zIndex=0,
-            layerRole="overlay",
+            layerRole=layer_role,
             layout=layout_role,
             content=beat.text,
             style=style,
             componentId=comp_id,
             props=motion_props,
+            assetType=asset_type,
         )
         return plan, [], [text_item]
 

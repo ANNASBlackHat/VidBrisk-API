@@ -206,6 +206,7 @@ def run_pipeline(
         footage_candidates=candidates_map,
         output_json_path=output_json_path,
         deficit_strategy=deficit_strategy,
+        engine=engine,
     )
     print(f"  ✓ Timeline generated: {timeline.total_duration:.2f}s total duration across {len(timeline.tracks)} tracks.")
     if output_json_path:
