@@ -29,9 +29,10 @@ def send_video(video_path: str, caption: str = ""):
     file_size_mb = os.path.getsize(video_path) / (1024 * 1024)
     print(f"Original video size: {file_size_mb:.2f} MB")
     
-    # If video is larger than 10MB, compress for speedy Telegram upload
-    if file_size_mb > 10.0:
-        print("File is larger than 10MB. Optimizing for quick Telegram dispatch...")
+    upload_path = video_path
+    # If video is larger than 3MB, optimize for speedy Telegram upload
+    if file_size_mb > 3.0:
+        print("Optimizing video size for reliable Telegram dispatch...")
         base, ext = os.path.splitext(video_path)
         upload_path = f"{base}_telegram.mp4"
 
