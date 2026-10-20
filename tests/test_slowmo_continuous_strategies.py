@@ -26,7 +26,8 @@ def test_slowmo_strategy_marks_retime_props():
     assert len(items) == 1
     assert items[0].trackEnd - items[0].trackStart == 5.0
     assert items[0].props.get("retime_strategy") == "slowmo"
-    assert items[0].props.get("retime_factor") == 1.667
+    # Clamped to MAX_SLOWMO_FACTOR ceiling (1.35)
+    assert items[0].props.get("retime_factor") == 1.35
     assert plan.strategy == "slowmo_retime"
 
 
