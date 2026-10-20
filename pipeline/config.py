@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     LOCAL_STORAGE_DIR: str = "./data/storage"
     OUTPUT_DIR: str = "./output"
     DEFICIT_STRATEGY: Literal["balanced_splice", "slowmo", "continuous"] = "balanced_splice"
+    MAX_SLOWMO_FACTOR: float = 1.35
+    MIN_SPEEDUP_FACTOR: float = 0.85
+
 
     # TTS Settings
     DEFAULT_TTS_PROVIDER: Literal[
