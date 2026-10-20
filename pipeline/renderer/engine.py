@@ -487,19 +487,37 @@ class VideoRenderer:
         pts_factor = 1.0
         loop_args: list[str] = []
 
+        from pipeline.config import get_settings
+        settings = get_settings()
+        max_slowmo = getattr(settings, "MAX_SLOWMO_FACTOR", 1.35)
+
         if is_slowmo:
             avail_dur = max(0.1, (media_dur - start_ts) if media_dur is not None else duration)
-            pts_factor = max(0.2, min(5.0, duration / avail_dur))
-            self._log(f"  ↳ [Slowmo] Retiming video with setpts factor {pts_factor:.3f}x (no loops)")
+            pts_factor = max(0.2, min(max_slowmo, duration / avail_dur))
+            if media_dur is not None and duration > (avail_dur * pts_factor + 0.1):
+                loop_args = ["-stream_loop", "-1"]
+                self._log(f"  ↳ [Slowmo] Retiming video with setpts factor {pts_factor:.3f}x + stream_loop guard")
+            else:
+                self._log(f"  ↳ [Slowmo] Retiming video with setpts factor {pts_factor:.3f}x (no loops)")
         elif is_continuous:
             if media_dur is not None and (start_ts + duration) > media_dur:
                 avail_dur = max(0.1, media_dur - start_ts)
-                pts_factor = max(0.2, min(5.0, duration / avail_dur))
-                self._log(f"  ↳ [Continuous-Slowmo] Raw source ended; retimed factor {pts_factor:.3f}x (no loops)")
+                pts_factor = max(0.2, min(max_slowmo, duration / avail_dur))
+                if duration > (avail_dur * pts_factor + 0.1):
+                    loop_args = ["-stream_loop", "-1"]
+                    self._log(f"  ↳ [Continuous-Slowmo] Raw source ended; retimed factor {pts_factor:.3f}x + stream_loop guard")
+                else:
+                    self._log(f"  ↳ [Continuous-Slowmo] Raw source ended; retimed factor {pts_factor:.3f}x (no loops)")
         else:
             if media_dur is not None and duration > media_dur:
-                pts_factor = duration / max(0.1, media_dur - start_ts)
-                self._log(f"  ↳ [Retiming] Overcoming deficit with setpts factor {pts_factor:.3f}x (avoiding stream_loop repeat)")
+                avail_dur = max(0.1, media_dur - start_ts)
+                pts_factor = max(0.2, min(max_slowmo, duration / avail_dur))
+                if duration > (avail_dur * pts_factor + 0.1):
+                    loop_args = ["-stream_loop", "-1"]
+                    self._log(f"  ↳ [Retiming] Overcoming deficit with setpts factor {pts_factor:.3f}x + stream_loop guard")
+                else:
+                    self._log(f"  ↳ [Retiming] Overcoming deficit with setpts factor {pts_factor:.3f}x (avoiding stream_loop repeat)")
+
 
         if fit_mode == "blur_bg":
             filter_str = self._get_filter_complex(width, height, fit_mode, pts_factor=pts_factor)
