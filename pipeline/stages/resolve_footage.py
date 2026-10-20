@@ -24,6 +24,8 @@ def resolve_footage(
     provider: Optional[str] = None,
     exclude_source_video_ids: Optional[list[str]] = None,
     exclude_chunk_ids: Optional[list[str]] = None,
+    context_anchor: Optional[str] = None,
+    genre: Optional[str] = None,
 ) -> list[CandidateChunk]:
     """Resolves raw footage candidates for a single beat via Footage Engine search."""
     motion_props = beat.motion_props or {}
@@ -48,7 +50,12 @@ def resolve_footage(
         return []
 
     footage_engine = resolver or FootageResolver()
-    query = beat.visual_intent or beat.text
+    raw_query = beat.visual_intent or beat.text
+
+    from pipeline.genre_anchor import format_anchored_query, get_genre_anchor
+    eff_anchor = context_anchor or (get_genre_anchor(genre) if genre else None)
+    query = format_anchored_query(raw_query, eff_anchor) if eff_anchor else raw_query
+
     kwargs = {
         "query": query,
         "top_k": top_k,
@@ -77,7 +84,10 @@ def resolve_beat_visuals(
     exclude_source_video_ids: Optional[list[str]] = None,
     exclude_chunk_ids: Optional[list[str]] = None,
     engine: str = "remotion",
+    context_anchor: Optional[str] = None,
+    genre: Optional[str] = None,
 ) -> tuple[Beat, list[CandidateChunk]]:
+
     """Executes the full staged Beat -> Search -> Assess/Requery -> Concept loop.
 
     1. If the beat was already designated as an independent motion graphic,
@@ -108,6 +118,8 @@ def resolve_beat_visuals(
         return beat, []
 
     footage_engine = resolver or FootageResolver()
+    from pipeline.genre_anchor import format_anchored_query, get_genre_anchor
+    eff_anchor = context_anchor or (get_genre_anchor(genre) if genre else None)
 
     # Stage 3: Initial search
     candidates = resolve_footage(
@@ -118,6 +130,8 @@ def resolve_beat_visuals(
         provider=provider,
         exclude_source_video_ids=exclude_source_video_ids,
         exclude_chunk_ids=exclude_chunk_ids,
+        context_anchor=eff_anchor,
+        genre=genre,
     )
     if not candidates and exclude_source_video_ids:
         candidates = resolve_footage(
@@ -128,6 +142,8 @@ def resolve_beat_visuals(
             provider=provider,
             exclude_source_video_ids=None,
             exclude_chunk_ids=exclude_chunk_ids,
+            context_anchor=eff_anchor,
+            genre=genre,
         )
 
     # Stage 4: Assess & Decide
@@ -143,11 +159,12 @@ def resolve_beat_visuals(
     # Requery loop if needed
     while status == FootageStatus.REQUERIED and beat.requery_count < eff_max_requeries:
         beat.requery_count += 1
-        new_query = reformulate_query(beat, client=llm_client)
+        new_query = reformulate_query(beat, client=llm_client, context_anchor=eff_anchor)
         beat.visual_intent = new_query
+        anchored_search_query = format_anchored_query(new_query, eff_anchor) if eff_anchor else new_query
 
         candidates = footage_engine.search_candidates(
-            query=new_query,
+            query=anchored_search_query,
             top_k=top_k,
             target_orientation=target_orientation,
             provider=provider,
@@ -157,7 +174,7 @@ def resolve_beat_visuals(
         )
         if not candidates and exclude_source_video_ids:
             candidates = footage_engine.search_candidates(
-                query=new_query,
+                query=anchored_search_query,
                 top_k=top_k,
                 target_orientation=target_orientation,
                 provider=provider,
@@ -165,6 +182,7 @@ def resolve_beat_visuals(
                 exclude_chunk_ids=exclude_chunk_ids,
                 beat_id=beat.id,
             )
+
 
         status = assess_beat_candidates(
             beat=beat,

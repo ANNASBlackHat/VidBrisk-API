@@ -133,17 +133,25 @@ def assess_beat_candidates(
 def reformulate_query(
     beat: Beat,
     client: Optional[GeminiLLMClient] = None,
+    context_anchor: Optional[str] = None,
 ) -> str:
     """Generates an adjusted, broader search query to recover from a search failure.
 
     Uses specific failure reasons (e.g. static loop vs mismatched subject)
-    to guide the query broadening.
+    and optional context anchor to guide the query broadening.
     """
     current_query = beat.visual_intent or beat.text
     reason = beat.requery_reason or "Low similarity score"
 
+    anchor_context = (
+        f"Genre / Environment Context: \"{context_anchor}\"\nEnsure all search terms stay strictly within this environment.\n"
+        if context_anchor
+        else ""
+    )
+
     prompt = (
         f"You are a video editor refining a stock footage search query.\n"
+        f"{anchor_context}"
         f"Narration line: \"{beat.text}\"\n"
         f"Initial search query: \"{current_query}\"\n"
         f"Search failure reason: \"{reason}\"\n\n"

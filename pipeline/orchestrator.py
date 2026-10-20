@@ -85,9 +85,24 @@ def run_pipeline(
     for b in beats:
         print(f"    - [{b.id}] ({b.beat_type}) {b.text[:40]}... -> intent: {b.visual_intent[:30]}...")
 
+    # Auto-detect genre if not explicitly provided
+    effective_genre = genre
+    if not effective_genre:
+        from pipeline.genre_detector import detect_genre
+        text_for_detection = raw_script if single_pass_llm else cleaned_text
+        effective_genre = detect_genre(text_for_detection, client=llm_client)
+        if effective_genre and effective_genre != "default":
+            print(f"  ↳ Auto-detected genre: '{effective_genre}'")
+
+    from pipeline.genre_anchor import get_genre_anchor
+    context_anchor = get_genre_anchor(effective_genre, channel)
+    if context_anchor:
+        print(f"  ↳ Visual domain anchor: '{context_anchor}'")
+
     tts = tts_provider or get_tts_provider()
     aligner = aligner_provider or get_aligner_provider()
     resolver = footage_resolver or FootageResolver()
+
 
     from pipeline.footage.audit import FootageDecisionAuditCollector, set_audit_collector
     audit = FootageDecisionAuditCollector()
@@ -132,6 +147,8 @@ def run_pipeline(
                     exclude_chunk_ids=selected_chunk_ids or None,
                     exclude_source_video_ids=recent_media or None,
                     engine=engine,
+                    context_anchor=context_anchor,
+                    genre=effective_genre,
                 )
                 beats[idx - 1] = updated_beat
             except Exception as e:
@@ -182,6 +199,8 @@ def run_pipeline(
                     exclude_chunk_ids=selected_chunk_ids or None,
                     exclude_source_video_ids=recent_media or None,
                     engine=engine,
+                    context_anchor=context_anchor,
+                    genre=effective_genre,
                 )
                 beats[idx - 1] = updated_beat
             except Exception as e:
