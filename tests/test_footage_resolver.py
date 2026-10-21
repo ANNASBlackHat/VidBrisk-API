@@ -331,3 +331,36 @@ def test_footage_resolver_provider_filter():
     )
 
 
+def test_search_by_caption_with_media_item_storage_path(monkeypatch):
+    """Verifies that search_by_caption uses media_item storage_path and unchunked media_items."""
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+
+    # Row 1: Chunk with missing chunk storage_path, but media_item storage_path populated
+    # Row 2: Unchunked media_item (e.g. Pixabay)
+    mock_cursor.fetchall.return_value = [
+        ("chk_1", "media_1", "youtube", 0.0, 5.0, "15jxqXywpcr4woXiLDCcpOtGehPYYh3np", "video", 10.0, 2.0, "octopus swimming", ["octopus"], 2),
+        ("media_pixabay_1", "media_pixabay_1", "pixabay", 0.0, 12.0, "https://pixabay.com/videos/download/video-123.mp4", "video", None, None, "deep sea coral reef", ["coral", "ocean"], 2),
+    ]
+
+    import psycopg2
+    monkeypatch.setattr(psycopg2, "connect", lambda *args, **kwargs: mock_conn)
+
+    resolver = FootageResolver(hybrid_search=False)
+    candidates = resolver.search_by_caption("octopus deep sea coral", top_k=5)
+
+    assert len(candidates) == 2
+    # Verify chunk candidate uses storage_path from media_item and resolves drive download url
+    assert candidates[0].chunk_id == "chk_1"
+    assert candidates[0].storage_path == "15jxqXywpcr4woXiLDCcpOtGehPYYh3np"
+    assert "drive.google.com/uc?export=download&id=15jxqXywpcr4woXiLDCcpOtGehPYYh3np" in candidates[0].storage_url
+
+    # Verify unchunked Pixabay candidate is successfully parsed
+    assert candidates[1].chunk_id == "media_pixabay_1"
+    assert candidates[1].provider == "pixabay"
+    assert candidates[1].storage_path == "https://pixabay.com/videos/download/video-123.mp4"
+    assert candidates[1].storage_url == "https://pixabay.com/videos/download/video-123.mp4"
+
+
+

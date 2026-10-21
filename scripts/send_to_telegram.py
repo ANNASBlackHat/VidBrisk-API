@@ -21,7 +21,7 @@ def get_telegram_creds():
                     chat_id = m_chat.group(1).strip()
     return token, chat_id
 
-def send_video(video_path: str, caption: str = ""):
+def send_video(video_path: str, caption: str = "", target_height: int = 320):
     token, chat_id = get_telegram_creds()
     if not token or not chat_id:
         raise ValueError("TELEGRAM_TOKEN or TELEGRAM_CHAT_ID not found in environment or ~/.zshrc")
@@ -30,17 +30,18 @@ def send_video(video_path: str, caption: str = ""):
     print(f"Original video size: {file_size_mb:.2f} MB")
     
     upload_path = video_path
-    # If video is larger than 3MB, optimize for speedy Telegram upload
+    # Optimize for speedy Telegram preview upload
     if file_size_mb > 3.0:
-        print("Optimizing video size for reliable Telegram dispatch...")
+        print(f"Optimizing video to {target_height}p preview size for reliable Telegram dispatch...")
         base, ext = os.path.splitext(video_path)
-        upload_path = f"{base}_telegram.mp4"
+        upload_path = f"{base}_preview_{target_height}p.mp4"
 
         cmd = [
             "ffmpeg", "-y", "-i", video_path,
-            "-c:v", "libx264", "-crf", "28",
-            "-preset", "faster",
-            "-c:a", "aac", "-b:a", "96k",
+            "-vf", f"scale=-2:'min({target_height},ih)'",
+            "-c:v", "libx264", "-crf", "32",
+            "-preset", "veryfast",
+            "-c:a", "aac", "-b:a", "64k",
             "-movflags", "+faststart",
             upload_path
         ]
@@ -68,9 +69,10 @@ def send_video(video_path: str, caption: str = ""):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python send_to_telegram.py <path_to_video> [caption]")
+        print("Usage: python send_to_telegram.py <path_to_video> [caption] [height_p]")
         sys.exit(1)
     
     v_path = sys.argv[1]
     cap = sys.argv[2] if len(sys.argv) > 2 else "🎬 Final Rendered Video"
-    send_video(v_path, cap)
+    h_p = int(sys.argv[3]) if len(sys.argv) > 3 else 320
+    send_video(v_path, cap, target_height=h_p)

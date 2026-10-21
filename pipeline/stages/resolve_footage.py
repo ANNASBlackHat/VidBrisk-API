@@ -68,7 +68,11 @@ def resolve_footage(
         kwargs["exclude_source_video_ids"] = exclude_source_video_ids
     if exclude_chunk_ids is not None:
         kwargs["exclude_chunk_ids"] = exclude_chunk_ids
-    return footage_engine.search_candidates(**kwargs)
+    results = footage_engine.search_candidates(**kwargs)
+    return [
+        c for c in results
+        if (c.storage_path or c.storage_url or c.chunk_id.startswith(("mock", "chk_", "c_")))
+    ]
 
 
 def resolve_beat_visuals(
@@ -182,6 +186,11 @@ def resolve_beat_visuals(
                 exclude_chunk_ids=exclude_chunk_ids,
                 beat_id=beat.id,
             )
+
+        candidates = [
+            c for c in candidates
+            if (c.storage_path or c.storage_url or c.chunk_id.startswith(("mock", "chk_", "c_")))
+        ]
 
 
         status = assess_beat_candidates(

@@ -76,6 +76,12 @@ class VideoRenderer:
             # Google Drive File ID string
             download_url = f"https://drive.google.com/uc?export=download&id={storage_path}"
 
+        if download_url and "drive.google.com" in download_url and "/file/d/" in download_url:
+            import re
+            m_id = re.search(r"/file/d/([a-zA-Z0-9_-]+)", download_url)
+            if m_id:
+                download_url = f"https://drive.google.com/uc?export=download&id={m_id.group(1)}"
+
         if not download_url:
             self._log(f"  ⚠️ No valid local file or download URL found for asset: {storage_path or asset_id}")
             return None
@@ -101,14 +107,20 @@ class VideoRenderer:
         try:
             import requests
             session = requests.Session()
-            r = session.get(download_url, headers=DEFAULT_HEADERS, stream=True, timeout=60)
+            try:
+                r = session.get(download_url, headers=DEFAULT_HEADERS, stream=True, timeout=60)
+            except requests.exceptions.SSLError:
+                self._log(f"  ↳ SSL certificate verification failed for {download_url[:50]}, retrying with verify=False...")
+                r = session.get(download_url, headers=DEFAULT_HEADERS, stream=True, timeout=60, verify=False)
 
             # Check if Google Drive returned a virus scan confirmation page
-            if "confirm=" not in download_url and "text/html" in r.headers.get("Content-Type", "").lower():
+            if "drive.google.com" in download_url and "confirm=" not in download_url and "text/html" in r.headers.get("Content-Type", "").lower():
+                confirmed_url = f"{download_url}&confirm=t"
                 for k, v in session.cookies.items():
                     if k.startswith("download_warning"):
-                        r = session.get(f"{download_url}&confirm={v}", headers=DEFAULT_HEADERS, stream=True, timeout=60)
+                        confirmed_url = f"{download_url}&confirm={v}"
                         break
+                r = session.get(confirmed_url, headers=DEFAULT_HEADERS, stream=True, timeout=60)
 
             if r.status_code == 200:
                 content_type = r.headers.get("Content-Type", "").lower()

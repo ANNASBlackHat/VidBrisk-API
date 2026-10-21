@@ -149,18 +149,50 @@ class FootageResolver:
                 results_data = job.get("result", {}).get("results", [])
                 candidates: list[CandidateChunk] = []
                 for r in results_data:
+                    c_sp = (r.get("storage_path") or "").strip()
+                    c_su = (r.get("storage_url") or "").strip()
+                    m_id = r.get("media_item_id", "")
+                    if not c_sp and m_id:
+                        try:
+                            import psycopg2
+                            conn = psycopg2.connect(self.database_url)
+                            with conn.cursor() as cur:
+                                cur.execute("SELECT storage_path FROM media_items WHERE id = %s", (m_id,))
+                                row = cur.fetchone()
+                                if row and row[0]:
+                                    c_sp = str(row[0]).strip()
+                            conn.close()
+                        except Exception as e:
+                            logger.debug(f"[FootageResolver] Could not hydrate storage_path for media_item {m_id}: {e}")
+
+                    if not c_su and c_sp:
+                        if c_sp.startswith(("http://", "https://", "file://")):
+                            c_su = c_sp
+                        elif "drive.google.com" in c_sp:
+                            import re
+                            m_match = re.search(r"/(?:d|id=)/([a-zA-Z0-9_-]+)", c_sp)
+                            if m_match:
+                                c_su = f"https://drive.google.com/uc?export=download&id={m_match.group(1)}"
+                            else:
+                                c_su = c_sp
+                        else:
+                            c_su = f"https://drive.google.com/uc?export=download&id={c_sp}"
+
+                    if not c_sp and not c_su:
+                        continue  # Skip unresolvable chunks
+
                     candidates.append(
                         CandidateChunk(
                             chunk_id=r.get("chunk_id", ""),
-                            media_item_id=r.get("media_item_id", ""),
+                            media_item_id=m_id,
                             score=float(r.get("score", 0.0)),
                             start_ts=float(r.get("start_ts", 0.0)),
                             end_ts=float(r["end_ts"]) if r.get("end_ts") is not None else None,
                             duration_sec=float(r["duration_sec"]) if r.get("duration_sec") is not None else None,
                             media_type=r.get("media_type", "video"),
                             provider=r.get("provider", "unknown"),
-                            storage_path=r.get("storage_path") or "",
-                            storage_url=r.get("storage_url") or "",
+                            storage_path=c_sp,
+                            storage_url=c_su,
                             resolution=r.get("resolution"),
                             orientation=r.get("orientation", "unknown"),
                             caption=r.get("caption"),
@@ -213,54 +245,110 @@ class FootageResolver:
         active_model = active_embedding_model or self.active_embedding_model
 
         def execute_query(filter_model: Optional[str]):
-            where_clauses = [
-                "((c.caption IS NOT NULL AND c.caption != '') OR (c.tags IS NOT NULL AND c.tags::text != '[]') OR (m.item_metadata IS NOT NULL))"
+            chunk_where = [
+                "((c.caption IS NOT NULL AND c.caption != '') OR (c.tags IS NOT NULL AND c.tags::text != '[]') OR (m.item_metadata IS NOT NULL))",
+                "COALESCE(NULLIF(c.storage_path, ''), NULLIF(m.storage_path, '')) IS NOT NULL",
+                "COALESCE(NULLIF(c.storage_path, ''), NULLIF(m.storage_path, '')) != ''",
+            ]
+            media_where = [
+                "m.storage_path IS NOT NULL",
+                "m.storage_path != ''",
+                "(m.status IS NULL OR m.status != 'failed')",
             ]
             params: dict[str, Any] = {"words": words, "fetch_k": max(50, top_k * 6)}
 
             if filter_model:
-                where_clauses.append("(c.embedding_model = %(active_model)s OR c.embedding_model IS NULL)")
+                chunk_where.append("(c.embedding_model = %(active_model)s OR c.embedding_model IS NULL)")
                 params["active_model"] = filter_model
             if provider:
-                where_clauses.append("m.provider = %(provider)s")
+                chunk_where.append("m.provider = %(provider)s")
+                media_where.append("m.provider = %(provider)s")
                 params["provider"] = provider
             if media_type:
-                where_clauses.append("c.media_type = %(media_type)s")
+                chunk_where.append("c.media_type = %(media_type)s")
+                media_where.append("m.media_type::text = %(media_type)s")
                 params["media_type"] = media_type
 
             if exclude_source_video_ids:
-                where_clauses.append("c.media_item_id != ALL(%(ex_media)s)")
+                chunk_where.append("c.media_item_id != ALL(%(ex_media)s)")
+                media_where.append("m.id != ALL(%(ex_media)s)")
                 params["ex_media"] = list(exclude_source_video_ids)
             if exclude_chunk_ids:
-                where_clauses.append("c.id != ALL(%(ex_chunks)s)")
+                chunk_where.append("c.id != ALL(%(ex_chunks)s)")
+                media_where.append("m.id != ALL(%(ex_chunks)s)")
                 params["ex_chunks"] = list(exclude_chunk_ids)
 
-            where_sql = " AND ".join(where_clauses)
+            where_chunk_sql = " AND ".join(chunk_where)
+            where_media_sql = " AND ".join(media_where)
+
             sql = f"""
-                SELECT c.id, c.media_item_id, m.provider, c.start_ts, c.end_ts,
-                       c.storage_path, c.media_type, c.motion_mean, c.motion_std,
-                       c.caption, c.tags,
-                       (
-                         SELECT count(*) 
-                         FROM unnest(%(words)s::text[]) w 
-                         WHERE c.caption ILIKE '%%' || w || '%%' 
-                            OR c.tags::text ILIKE '%%' || w || '%%'
-                            OR m.item_metadata::text ILIKE '%%' || w || '%%'
-                            OR c.storage_path ILIKE '%%' || w || '%%'
-                       ) as match_count
-                FROM chunks c
-                JOIN media_items m ON c.media_item_id = m.id
-                WHERE {where_sql}
-                  AND (
-                    EXISTS (
-                      SELECT 1 FROM unnest(%(words)s::text[]) w
-                      WHERE c.caption ILIKE '%%' || w || '%%' 
-                         OR c.tags::text ILIKE '%%' || w || '%%'
-                         OR m.item_metadata::text ILIKE '%%' || w || '%%'
-                         OR c.storage_path ILIKE '%%' || w || '%%'
-                    )
-                  )
-                ORDER BY match_count DESC, c.start_ts ASC
+                WITH combined_results AS (
+                    -- 1. Chunks with fallback to media_items storage_path and duration
+                    SELECT c.id, c.media_item_id, m.provider, c.start_ts,
+                           COALESCE(c.end_ts, c.start_ts + m.duration_sec, m.duration_sec) AS end_ts,
+                           COALESCE(NULLIF(c.storage_path, ''), NULLIF(m.storage_path, '')) AS storage_path,
+                           COALESCE(c.media_type::text, m.media_type::text, 'video') AS media_type,
+                           c.motion_mean, c.motion_std,
+                           c.caption, c.tags,
+                           (
+                             SELECT count(*) 
+                             FROM unnest(%(words)s::text[]) w 
+                             WHERE c.caption ILIKE '%%' || w || '%%' 
+                                OR c.tags::text ILIKE '%%' || w || '%%'
+                                OR m.item_metadata::text ILIKE '%%' || w || '%%'
+                                OR COALESCE(NULLIF(c.storage_path, ''), NULLIF(m.storage_path, '')) ILIKE '%%' || w || '%%'
+                           ) AS match_count
+                    FROM chunks c
+                    JOIN media_items m ON c.media_item_id = m.id
+                    WHERE {where_chunk_sql}
+                      AND (
+                        EXISTS (
+                          SELECT 1 FROM unnest(%(words)s::text[]) w
+                          WHERE c.caption ILIKE '%%' || w || '%%' 
+                             OR c.tags::text ILIKE '%%' || w || '%%'
+                             OR m.item_metadata::text ILIKE '%%' || w || '%%'
+                             OR COALESCE(NULLIF(c.storage_path, ''), NULLIF(m.storage_path, '')) ILIKE '%%' || w || '%%'
+                        )
+                      )
+
+                    UNION ALL
+
+                    -- 2. Unchunked MediaItems (e.g. Pixabay intact footages)
+                    SELECT m.id AS id, m.id AS media_item_id, m.provider, 0.0 AS start_ts,
+                           m.duration_sec AS end_ts,
+                           m.storage_path AS storage_path,
+                           m.media_type::text AS media_type,
+                           NULL::float AS motion_mean, NULL::float AS motion_std,
+                           COALESCE(m.item_metadata->>'description', m.item_metadata->>'title', '') AS caption,
+                           CASE 
+                             WHEN jsonb_typeof(COALESCE(m.item_metadata->'tags', '[]'::json)::jsonb) = 'array' 
+                             THEN m.item_metadata->'tags'
+                             ELSE '[]'::json 
+                           END AS tags,
+                           (
+                             SELECT count(*)
+                             FROM unnest(%(words)s::text[]) w
+                             WHERE m.item_metadata::text ILIKE '%%' || w || '%%'
+                                OR m.source_url ILIKE '%%' || w || '%%'
+                                OR m.storage_path ILIKE '%%' || w || '%%'
+                           ) AS match_count
+                    FROM media_items m
+                    WHERE NOT EXISTS (SELECT 1 FROM chunks c_sub WHERE c_sub.media_item_id = m.id)
+                      AND {where_media_sql}
+                      AND (
+                        EXISTS (
+                          SELECT 1 FROM unnest(%(words)s::text[]) w
+                          WHERE m.item_metadata::text ILIKE '%%' || w || '%%'
+                             OR m.source_url ILIKE '%%' || w || '%%'
+                             OR m.storage_path ILIKE '%%' || w || '%%'
+                        )
+                      )
+                )
+                SELECT id, media_item_id, provider, start_ts, end_ts,
+                       storage_path, media_type, motion_mean, motion_std,
+                       caption, tags, match_count
+                FROM combined_results
+                ORDER BY match_count DESC, start_ts ASC
                 LIMIT %(fetch_k)s;
             """
             try:
@@ -287,6 +375,10 @@ class FootageResolver:
             if match_cnt <= 0:
                 continue
 
+            clean_sp = str(storage_path or "").strip()
+            if not clean_sp:
+                continue
+
             # Deduplicate by canonical segment key to eliminate identical clips across embedding runs
             seg_key = (mid, round(s_ts or 0.0, 1), round(e_ts or 0.0, 1)) if mid else cid
             if seg_key in seen_segments:
@@ -294,25 +386,31 @@ class FootageResolver:
 
             norm_score = min(1.0, 0.40 + 0.15 * match_cnt)
             storage_url = ""
-            if storage_path:
-                if storage_path.startswith(("http://", "https://", "file://")):
-                    storage_url = storage_path
+            if clean_sp.startswith(("http://", "https://", "file://")):
+                storage_url = clean_sp
+            elif "drive.google.com" in clean_sp:
+                import re
+                m_match = re.search(r"/(?:d|id=)/([a-zA-Z0-9_-]+)", clean_sp)
+                if m_match:
+                    storage_url = f"https://drive.google.com/uc?export=download&id={m_match.group(1)}"
                 else:
-                    storage_url = f"https://drive.google.com/uc?export=download&id={storage_path}"
+                    storage_url = clean_sp
+            else:
+                storage_url = f"https://drive.google.com/uc?export=download&id={clean_sp}"
 
             seen_segments[seg_key] = CandidateChunk(
                 chunk_id=cid,
                 media_item_id=mid,
                 score=norm_score,
-                start_ts=s_ts,
+                start_ts=s_ts or 0.0,
                 end_ts=e_ts,
                 duration_sec=(e_ts - s_ts) if (e_ts is not None and s_ts is not None) else None,
                 media_type=str(mtype) if mtype else "video",
                 provider=provider_val or "unknown",
-                storage_path=storage_path or "",
+                storage_path=clean_sp,
                 storage_url=storage_url,
                 caption=cap,
-                tags=tags or [],
+                tags=tags if isinstance(tags, list) else [],
                 motion_mean=m_mean,
                 motion_std=m_std,
             )
@@ -406,9 +504,13 @@ class FootageResolver:
                         segment_map[key].tags = c.tags
                     if not segment_map[key].storage_url and c.storage_url:
                         segment_map[key].storage_url = c.storage_url
+                    if not segment_map[key].storage_path and c.storage_path:
+                        segment_map[key].storage_path = c.storage_path
 
+            # Filter out any candidates with missing storage references
+            valid_fused = [c for c in segment_map.values() if (c.storage_path or c.storage_url)]
             fused = sorted(
-                segment_map.values(),
+                valid_fused,
                 key=lambda c: rrf_scores.get(get_seg_key(c), 0.0),
                 reverse=True,
             )
@@ -470,8 +572,22 @@ class FootageResolver:
             for r in results:
                 resolution = getattr(r, "resolution", None)
                 orientation = getattr(r, "orientation", "unknown")
-                storage_path = getattr(r, "storage_path", "") or ""
-                storage_url = getattr(r, "storage_url", "") or ""
+                storage_path = (getattr(r, "storage_path", "") or "").strip()
+                storage_url = (getattr(r, "storage_url", "") or "").strip()
+                mid = getattr(r, "media_item_id", "")
+                if not storage_path and mid:
+                    try:
+                        import psycopg2
+                        conn = psycopg2.connect(self.database_url)
+                        with conn.cursor() as cur:
+                            cur.execute("SELECT storage_path FROM media_items WHERE id = %s", (mid,))
+                            row = cur.fetchone()
+                            if row and row[0]:
+                                storage_path = str(row[0]).strip()
+                        conn.close()
+                    except Exception as e:
+                        logger.debug(f"[FootageResolver] In-process storage_path hydration failed: {e}")
+
                 if storage_url and storage_url.startswith("file://"):
                     local_f = storage_url.replace("file://", "")
                     if not os.path.exists(local_f):
@@ -480,13 +596,23 @@ class FootageResolver:
                 if not storage_url and storage_path:
                     if storage_path.startswith(("http://", "https://", "file://")):
                         storage_url = storage_path
+                    elif "drive.google.com" in storage_path:
+                        import re
+                        m_match = re.search(r"/(?:d|id=)/([a-zA-Z0-9_-]+)", storage_path)
+                        if m_match:
+                            storage_url = f"https://drive.google.com/uc?export=download&id={m_match.group(1)}"
+                        else:
+                            storage_url = storage_path
                     else:
                         storage_url = f"https://drive.google.com/uc?export=download&id={storage_path}"
+
+                if not storage_path and not storage_url:
+                    continue  # Filter out unplayable chunks without storage
 
                 candidates.append(
                     CandidateChunk(
                         chunk_id=getattr(r, "chunk_id", ""),
-                        media_item_id=getattr(r, "media_item_id", ""),
+                        media_item_id=mid,
                         score=float(getattr(r, "score", 0.0)),
                         start_ts=float(getattr(r, "start_ts", 0.0)),
                         end_ts=float(r.end_ts) if getattr(r, "end_ts", None) is not None else None,

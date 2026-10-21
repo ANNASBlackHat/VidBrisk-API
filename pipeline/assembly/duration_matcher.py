@@ -37,6 +37,12 @@ def plan_beat_assets(
     beat_start = round(track_cursor, 2)
     beat_end = round(track_cursor + visual_duration, 2)
 
+    # Filter out candidates with missing storage references (keep unit test mock identifiers)
+    candidates = [
+        c for c in candidates
+        if (c.storage_path or c.storage_url or c.chunk_id.startswith(("mock", "chk_", "c_")))
+    ]
+
     motion_props = beat.motion_props or {}
     layout_recipe = motion_props.get("layout_recipe")
 

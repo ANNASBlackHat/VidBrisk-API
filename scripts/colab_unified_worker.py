@@ -48,18 +48,21 @@ import shutil
 
 print("[setup-gpu] Installing Python packages for TTS and Qwen Embedding...", flush=True)
 
-groups = [
-    ["torch", "torchaudio"],
-    ["soundfile", "numpy", "pillow", "requests"],
-    ["pydantic", "pydantic-settings", "python-dotenv", "sqlalchemy", "psycopg2-binary", "psycopg[binary]"],
-    ["transformers>=4.57", "sentence-transformers", "pymilvus", "imagekitio", "opencv-python-headless"],
-    ["kokoro-onnx", "omnivoice"],
-    ["fastapi", "uvicorn", "pyngrok"],
+pkgs = [
+    "soundfile", "pydub", "librosa", "numpy", "pillow", "requests",
+    "pydantic", "pydantic-settings", "python-dotenv", "sqlalchemy",
+    "psycopg[binary]", "psycopg2-binary",
+    "transformers>=4.57.0", "sentence-transformers", "accelerate",
+    "pymilvus", "imagekitio", "opencv-python-headless",
+    "kokoro-onnx", "fastapi", "uvicorn", "pyngrok",
 ]
 
-for group in groups:
-    print(f"[setup-gpu] pip install {' '.join(group)} ...", flush=True)
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-qq", *group])
+print(f"[setup-gpu] pip install {len(pkgs)} packages ...", flush=True)
+subprocess.check_call([sys.executable, "-m", "pip", "install", "-qq", *pkgs])
+
+print("[setup-gpu] pip install --no-deps omnivoice ...", flush=True)
+subprocess.check_call([sys.executable, "-m", "pip", "install", "-qq", "--no-deps", "omnivoice"])
+
 
 # Install Chrome and Node.js if render task is enabled on GPU
 INSTALL_RENDER = bool(__RENDER_ENABLED__)
