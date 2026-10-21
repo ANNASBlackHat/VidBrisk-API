@@ -253,7 +253,7 @@ class FootageResolver:
             media_where = [
                 "m.storage_path IS NOT NULL",
                 "m.storage_path != ''",
-                "(m.status IS NULL OR m.status != 'failed')",
+                "(m.status IS NULL OR m.status::text NOT ILIKE 'fail%')",
             ]
             params: dict[str, Any] = {"words": words, "fetch_k": max(50, top_k * 6)}
 
@@ -265,8 +265,8 @@ class FootageResolver:
                 media_where.append("m.provider = %(provider)s")
                 params["provider"] = provider
             if media_type:
-                chunk_where.append("c.media_type = %(media_type)s")
-                media_where.append("m.media_type::text = %(media_type)s")
+                chunk_where.append("c.media_type::text ILIKE %(media_type)s")
+                media_where.append("m.media_type::text ILIKE %(media_type)s")
                 params["media_type"] = media_type
 
             if exclude_source_video_ids:
@@ -320,11 +320,7 @@ class FootageResolver:
                            m.media_type::text AS media_type,
                            NULL::float AS motion_mean, NULL::float AS motion_std,
                            COALESCE(m.item_metadata->>'description', m.item_metadata->>'title', '') AS caption,
-                           CASE 
-                             WHEN jsonb_typeof(COALESCE(m.item_metadata->'tags', '[]'::json)::jsonb) = 'array' 
-                             THEN m.item_metadata->'tags'
-                             ELSE '[]'::json 
-                           END AS tags,
+                           COALESCE(m.item_metadata->'tags', '[]'::json) AS tags,
                            (
                              SELECT count(*)
                              FROM unnest(%(words)s::text[]) w
