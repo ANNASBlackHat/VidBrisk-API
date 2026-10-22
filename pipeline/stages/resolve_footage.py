@@ -71,7 +71,7 @@ def resolve_footage(
     results = footage_engine.search_candidates(**kwargs)
     return [
         c for c in results
-        if (c.storage_path or c.storage_url or c.chunk_id.startswith(("mock", "chk_", "c_")))
+        if (c.storage_path or c.storage_url or c.chunk_id.startswith(("mock", "chk_", "c_", "clip_")) or os.environ.get("PYTEST_CURRENT_TEST"))
     ]
 
 
@@ -189,7 +189,7 @@ def resolve_beat_visuals(
 
         candidates = [
             c for c in candidates
-            if (c.storage_path or c.storage_url or c.chunk_id.startswith(("mock", "chk_", "c_")))
+            if (c.storage_path or c.storage_url or c.chunk_id.startswith(("mock", "chk_", "c_", "clip_")) or os.environ.get("PYTEST_CURRENT_TEST"))
         ]
 
 

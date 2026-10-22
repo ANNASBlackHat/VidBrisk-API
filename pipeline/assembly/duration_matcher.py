@@ -167,7 +167,7 @@ def plan_beat_assets(
             comp_id = None
             layout_role = "full"
             layer_role = "background"
-            asset_type = "text"
+            asset_type = "text_card"
         else:
             layout_role = motion_props.get("display_mode", "takeover")
             if layout_role == "overlay":
