@@ -114,6 +114,7 @@ def run_cloud_pipeline(
     force_gofile: bool = False,
     max_direct_size_mb: float = 45.0,
     preview_height: int = 320,
+    run_critic: bool = True,
 ) -> Dict[str, Any]:
     """Runs end-to-end pipeline in cloud environment with automated hardware & delivery routing."""
     start_time = time.time()
@@ -245,12 +246,40 @@ def run_cloud_pipeline(
     print(f"⏳ Total Elapsed Time: {elapsed_time:.1f}s")
     print("=" * 60 + "\n")
 
+    # 6. Post-Run AI Quality Critic & QA Inspector
+    critique_report: Optional[Dict[str, Any]] = None
+    skip_critic = (
+        run_critic is False
+        or os.environ.get("SKIP_AI_CRITIC", "").lower() in ("1", "true", "yes")
+        or os.environ.get("ENABLE_AI_CRITIC", "").lower() in ("0", "false", "no")
+    )
+
+    if not skip_critic:
+        try:
+            from pipeline.eval.critic import run_post_generation_critic
+            audit_path = timeline_path.replace("_timeline.json", "_timeline_audit.json")
+            critique_report = run_post_generation_critic(
+                timeline_path=timeline_path,
+                audit_path=audit_path if os.path.exists(audit_path) else None,
+                title=title,
+                genre=genre,
+            )
+            if critique_report and "telegram_summary" in critique_report:
+                print("=" * 60)
+                print("📋 Post-Run AI Quality Critic Summary:")
+                print("=" * 60)
+                print(critique_report["telegram_summary"])
+                print(f"📄 Full Markdown Report: {critique_report.get('critique_md_path')}")
+                print("=" * 60 + "\n")
+        except Exception as e:
+            logger.warning(f"⚠️ Post-run critique failed (non-fatal): {e}")
+
     delivery_result: Optional[Dict[str, Any]] = None
 
-    # 6. Dispatch to Telegram / Gofile
+    # 7. Dispatch to Telegram / Gofile
     if send_telegram:
         try:
-            from scripts.send_to_telegram import get_telegram_creds, send_video
+            from scripts.send_to_telegram import get_telegram_creds, send_video, send_text_message
             tok, chat = get_telegram_creds()
             if tok and chat:
                 caption = (
@@ -267,6 +296,11 @@ def run_cloud_pipeline(
                     max_direct_size_mb=max_direct_size_mb,
                     force_gofile=force_gofile,
                 )
+
+                # Send companion critique audit report if generated
+                if critique_report and critique_report.get("telegram_summary"):
+                    print("📤 Dispatching Quality Audit report to Telegram...")
+                    send_text_message(critique_report["telegram_summary"])
             else:
                 logger.info("ℹ️ Telegram credentials not found in env or ~/.zshrc. Skipping dispatch.")
         except Exception as e:
@@ -276,6 +310,7 @@ def run_cloud_pipeline(
         "status": "success",
         "video_path": rendered_path,
         "timeline_path": timeline_path,
+        "critique": critique_report,
         "file_size_mb": file_size_mb,
         "duration_sec": total_duration,
         "beat_count": beat_count,
@@ -327,6 +362,8 @@ def main():
     parser.add_argument("--gofile", action="store_true", help="Force upload full video to Gofile.io regardless of size")
     parser.add_argument("--max-direct-size-mb", type=float, default=45.0, help="Max file size for direct Telegram upload (MB)")
     parser.add_argument("--preview-height", type=int, default=320, help="Resolution height for Telegram preview clip")
+    parser.add_argument("--critic", action="store_true", default=True, help="Run AI post-run quality critic (default: True)")
+    parser.add_argument("--no-critic", dest="critic", action="store_false", help="Skip AI post-run quality critic")
 
     args = parser.parse_args()
 
@@ -350,6 +387,7 @@ def main():
             force_gofile=args.gofile,
             max_direct_size_mb=args.max_direct_size_mb,
             preview_height=args.preview_height,
+            run_critic=args.critic,
         )
     except Exception as e:
         logger.error(f"❌ Cloud Pipeline failed: {e}", exc_info=True)

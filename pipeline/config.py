@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     MAX_SLOWMO_FACTOR: float = 1.35
     MIN_SPEEDUP_FACTOR: float = 0.85
 
+    # Post-Run AI Critic & Quality Inspector
+    ENABLE_AI_CRITIC: bool = True
+    SKIP_AI_CRITIC: bool = False
+
 
     # TTS Settings
     DEFAULT_TTS_PROVIDER: Literal[

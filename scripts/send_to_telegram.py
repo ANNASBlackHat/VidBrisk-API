@@ -94,6 +94,31 @@ def upload_to_gofile(file_path: str, token: Optional[str] = None, max_retries: i
     print("❌ All Gofile upload attempts failed.")
     return None
 
+def send_text_message(text: str) -> Optional[str]:
+    """Sends a text message to the configured Telegram chat."""
+    token, chat_id = get_telegram_creds()
+    if not token or not chat_id:
+        return None
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "Markdown",
+    }
+    try:
+        res = requests.post(url, json=payload, timeout=15)
+        if res.status_code == 200:
+            print("✅ Successfully sent message to Telegram!")
+            return res.text
+        else:
+            # Fallback without markdown parsing if syntax error
+            payload.pop("parse_mode", None)
+            res2 = requests.post(url, json=payload, timeout=15)
+            return res2.text
+    except Exception as e:
+        print(f"⚠️ Telegram sendMessage error: {e}")
+        return None
+
 def create_preview_video(video_path: str, target_height: int = 320) -> str:
     """Creates a fast, highly compressed preview video for instant mobile Telegram viewing."""
     base, ext = os.path.splitext(video_path)
