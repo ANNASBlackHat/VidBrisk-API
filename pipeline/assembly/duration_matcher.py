@@ -446,27 +446,60 @@ def plan_beat_assets(
 
     # 1.5 Find distinct candidates for balanced_splice or multi-clip early
     distinct_cands: list[CandidateChunk] = []
-    seen_media: set[str] = set()
+    seen_chunks: set[str] = set()
     seen_paths: set[str] = set()
+    seen_media_spans: list[tuple[str, float, float]] = []
     selection_notes: list[str] = []
     for idx, c in enumerate(candidates):
+        cid = c.chunk_id
         m_id = c.media_item_id
         s_path = c.storage_path
-        if m_id and m_id in seen_media:
+        c_start = float(c.start_ts or 0.0)
+        c_end = float(c.end_ts or (c_start + (c.duration_sec or 3.0)))
+
+        # 1. Exact duplicate chunk or storage file path
+        if cid and cid in seen_chunks:
             selection_notes.append(
-                f"Skipped candidate #{idx+1} ({c.chunk_id}): media_item_id '{m_id}' already used in beat."
+                f"Skipped candidate #{idx+1} ({cid}): chunk already used in beat."
             )
             continue
         if s_path and s_path in seen_paths:
             selection_notes.append(
-                f"Skipped candidate #{idx+1} ({c.chunk_id}): storage_path '{s_path}' already used in beat."
+                f"Skipped candidate #{idx+1} ({cid}): storage_path '{s_path}' already used in beat."
             )
             continue
-        distinct_cands.append(c)
+
+        # 2. For unchunked media (single short clip without sub-chunks): media_item_id uniqueness applies
+        is_unchunked = (cid == m_id) or (not c.start_ts and not c.end_ts and c.duration_sec and c.duration_sec <= 10.0)
+        if is_unchunked and m_id:
+            if any(prev_m == m_id for prev_m, _, _ in seen_media_spans):
+                selection_notes.append(
+                    f"Skipped candidate #{idx+1} ({cid}): unchunked media_item_id '{m_id}' already used in beat."
+                )
+                continue
+
+        # 3. For chunked media: allow different chunks from the same source, but avoid jump-cuts (<10s temporal gap)
+        is_jump_cut = False
         if m_id:
-            seen_media.add(m_id)
+            for prev_m, prev_s, prev_e in seen_media_spans:
+                if prev_m == m_id:
+                    # Check if chunks overlap or are too close (< 10s gap)
+                    if abs(c_start - prev_e) < 10.0 or abs(prev_s - c_end) < 10.0 or (c_start <= prev_e and c_end >= prev_s):
+                        is_jump_cut = True
+                        break
+        if is_jump_cut:
+            selection_notes.append(
+                f"Skipped candidate #{idx+1} ({cid}): chunk too close in time (<10s) to another chunk from '{m_id}' (avoiding jump-cut)."
+            )
+            continue
+
+        distinct_cands.append(c)
+        if cid:
+            seen_chunks.add(cid)
         if s_path:
             seen_paths.add(s_path)
+        if m_id:
+            seen_media_spans.append((m_id, c_start, c_end))
 
     # 2. Check micro-cut deficit: if candidate 1 covers almost the whole beat (deficit < 1.0s),
     # avoid splicing a second candidate and extend/retime candidate 1 instead, PROVIDED retiming is within ceiling.

@@ -208,11 +208,11 @@ def run_pipeline(
                 candidates = []
             candidates_map[beat.id] = candidates
             if candidates:
-                for c in candidates:
-                    if c.chunk_id and c.chunk_id not in selected_chunk_ids:
-                        selected_chunk_ids.append(c.chunk_id)
-                    if c.media_item_id and c.media_item_id not in selected_media_ids:
-                        selected_media_ids.append(c.media_item_id)
+                top_cand = candidates[0]
+                if top_cand.chunk_id and top_cand.chunk_id not in selected_chunk_ids:
+                    selected_chunk_ids.append(top_cand.chunk_id)
+                if top_cand.media_item_id and top_cand.media_item_id not in selected_media_ids:
+                    selected_media_ids.append(top_cand.media_item_id)
             print(f"    - Footage candidates resolved: {len(candidates)} match(es) (status: {getattr(beats[idx - 1].footage_status, 'value', str(beats[idx - 1].footage_status))})")
             audit.log_beat_summary(beat.id)
 

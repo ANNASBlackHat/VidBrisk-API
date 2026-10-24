@@ -12,6 +12,44 @@ logger = logging.getLogger(__name__)
 OrientationType = Literal["horizontal", "vertical", "square", "any"]
 
 
+def compute_semantic_relevance_boost(query: str, candidate: CandidateChunk) -> float:
+    """Computes a relative boost/penalty for ranking candidates based on keyword and environment alignment."""
+    if not query:
+        return 0.0
+
+    stop_words = {
+        "the", "and", "with", "from", "that", "this", "for", "over", "under", "into", "onto",
+        "shot", "macro", "view", "scene", "close", "underwater", "marine", "ocean", "deep", "sea",
+        "video", "clip", "shows", "likely", "type", "part", "some", "real", "take", "make", "her",
+        "his", "its", "their", "are", "was", "were", "been", "being", "have", "has", "had"
+    }
+    query_words = set(
+        w.strip(".,;:\"'()[]{}!?-").lower()
+        for w in query.split()
+        if len(w) >= 3 and w.lower() not in stop_words
+    )
+    if not query_words:
+        return 0.0
+
+    cand_text = f"{candidate.caption or ''} {' '.join(candidate.tags or [])}".lower()
+
+    # 1. Salient keyword matches (e.g. octopus, eggs, brooding, larvae, crevice)
+    match_count = sum(1 for w in query_words if w in cand_text)
+    boost = match_count * 0.03  # +0.03 for each matched salient keyword
+
+    # 2. Environmental / habitat alignment checks (soft relative adjustment)
+    rocky_intent = any(w in query_words for w in ("rocky", "cliff", "crevice", "wall", "boulder", "reef"))
+    sandy_cand = any(w in cand_text for w in ("sand", "sandy", "sediment"))
+    rocky_cand = any(w in cand_text for w in ("rock", "rocky", "cliff", "crevice", "wall", "reef"))
+
+    if rocky_intent and sandy_cand and not rocky_cand:
+        boost -= 0.04  # demote slightly if intent specifically wanted rocky/cliff but clip is sandy
+    elif rocky_intent and rocky_cand:
+        boost += 0.05  # promote if intent wanted rock and clip is on rock
+
+    return boost
+
+
 class FootageResolver:
     """Encapsulates semantic search against Footage Engine (Worker Queue + In-Process Fallback)."""
 
@@ -416,6 +454,11 @@ class FootageResolver:
             )
 
         candidates = list(seen_segments.values())
+        if query and candidates:
+            candidates.sort(
+                key=lambda c: (c.score + compute_semantic_relevance_boost(query, c)),
+                reverse=True,
+            )
         return candidates[:top_k]
 
     def search_candidates(
@@ -509,13 +552,15 @@ class FootageResolver:
 
             # Filter out any candidates with missing storage references
             valid_fused = [c for c in segment_map.values() if (c.storage_path or c.storage_url)]
-            fused = sorted(
-                valid_fused,
-                key=lambda c: rrf_scores.get(get_seg_key(c), 0.0),
-                reverse=True,
-            )
+            max_rrf = max(rrf_scores.values()) if rrf_scores else 1.0
+
+            def rank_key(c: CandidateChunk) -> float:
+                base = rrf_scores.get(get_seg_key(c), 0.0) / max_rrf
+                boost = compute_semantic_relevance_boost(query, c)
+                return base + boost
+
+            fused = sorted(valid_fused, key=rank_key, reverse=True)
             if fused and rrf_scores:
-                max_rrf = max(rrf_scores.values())
                 for c in fused:
                     rel = rrf_scores[get_seg_key(c)] / max_rrf
                     c.score = max(c.score, round(0.55 + 0.40 * rel, 3))
@@ -644,5 +689,11 @@ class FootageResolver:
             candidates = (matching + non_matching)[:top_k]
         else:
             candidates = candidates[:top_k]
+
+        if query and candidates:
+            candidates.sort(
+                key=lambda c: (c.score + compute_semantic_relevance_boost(query, c)),
+                reverse=True,
+            )
 
         return candidates

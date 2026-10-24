@@ -253,3 +253,86 @@ def test_send_document_mock(tmp_path, monkeypatch):
         res = send_document(str(dummy_doc), caption="Test Caption")
         assert res == '{"ok": true}'
 
+
+def test_semantic_relevance_boost_promotes_rocky_over_sand():
+    """Verify that Candidate on rock with eggs gets boosted over candidate on sand."""
+    from pipeline.footage.resolver import compute_semantic_relevance_boost
+    from pipeline.models import CandidateChunk
+
+    query = "Extreme close-up of a brooding octopus on a dark rocky cliff face guarding translucent eggs"
+
+    cand_sand = CandidateChunk(
+        chunk_id="chk_sand",
+        media_item_id="media_1",
+        score=1.0,
+        start_ts=457.0,
+        end_ts=460.0,
+        caption="A small reddish-brown octopus resting on a sandy seabed",
+        tags=["underwater", "sandy seabed", "small octopus"],
+    )
+
+    cand_rock = CandidateChunk(
+        chunk_id="chk_rock",
+        media_item_id="media_1",
+        score=1.0,
+        start_ts=2100.0,
+        end_ts=2104.0,
+        caption="A close-up view of a purple octopus with its tentacles curled around a cluster of eggs",
+        tags=["underwater", "deep sea", "rocky", "crevice", "eggs"],
+    )
+
+    boost_sand = compute_semantic_relevance_boost(query, cand_sand)
+    boost_rock = compute_semantic_relevance_boost(query, cand_rock)
+
+    assert boost_rock > boost_sand, f"Expected boost_rock ({boost_rock}) > boost_sand ({boost_sand})"
+
+
+def test_intra_source_chunk_splicing_prevents_looping():
+    """Verify that 2 distinct chunks from the same source video (different timestamps) are spliced to prevent looping."""
+    from pipeline.assembly.duration_matcher import plan_beat_assets
+    from pipeline.models import Beat, CandidateChunk, VoiceClip
+
+    beat = Beat(
+        id="b_test",
+        text="For over four years, she remains motionless on the rocky cliff face.",
+        visual_intent="Brooding octopus on rocky cliff",
+    )
+    voice_clip = VoiceClip(beat_id="b_test", audio_path="mock.wav", duration_sec=7.70)
+
+    cand1 = CandidateChunk(
+        chunk_id="chk_1",
+        media_item_id="long_youtube_doc_1",
+        score=1.0,
+        start_ts=457.0,
+        end_ts=460.13,
+        duration_sec=3.13,
+        storage_path="path_chunk_1.mp4",
+        caption="Octopus resting",
+    )
+
+    cand2 = CandidateChunk(
+        chunk_id="chk_2",
+        media_item_id="long_youtube_doc_1",  # Same media_item_id!
+        score=1.0,
+        start_ts=2100.0,  # Distinct timestamp > 1600s away!
+        end_ts=2104.20,
+        duration_sec=4.20,
+        storage_path="path_chunk_2.mp4",
+        caption="Octopus in crevice",
+    )
+
+    plan, video_items, text_items = plan_beat_assets(
+        beat=beat,
+        voice_clip=voice_clip,
+        candidates=[cand1, cand2],
+        track_cursor=0.0,
+        deficit_strategy="balanced_splice",
+    )
+
+    # Must splice the 2 chunks instead of falling back to 1 slowmo/looped clip!
+    assert len(video_items) == 2, f"Expected 2 spliced video items to cover 7.7s, got {len(video_items)}"
+    assert video_items[0].assetId == "chk_1"
+    assert video_items[1].assetId == "chk_2"
+    assert round(video_items[0].trackEnd - video_items[0].trackStart + video_items[1].trackEnd - video_items[1].trackStart, 2) == 7.70
+
+
