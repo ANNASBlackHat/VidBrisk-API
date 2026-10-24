@@ -345,9 +345,9 @@ def test_micro_cut_elimination_in_chaining():
     voice_clip = VoiceClip(beat_id="b_pacing", audio_path="mock.wav", duration_sec=7.70)
 
     # Cand1: 1.53s, Cand2: 5.00s, Cand3: 4.00s
-    cand1 = CandidateChunk(chunk_id="c1", media_item_id="m1", score=1.0, duration_sec=1.53, storage_path="s1.mp4")
-    cand2 = CandidateChunk(chunk_id="c2", media_item_id="m2", score=1.0, duration_sec=5.00, storage_path="s2.mp4")
-    cand3 = CandidateChunk(chunk_id="c3", media_item_id="m3", score=1.0, duration_sec=4.00, storage_path="s3.mp4")
+    cand1 = CandidateChunk(chunk_id="c1", media_item_id="m1", score=1.0, start_ts=0.0, duration_sec=1.53, storage_path="s1.mp4")
+    cand2 = CandidateChunk(chunk_id="c2", media_item_id="m2", score=1.0, start_ts=0.0, duration_sec=5.00, storage_path="s2.mp4")
+    cand3 = CandidateChunk(chunk_id="c3", media_item_id="m3", score=1.0, start_ts=0.0, duration_sec=4.00, storage_path="s3.mp4")
 
     plan, video_items, _ = plan_beat_assets(
         beat=beat,

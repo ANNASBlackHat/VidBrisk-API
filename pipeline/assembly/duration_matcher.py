@@ -471,7 +471,7 @@ def plan_beat_assets(
             continue
         if s_path and s_path in seen_paths:
             selection_notes.append(
-                f"Skipped candidate #{idx+1} ({cid}): storage_path '{s_path}' already used in beat."
+                f"Skipped candidate #{idx+1} ({cid}): media_item_id '{m_id}' already used in beat (storage_path '{s_path}')."
             )
             continue
 
