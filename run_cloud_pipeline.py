@@ -106,6 +106,7 @@ def run_cloud_pipeline(
     genre: Optional[str] = None,
     channel: Optional[str] = None,
     deficit_strategy: str = "balanced_splice",
+    cinematic: bool = False,
     voice: Optional[str] = None,
     tts_provider_name: Optional[str] = None,
     aligner_provider_name: Optional[str] = None,
@@ -220,6 +221,7 @@ def run_cloud_pipeline(
         voice=eff_voice,
         engine=engine_name,
         deficit_strategy=deficit_strategy,
+        cinematic=cinematic,
     )
 
     audio_track = timeline.get_track("audio") if hasattr(timeline, "get_track") else None
@@ -367,9 +369,14 @@ def main():
     )
     parser.add_argument(
         "--deficit-strategy",
-        choices=["balanced_splice", "slowmo", "continuous"],
+        choices=["balanced_splice", "slowmo", "continuous", "virtual_camera"],
         default="balanced_splice",
-        help="Footage deficit strategy (default: balanced_splice)",
+        help="Footage deficit strategy: balanced_splice (default), slowmo, continuous, or virtual_camera",
+    )
+    parser.add_argument(
+        "--cinematic",
+        action="store_true",
+        help="Enable cinematic scene directing, global Viterbi timeline optimization, and virtual camera reframing",
     )
     parser.add_argument("--tts", type=str, default=None, help="TTS provider (omni, kokoro, mock). Auto-detected if omitted.")
     parser.add_argument("--voice", type=str, default="deep_documentary", help="Voice identifier (default: deep_documentary)")
@@ -397,6 +404,7 @@ def main():
             genre=args.genre,
             channel=args.channel,
             deficit_strategy=args.deficit_strategy,
+            cinematic=args.cinematic,
             voice=args.voice,
             tts_provider_name=args.tts,
             aligner_provider_name=args.aligner,
