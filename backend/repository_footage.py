@@ -1119,6 +1119,7 @@ def override_job_beat_selection(db: Session, job_id: str, beat_id: str, chunk_id
 
     # Reorder candidate in footage_candidates map so chosen chunk is at index 0
     cands_map = dict(job.footage_candidates or {})
+    chosen_cand = None
     if beat_id in cands_map and isinstance(cands_map[beat_id], list):
         cands_list = list(cands_map[beat_id])
         target_idx = next((i for i, c in enumerate(cands_list) if (c.get("chunk_id") == chunk_id or c.get("id") == chunk_id)), -1)
@@ -1126,6 +1127,37 @@ def override_job_beat_selection(db: Session, job_id: str, beat_id: str, chunk_id
             chosen = cands_list.pop(target_idx)
             cands_list.insert(0, chosen)
             cands_map[beat_id] = cands_list
+            chosen_cand = chosen
+
+    # Also update job.timeline so GET /jobs/{id}/timeline stays in sync
+    if job.timeline and isinstance(job.timeline, dict):
+        tl = dict(job.timeline)
+        if "tracks" in tl and isinstance(tl["tracks"], list) and chosen_cand:
+            new_tracks = []
+            for trk in tl["tracks"]:
+                trk_copy = dict(trk)
+                if trk_copy.get("type") == "video":
+                    items_copy = []
+                    for it in trk_copy.get("items", []):
+                        it_copy = dict(it)
+                        it_id = str(it_copy.get("id", ""))
+                        if beat_id in it_id or it_copy.get("beatId") == beat_id:
+                            it_copy["assetId"] = chosen_cand.get("chunk_id") or chosen_cand.get("id")
+                            it_copy["storagePath"] = chosen_cand.get("storage_path") or chosen_cand.get("storage_url")
+                            it_copy["storageUrl"] = chosen_cand.get("storage_url") or chosen_cand.get("storage_path")
+                            if "start_ts" in chosen_cand:
+                                it_copy["sourceIn"] = chosen_cand.get("start_ts", 0)
+                            if "end_ts" in chosen_cand:
+                                it_copy["sourceOut"] = chosen_cand.get("end_ts")
+                        items_copy.append(it_copy)
+                    trk_copy["items"] = items_copy
+                new_tracks.append(trk_copy)
+            tl["tracks"] = new_tracks
+        if "metadata" in tl and isinstance(tl["metadata"], dict):
+            meta = dict(tl["metadata"])
+            meta["footage_candidates"] = cands_map
+            tl["metadata"] = meta
+        job.timeline = tl
 
     job.beats = updated_beats
     job.footage_candidates = cands_map
