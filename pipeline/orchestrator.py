@@ -32,6 +32,7 @@ def run_pipeline(
     voice: Optional[str] = None,
     engine: str = "remotion",
     deficit_strategy: Optional[str] = None,
+    cinematic: bool = False,
 ) -> TimelinePlan:
     """Executes stages [1] to [6] end-to-end on raw script text.
 
@@ -163,7 +164,7 @@ def run_pipeline(
                     selected_media_ids.append(top_cand.media_item_id)
             print(f"    - Footage candidates resolved: {len(candidates)} match(es) (status: {getattr(beats[idx - 1].footage_status, 'value', str(beats[idx - 1].footage_status))})")
     else:
-        print("\n▶ [3, 4, 5] Processing per-beat synthesis, alignment, and footage resolution...")
+        print("\n▶ [3, 4] Processing per-beat synthesis and alignment...")
         for idx, beat in enumerate(beats, start=1):
             print(f"  • Beat {idx}/{len(beats)} [{beat.id}]:")
 
@@ -187,34 +188,55 @@ def run_pipeline(
             timings_map[beat.id] = beat_timings
             print(f"    - Timestamps aligned: {len(beat_timings)} words")
 
-            # Stage 5: Resolve footage
-            recent_media = [m for m in selected_media_ids[-2:] if m]
-            try:
-                updated_beat, candidates = resolve_beat_visuals(
-                    beat=beat,
-                    resolver=resolver,
-                    top_k=5,
-                    target_orientation=target_orientation,
-                    provider=footage_provider,
-                    exclude_chunk_ids=selected_chunk_ids or None,
-                    exclude_source_video_ids=recent_media or None,
-                    engine=engine,
-                    context_anchor=context_anchor,
-                    genre=effective_genre,
-                )
-                beats[idx - 1] = updated_beat
-            except Exception as e:
-                print(f"    - Footage resolution note: {e} (using fallback)")
-                candidates = []
-            candidates_map[beat.id] = candidates
-            if candidates:
-                top_cand = candidates[0]
-                if top_cand.chunk_id and top_cand.chunk_id not in selected_chunk_ids:
-                    selected_chunk_ids.append(top_cand.chunk_id)
-                if top_cand.media_item_id and top_cand.media_item_id not in selected_media_ids:
-                    selected_media_ids.append(top_cand.media_item_id)
-            print(f"    - Footage candidates resolved: {len(candidates)} match(es) (status: {getattr(beats[idx - 1].footage_status, 'value', str(beats[idx - 1].footage_status))})")
-            audit.log_beat_summary(beat.id)
+        if cinematic:
+            print("\n▶ [5] Processing cinematic scene directing & global Viterbi footage sequence optimization...")
+            from pipeline.stages.resolve_footage import resolve_scene_visuals_cinematic
+            cinematic_results = resolve_scene_visuals_cinematic(
+                beats=beats,
+                resolver=resolver,
+                genre=effective_genre,
+                top_k=5,
+                target_orientation=target_orientation,
+                provider=footage_provider,
+                engine=engine,
+                deficit_strategy=deficit_strategy or "virtual_camera",
+            )
+            for idx, (updated_b, cands) in enumerate(cinematic_results):
+                beats[idx] = updated_b
+                candidates_map[updated_b.id] = cands
+                print(f"  • Beat {idx+1}/{len(beats)} [{updated_b.id}]: selected clip '{updated_b.selected_clip_id}' ({len(cands)} candidates)")
+                audit.log_beat_summary(updated_b.id)
+        else:
+            print("\n▶ [5] Processing per-beat footage resolution...")
+            for idx, beat in enumerate(beats, start=1):
+                print(f"  • Beat {idx}/{len(beats)} [{beat.id}]:")
+                recent_media = [m for m in selected_media_ids[-2:] if m]
+                try:
+                    updated_beat, candidates = resolve_beat_visuals(
+                        beat=beat,
+                        resolver=resolver,
+                        top_k=5,
+                        target_orientation=target_orientation,
+                        provider=footage_provider,
+                        exclude_chunk_ids=selected_chunk_ids or None,
+                        exclude_source_video_ids=recent_media or None,
+                        engine=engine,
+                        context_anchor=context_anchor,
+                        genre=effective_genre,
+                    )
+                    beats[idx - 1] = updated_beat
+                except Exception as e:
+                    print(f"    - Footage resolution note: {e} (using fallback)")
+                    candidates = []
+                candidates_map[beat.id] = candidates
+                if candidates:
+                    top_cand = candidates[0]
+                    if top_cand.chunk_id and top_cand.chunk_id not in selected_chunk_ids:
+                        selected_chunk_ids.append(top_cand.chunk_id)
+                    if top_cand.media_item_id and top_cand.media_item_id not in selected_media_ids:
+                        selected_media_ids.append(top_cand.media_item_id)
+                print(f"    - Footage candidates resolved: {len(candidates)} match(es) (status: {getattr(beats[idx - 1].footage_status, 'value', str(beats[idx - 1].footage_status))})")
+                audit.log_beat_summary(beat.id)
 
     # Stage 6: Assemble timeline
     print("\n▶ [6] Assembling timeline plan and gap-filling...")

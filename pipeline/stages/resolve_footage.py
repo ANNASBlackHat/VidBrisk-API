@@ -207,3 +207,87 @@ def resolve_beat_visuals(
         concept_motion_graphic(beat, is_fallback=True, client=llm_client, engine=engine)
 
     return beat, candidates
+
+
+def resolve_scene_visuals_cinematic(
+    beats: list[Beat],
+    resolver: Optional[FootageResolver] = None,
+    genre: Optional[str] = None,
+    top_k: int = 5,
+    target_orientation: Optional[OrientationType] = "horizontal",
+    provider: Optional[str] = None,
+    engine: str = "remotion",
+    deficit_strategy: str = "virtual_camera",
+    llm_client: Optional[GeminiLLMClient] = None,
+) -> list[tuple[Beat, list[CandidateChunk]]]:
+    """Resolves visuals across a full scene using Director Sheets and Global Viterbi Optimization.
+
+    1. Formulates SceneDirectorSheet (shot-scale progression and visual rhythm).
+    2. Gathers candidate pools for all narrative beats.
+    3. Runs Viterbi dynamic programming to select the globally optimal sequence minimizing jump-cuts,
+       motion collision, and color temperature shocks.
+    4. Handles non-narrative beats via motion graphic concepting.
+    """
+    from pipeline.cinematic.director import direct_scene
+    from pipeline.cinematic.viterbi_optimizer import ViterbiTimelineOptimizer
+
+    director_sheet = direct_scene(beats, genre=genre)
+    footage_engine = resolver or FootageResolver()
+    results: list[tuple[Beat, list[CandidateChunk]]] = []
+
+    # 1. Gather candidate lattice
+    candidate_lattice: dict[str, list[CandidateChunk]] = {}
+    narrative_beats: list[Beat] = []
+
+    for beat in beats:
+        motion_props = beat.motion_props or {}
+        layout_recipe = motion_props.get("layout_recipe")
+        display_mode = motion_props.get("display_mode")
+        is_overlay = layout_recipe in ("stat_over_footage", "quote_over_footage", "split_screen") or display_mode == "overlay"
+
+        if not is_overlay and beat.beat_type != "narrative":
+            concept_motion_graphic(beat, is_fallback=False, client=llm_client, engine=engine)
+            beat.footage_status = FootageStatus.ACCEPTED
+            continue
+
+        cands = resolve_footage(
+            beat=beat,
+            resolver=footage_engine,
+            top_k=max(top_k, 5),
+            target_orientation=target_orientation,
+            provider=provider,
+            genre=genre,
+        )
+        if cands:
+            candidate_lattice[beat.id] = cands
+            narrative_beats.append(beat)
+
+    # 2. Run Global Viterbi Timeline Optimization
+    optimizer = ViterbiTimelineOptimizer()
+    chosen_sequence = optimizer.optimize_timeline(
+        beats=narrative_beats,
+        candidate_lattice=candidate_lattice,
+        director_sheet=director_sheet,
+    )
+
+    chosen_map = {c.chunk_id: c for c in chosen_sequence}
+    # Map back to each beat
+    chosen_by_beat: dict[str, CandidateChunk] = {}
+    for idx, b in enumerate(narrative_beats):
+        if idx < len(chosen_sequence):
+            chosen_by_beat[b.id] = chosen_sequence[idx]
+
+    for beat in beats:
+        if beat.id in chosen_by_beat:
+            best_chunk = chosen_by_beat[beat.id]
+            all_cands = candidate_lattice.get(beat.id, [])
+            # Place chosen chunk at the front of candidates
+            reordered = [best_chunk] + [c for c in all_cands if c.chunk_id != best_chunk.chunk_id]
+            beat.selected_clip_id = best_chunk.chunk_id
+            beat.footage_status = FootageStatus.ACCEPTED
+            results.append((beat, reordered))
+        else:
+            # Non-narrative or fallback
+            results.append((beat, []))
+
+    return results

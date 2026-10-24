@@ -117,9 +117,14 @@ def main():
     parser.add_argument(
         "--deficit-strategy",
         type=str,
-        choices=["balanced_splice", "slowmo", "continuous"],
+        choices=["balanced_splice", "slowmo", "continuous", "virtual_camera"],
         default=None,
-        help="Strategy to handle footage shorter than speech beat: balanced_splice (default), slowmo, or continuous",
+        help="Strategy to handle footage shorter than speech beat: balanced_splice (default), slowmo, continuous, or virtual_camera",
+    )
+    parser.add_argument(
+        "--cinematic",
+        action="store_true",
+        help="Enable cinematic scene directing, global Viterbi timeline optimization, and virtual camera reframing",
     )
 
     args = parser.parse_args()
@@ -168,6 +173,7 @@ def main():
             voice=args.voice,
             engine=args.engine,
             deficit_strategy=args.deficit_strategy,
+            cinematic=args.cinematic,
         )
 
         if args.no_captions:
