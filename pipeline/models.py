@@ -33,6 +33,7 @@ StrategyType = Literal[
     "balanced_splice",
     "slowmo_retime",
     "continuous_window",
+    "virtual_camera_reframe",
 ]
 TrackType = Literal["video", "text", "audio"]
 LayerRole = Literal["background", "midground", "overlay", "caption"]

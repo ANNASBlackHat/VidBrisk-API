@@ -579,6 +579,86 @@ def plan_beat_assets(
             logger.debug(f"[DurationMatcher] Audit recording note: {e}")
         return plan, [item], []
 
+    # 2.5 Virtual Camera Two-Shot Strategy (Director Punch-In Reframe)
+    if deficit_strategy == "virtual_camera":
+        if c1_dur >= 0.35 * visual_duration:
+            dur1 = round(visual_duration / 2.0, 2)
+            dur2 = round(visual_duration - dur1, 2)
+            s_dur1 = round(min(c1_dur, dur1), 2)
+            s_dur2 = round(min(c1_dur, dur2), 2)
+
+            props1 = {**bg_props, "camera_angle": "master_wide", "scale": 1.0}
+            props2 = {
+                **bg_props,
+                "camera_angle": "digital_punch_in",
+                "scale": 1.30,
+                "zoom_drift": 0.02,
+                "transform_origin": "center",
+            }
+
+            item1 = TrackItem(
+                id=f"clip_{beat.id}_wide",
+                assetId=c1.chunk_id,
+                trackStart=beat_start,
+                trackEnd=round(beat_start + dur1, 2),
+                zIndex=0,
+                layerRole="background",
+                layout="full",
+                sourceIn=0.0,
+                sourceOut=s_dur1,
+                assetType="video",
+                storagePath=c1.storage_path,
+                storageUrl=c1.storage_url,
+                props=props1,
+            )
+            item2 = TrackItem(
+                id=f"clip_{beat.id}_punch",
+                assetId=c1.chunk_id,
+                trackStart=round(beat_start + dur1, 2),
+                trackEnd=beat_end,
+                zIndex=0,
+                layerRole="background",
+                layout="full",
+                sourceIn=round(max(0.0, c1_dur - s_dur2), 2),
+                sourceOut=round(max(0.0, c1_dur - s_dur2) + s_dur2, 2),
+                assetType="video",
+                storagePath=c1.storage_path,
+                storageUrl=c1.storage_url,
+                props=props2,
+            )
+
+            plan = AssetPlan(
+                strategy="virtual_camera_reframe",
+                items=[
+                    AssetItem(type="video", chunk_id=c1.chunk_id, source_in=0.0, source_out=s_dur1, storage_path=c1.storage_path, storage_url=c1.storage_url, props=props1),
+                    AssetItem(type="video", chunk_id=c1.chunk_id, source_in=item2.sourceIn, source_out=item2.sourceOut, storage_path=c1.storage_path, storage_url=c1.storage_url, props=props2),
+                ],
+                layers=[
+                    Layer(role="background", z=0, type="video", layout="full", chunk_id=c1.chunk_id, source_in=0.0, source_out=s_dur1, storage_path=c1.storage_path, storage_url=c1.storage_url, props=props1),
+                    Layer(role="background", z=0, type="video", layout="full", chunk_id=c1.chunk_id, source_in=item2.sourceIn, source_out=item2.sourceOut, storage_path=c1.storage_path, storage_url=c1.storage_url, props=props2),
+                ],
+            )
+            try:
+                from pipeline.footage.audit import get_audit_collector
+                audit = get_audit_collector()
+                audit.record_selection(
+                    beat.id,
+                    [
+                        {"clip_id": item1.id, "asset_id": item1.assetId, "track_start": item1.trackStart, "track_end": item1.trackEnd, "duration": dur1, "storage_path": item1.storagePath},
+                        {"clip_id": item2.id, "asset_id": item2.assetId, "track_start": item2.trackStart, "track_end": item2.trackEnd, "duration": dur2, "storage_path": item2.storagePath},
+                    ],
+                    [f"Virtual camera two-shot reframe applied ({dur1:.2f}s wide @ 1.0x + {dur2:.2f}s punch-in @ 1.30x) on asset '{c1.chunk_id}'."],
+                    vo_duration=vo_duration,
+                    pause_after=pause_duration,
+                    total_duration=visual_duration,
+                )
+            except Exception as e:
+                logger.debug(f"[DurationMatcher] Audit recording note: {e}")
+            return plan, [item1, item2], []
+
+        # Candidate is too short (< 35% of visual duration); fall back to slowmo
+        deficit_strategy = "slowmo"
+
     # 3. Slowmo Strategy (explicit, or as fallback when only 1 distinct candidate exists)
     if deficit_strategy == "slowmo" or (deficit_strategy == "balanced_splice" and len(distinct_cands) < 2):
         retime_factor = round(visual_duration / max(0.1, c1_dur), 3)
