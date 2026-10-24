@@ -194,3 +194,62 @@ def test_skip_critic_environment_variables(mock_timeline_data, monkeypatch):
     res4 = run_post_generation_critic(mock_timeline_data)
     assert res4 is not None
     assert "evaluation" in res4
+
+
+def test_text_card_schema_validation():
+    """Verify that 'text_card' is a valid literal for Layer, AssetItem, TrackItem, and AssetPlan."""
+    from pipeline.models import AssetPlan, AssetItem, Layer, TrackItem
+
+    layer = Layer(
+        role="background",
+        z=0,
+        type="text_card",
+        layout="full",
+        content="Testing fallback text card",
+    )
+    assert layer.type == "text_card"
+
+    item = AssetItem(
+        type="text_card",
+        content="Testing fallback text card",
+    )
+    assert item.type == "text_card"
+
+    plan = AssetPlan(
+        strategy="text_card",
+        items=[item],
+        layers=[layer],
+    )
+    assert plan.strategy == "text_card"
+    assert len(plan.layers) == 1
+
+    track_item = TrackItem(
+        id="txt_test",
+        trackStart=0.0,
+        trackEnd=4.0,
+        assetType="text_card",
+        content="Test content",
+    )
+    assert track_item.assetType == "text_card"
+
+
+def test_send_document_mock(tmp_path, monkeypatch):
+    """Test send_document sends multipart/form-data to Telegram endpoint."""
+    from scripts.send_to_telegram import send_document
+
+    monkeypatch.setenv("TELEGRAM_TOKEN", "123456:FAKE_TOKEN")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "-100123456789")
+
+    dummy_doc = tmp_path / "test_audit.json"
+    dummy_doc.write_text('{"status": "ok"}', encoding="utf-8")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.text = '{"ok": true}'
+
+    with monkeypatch.context() as m:
+        import requests
+        m.setattr(requests, "post", MagicMock(return_value=mock_resp))
+        res = send_document(str(dummy_doc), caption="Test Caption")
+        assert res == '{"ok": true}'
+

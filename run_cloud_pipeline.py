@@ -279,7 +279,12 @@ def run_cloud_pipeline(
     # 7. Dispatch to Telegram / Gofile
     if send_telegram:
         try:
-            from scripts.send_to_telegram import get_telegram_creds, send_video, send_text_message
+            from scripts.send_to_telegram import (
+                get_telegram_creds,
+                send_video,
+                send_text_message,
+                send_document,
+            )
             tok, chat = get_telegram_creds()
             if tok and chat:
                 caption = (
@@ -299,8 +304,21 @@ def run_cloud_pipeline(
 
                 # Send companion critique audit report if generated
                 if critique_report and critique_report.get("telegram_summary"):
-                    print("📤 Dispatching Quality Audit report to Telegram...")
+                    print("📤 Dispatching Quality Audit summary to Telegram...")
                     send_text_message(critique_report["telegram_summary"])
+
+                # Send audit and critique files as downloadable documents
+                base_path, _ = os.path.splitext(timeline_path)
+                audit_path = f"{base_path}_audit.json"
+                if os.path.exists(audit_path):
+                    print("📤 Dispatching Footage Decision Audit JSON to Telegram...")
+                    send_document(audit_path, caption="📊 Footage Decision Audit")
+
+                if critique_report:
+                    critique_md = critique_report.get("critique_md_path")
+                    if critique_md and os.path.exists(critique_md):
+                        print("📤 Dispatching AI Critic Markdown report to Telegram...")
+                        send_document(critique_md, caption="📝 AI Quality Critic Report")
             else:
                 logger.info("ℹ️ Telegram credentials not found in env or ~/.zshrc. Skipping dispatch.")
         except Exception as e:

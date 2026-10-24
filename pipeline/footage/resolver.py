@@ -227,6 +227,10 @@ class FootageResolver:
         if not query or not query.strip():
             return []
 
+        if not self.database_url or "sqlite" in str(self.database_url).lower():
+            logger.debug("[FootageResolver] Skipping caption SQL search: non-PostgreSQL DATABASE_URL")
+            return []
+
         import psycopg2
 
         stop_words = {

@@ -25,6 +25,7 @@ StrategyType = Literal[
     "concat_clips",
     "image_kenburns",
     "motion_text",
+    "text_card",
     "split_screen",
     "stat_over_footage",
     "quote_over_footage",
@@ -104,7 +105,7 @@ class WordTiming(BaseModel):
 
 class AssetItem(BaseModel):
     """Specific asset chunk or visual card component used in an AssetPlan (legacy)."""
-    type: Literal["video", "image", "text_card", "motion"]
+    type: Literal["video", "image", "text_card", "text", "motion"]
     chunk_id: Optional[str] = None
     source_in: Optional[float] = None
     source_out: Optional[float] = None
@@ -120,7 +121,7 @@ class Layer(BaseModel):
     """A single z-ordered visual layer within a beat's composition."""
     role: LayerRole
     z: int
-    type: Literal["video", "image", "motion", "text"]
+    type: Literal["video", "image", "motion", "text", "text_card"]
     layout: LayoutRole = "full"
     # footage/image fields
     chunk_id: Optional[str] = None
@@ -191,7 +192,7 @@ class TrackItem(BaseModel):
     assetId: Optional[str] = None
     sourceIn: Optional[float] = None
     sourceOut: Optional[float] = None
-    assetType: Optional[Literal["video", "image", "motion"]] = None
+    assetType: Optional[Literal["video", "image", "motion", "text", "text_card"]] = None
     storagePath: Optional[str] = None
     storageUrl: Optional[str] = None
     componentId: Optional[str] = None

@@ -119,6 +119,35 @@ def send_text_message(text: str) -> Optional[str]:
         print(f"⚠️ Telegram sendMessage error: {e}")
         return None
 
+def send_document(file_path: str, caption: str = "") -> Optional[str]:
+    """Sends a document (JSON, Markdown, log, etc.) to the configured Telegram chat."""
+    token, chat_id = get_telegram_creds()
+    if not token or not chat_id:
+        print("⚠️ Telegram token or chat_id not set for send_document.")
+        return None
+    if not os.path.exists(file_path):
+        print(f"⚠️ Document file not found: {file_path}")
+        return None
+
+    url = f"https://api.telegram.org/bot{token}/sendDocument"
+    filename = os.path.basename(file_path)
+    try:
+        with open(file_path, "rb") as f:
+            data = {"chat_id": chat_id}
+            if caption:
+                data["caption"] = caption
+            files = {"document": (filename, f)}
+            res = requests.post(url, data=data, files=files, timeout=30)
+            if res.status_code == 200:
+                print(f"✅ Successfully sent document '{filename}' to Telegram!")
+                return res.text
+            else:
+                print(f"⚠️ Telegram sendDocument returned status {res.status_code}: {res.text}")
+                return None
+    except Exception as e:
+        print(f"⚠️ Telegram sendDocument error: {e}")
+        return None
+
 def create_preview_video(video_path: str, target_height: int = 320) -> str:
     """Creates a fast, highly compressed preview video for instant mobile Telegram viewing."""
     base, ext = os.path.splitext(video_path)
