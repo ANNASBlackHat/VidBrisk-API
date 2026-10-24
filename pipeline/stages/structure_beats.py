@@ -177,7 +177,8 @@ Output JSON format:
       "visual_intent": "...",
       "beat_type": "narrative",
       "motion_props": null,
-      "mood": "hopeful"
+      "mood": "hopeful",
+      "pause_after": 1.5
     }
   ]
 }

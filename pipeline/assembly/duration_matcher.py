@@ -359,6 +359,9 @@ def plan_beat_assets(
                     "storage_path": video_item.storagePath,
                 }],
                 [f"Single clip strategy: top candidate ({top_cand.chunk_id}, {cand_duration:.2f}s) fully covers visual duration ({visual_duration:.2f}s)."],
+                vo_duration=vo_duration,
+                pause_after=pause_duration,
+                total_duration=visual_duration,
             )
         except Exception as e:
             logger.debug(f"[DurationMatcher] Audit recording note: {e}")
@@ -435,6 +438,9 @@ def plan_beat_assets(
                     "storage_path": item.storagePath,
                 }],
                 [f"Continuous strategy: extended source window [{s_in:.2f}s - {s_out:.2f}s] to cover visual duration ({visual_duration:.2f}s)."],
+                vo_duration=vo_duration,
+                pause_after=pause_duration,
+                total_duration=visual_duration,
             )
         except Exception as e:
             logger.debug(f"[DurationMatcher] Audit recording note: {e}")
@@ -565,6 +571,9 @@ def plan_beat_assets(
                     "storage_path": item.storagePath,
                 }],
                 [f"Avoided micro-cut ({deficit:.2f}s < 1.00s): extended clip '{item.id}' instead of splicing secondary candidate."],
+                vo_duration=vo_duration,
+                pause_after=pause_duration,
+                total_duration=visual_duration,
             )
         except Exception as e:
             logger.debug(f"[DurationMatcher] Audit recording note: {e}")
@@ -638,6 +647,9 @@ def plan_beat_assets(
                     "storage_path": item.storagePath,
                 }],
                 selection_notes,
+                vo_duration=vo_duration,
+                pause_after=pause_duration,
+                total_duration=visual_duration,
             )
         except Exception as e:
             logger.debug(f"[DurationMatcher] Audit recording note: {e}")
@@ -664,6 +676,15 @@ def plan_beat_assets(
 
             dur1 = round(dur1, 2)
             dur2 = round(dur2, 2)
+
+            # Enforce 1.5s pacing floor if visual_duration >= 3.0s
+            if visual_duration >= 3.0:
+                if dur1 < 1.5:
+                    dur1 = 1.5
+                    dur2 = round(visual_duration - dur1, 2)
+                elif dur2 < 1.5:
+                    dur2 = 1.5
+                    dur1 = round(visual_duration - dur2, 2)
 
             items = [
                 TrackItem(
@@ -721,6 +742,9 @@ def plan_beat_assets(
                         {"clip_id": items[1].id, "asset_id": items[1].assetId, "track_start": items[1].trackStart, "track_end": items[1].trackEnd, "duration": dur2, "storage_path": items[1].storagePath},
                     ],
                     selection_notes,
+                    vo_duration=vo_duration,
+                    pause_after=pause_duration,
+                    total_duration=visual_duration,
                 )
             except Exception as e:
                 logger.debug(f"[DurationMatcher] Audit recording note: {e}")
@@ -748,10 +772,38 @@ def plan_beat_assets(
         for idx, cand in enumerate(distinct_cands):
             if remaining <= 0.05:
                 break
+
+            # If remaining duration is too short (< 1.5s) and we already have at least 1 clip chained,
+            # avoid creating a jarring micro-cut! Instead, absorb remaining time into previous clip.
+            if remaining < 1.50 and chain_items:
+                prev_item = chain_items[-1]
+                prev_item.trackEnd = beat_end
+                prev_dur = round(prev_item.trackEnd - prev_item.trackStart, 2)
+                prev_item.sourceOut = min(prev_dur, round(prev_item.sourceOut + remaining, 2))
+                if plan_items:
+                    plan_items[-1].source_out = prev_item.sourceOut
+                if plan_layers:
+                    plan_layers[-1].source_out = prev_item.sourceOut
+                selection_notes.append(
+                    f"Eliminated micro-cut: absorbed trailing {remaining:.2f}s into previous clip '{prev_item.id}' ({prev_dur:.2f}s total) to respect >= 1.5s pacing floor."
+                )
+                remaining = 0.0
+                break
+
             base_dur = usable_durs[idx]
             max_track_dur = round(base_dur * global_retime, 2)
             track_dur = min(max_track_dur, remaining)
             source_dur = min(base_dur, round(track_dur / global_retime, 2))
+
+            # Look ahead: if after this clip the remaining duration would be an unusable micro-cut (< 1.5s),
+            # absorb that tiny remainder into THIS clip right now!
+            rem_after = round(remaining - track_dur, 2)
+            if 0.05 < rem_after < 1.50 and (idx + 1 < len(distinct_cands)):
+                track_dur = round(track_dur + rem_after, 2)
+                source_dur = min(base_dur, round(track_dur / global_retime, 2))
+                selection_notes.append(
+                    f"Pacing optimization: absorbed {rem_after:.2f}s remainder into candidate #{idx+1} to prevent trailing micro-cut."
+                )
 
             is_last = (idx == len(distinct_cands) - 1) or (remaining - track_dur <= 0.05)
             t_start = round(curr_track, 2)
@@ -828,6 +880,9 @@ def plan_beat_assets(
                     for it in chain_items
                 ],
                 selection_notes,
+                vo_duration=vo_duration,
+                pause_after=pause_duration,
+                total_duration=visual_duration,
             )
         except Exception as e:
             logger.debug(f"[DurationMatcher] Audit recording note: {e}")
@@ -839,32 +894,54 @@ def plan_beat_assets(
     plan_layers: list[Layer] = []
     remaining_duration = visual_duration
     current_track_pos = beat_start
-    used_media_ids: set[str] = set()
+    used_chunks: set[str] = set()
     used_storage_paths: set[str] = set()
+    used_media_spans: list[tuple[str, float, float]] = []
     selection_notes: list[str] = []
-    MIN_SPLICE_DURATION = 1.0  # seconds: guard against jarring micro-cuts
+    MIN_SPLICE_DURATION = 1.5  # seconds: hard pacing floor against jarring micro-cuts
 
     for idx, cand in enumerate(candidates):
         if remaining_duration <= 0.05:
             break
 
-        # Disallow reusing the same physical video file within the same beat
-        if cand.media_item_id and cand.media_item_id in used_media_ids:
-            selection_notes.append(
-                f"Skipped candidate #{idx+1} ({cand.chunk_id}): media_item_id '{cand.media_item_id}' already used in beat."
-            )
+        c_id = cand.chunk_id
+        m_id = cand.media_item_id
+        s_path = cand.storage_path
+        c_start = float(cand.start_ts or 0.0)
+        c_end = float(cand.end_ts or (c_start + (cand.duration_sec or 3.0)))
+
+        # Chunk or storage path deduplication
+        if c_id and c_id in used_chunks:
+            selection_notes.append(f"Skipped candidate #{idx+1} ({c_id}): chunk already used in beat.")
             continue
-        if cand.storage_path and cand.storage_path in used_storage_paths:
-            selection_notes.append(
-                f"Skipped candidate #{idx+1} ({cand.chunk_id}): storage_path '{cand.storage_path}' already used in beat."
-            )
+        if s_path and s_path in used_storage_paths:
+            selection_notes.append(f"Skipped candidate #{idx+1} ({c_id}): storage_path already used in beat.")
             continue
 
-        # If a primary clip is already placed and the remaining deficit is tiny (< 1.0s),
+        # For unchunked media: media_item_id uniqueness applies
+        is_unchunked = (c_id == m_id) or (not cand.start_ts and not cand.end_ts and cand.duration_sec and cand.duration_sec <= 10.0)
+        if is_unchunked and m_id:
+            if any(prev_m == m_id for prev_m, _, _ in used_media_spans):
+                selection_notes.append(f"Skipped candidate #{idx+1} ({c_id}): unchunked media_item_id already used in beat.")
+                continue
+
+        # For chunked media: avoid temporal overlap or jump-cut within 10s of another chunk
+        is_jump_cut = False
+        if m_id:
+            for prev_m, prev_s, prev_e in used_media_spans:
+                if prev_m == m_id:
+                    if abs(c_start - prev_e) < 10.0 or abs(prev_s - c_end) < 10.0 or (c_start <= prev_e and c_end >= prev_s):
+                        is_jump_cut = True
+                        break
+        if is_jump_cut:
+            selection_notes.append(f"Skipped candidate #{idx+1} ({c_id}): chunk too close in time (<10s) to another chunk from '{m_id}' (avoiding jump-cut).")
+            continue
+
+        # If a primary clip is already placed and the remaining deficit is below pacing floor (< 1.5s),
         # extend the primary clip rather than flashing a sub-second micro-cut.
         if len(video_items) > 0 and remaining_duration < MIN_SPLICE_DURATION:
             selection_notes.append(
-                f"Avoided micro-cut ({remaining_duration:.2f}s < {MIN_SPLICE_DURATION}s): extended clip '{video_items[-1].id}' instead of splicing candidate #{idx+1}."
+                f"Avoided micro-cut ({remaining_duration:.2f}s < {MIN_SPLICE_DURATION}s): extended clip '{video_items[-1].id}' to beat end."
             )
             video_items[-1].trackEnd = beat_end
             if plan_items:
@@ -932,10 +1009,12 @@ def plan_beat_assets(
             )
         )
 
-        if cand.media_item_id:
-            used_media_ids.add(cand.media_item_id)
-        if cand.storage_path:
-            used_storage_paths.add(cand.storage_path)
+        if c_id:
+            used_chunks.add(c_id)
+        if s_path:
+            used_storage_paths.add(s_path)
+        if m_id:
+            used_media_spans.append((m_id, c_start, c_end))
 
         current_track_pos += use_dur
         remaining_duration -= use_dur
@@ -968,7 +1047,14 @@ def plan_beat_assets(
             }
             for item in video_items
         ]
-        audit.record_selection(beat.id, final_clips_summary, selection_notes)
+        audit.record_selection(
+            beat.id,
+            final_clips_summary,
+            selection_notes,
+            vo_duration=vo_duration,
+            pause_after=pause_duration,
+            total_duration=visual_duration,
+        )
     except Exception as e:
         logger.debug(f"[DurationMatcher] Audit recording note: {e}")
 

@@ -336,3 +336,56 @@ def test_intra_source_chunk_splicing_prevents_looping():
     assert round(video_items[0].trackEnd - video_items[0].trackStart + video_items[1].trackEnd - video_items[1].trackStart, 2) == 7.70
 
 
+def test_micro_cut_elimination_in_chaining():
+    """Verify that multi-candidate chaining eliminates micro-cuts (< 1.5s) by absorbing remainder."""
+    from pipeline.assembly.duration_matcher import plan_beat_assets
+    from pipeline.models import Beat, CandidateChunk, VoiceClip
+
+    beat = Beat(id="b_pacing", text="A long sentence with many words to test chaining.", visual_intent="Underwater test")
+    voice_clip = VoiceClip(beat_id="b_pacing", audio_path="mock.wav", duration_sec=7.70)
+
+    # Cand1: 1.53s, Cand2: 5.00s, Cand3: 4.00s
+    cand1 = CandidateChunk(chunk_id="c1", media_item_id="m1", score=1.0, duration_sec=1.53, storage_path="s1.mp4")
+    cand2 = CandidateChunk(chunk_id="c2", media_item_id="m2", score=1.0, duration_sec=5.00, storage_path="s2.mp4")
+    cand3 = CandidateChunk(chunk_id="c3", media_item_id="m3", score=1.0, duration_sec=4.00, storage_path="s3.mp4")
+
+    plan, video_items, _ = plan_beat_assets(
+        beat=beat,
+        voice_clip=voice_clip,
+        candidates=[cand1, cand2, cand3],
+        track_cursor=0.0,
+        deficit_strategy="balanced_splice",
+    )
+
+    # Every item must be >= 1.5s (no 1.17s micro-cuts!)
+    for it in video_items:
+        dur = round(it.trackEnd - it.trackStart, 2)
+        assert dur >= 1.50, f"Expected clip duration >= 1.50s, but found {dur}s on {it.id}"
+
+    # Total duration must equal 7.70s
+    total_dur = round(sum(it.trackEnd - it.trackStart for it in video_items), 2)
+    assert total_dur == 7.70
+
+
+def test_audit_records_pause_after_and_durations():
+    """Verify that the decision audit collector records and exports pause_after, vo_duration, and total_duration."""
+    from pipeline.footage.audit import FootageDecisionAuditCollector
+
+    collector = FootageDecisionAuditCollector(run_id="test_run")
+    collector.record_selection(
+        beat_id="b1",
+        final_clips=[{"clip_id": "clip_1", "duration": 7.70}],
+        notes=["Pacing test note"],
+        vo_duration=6.20,
+        pause_after=1.50,
+        total_duration=7.70,
+    )
+
+    data = collector.to_dict()
+    b1_audit = data["beats"]["b1"]
+    assert b1_audit["vo_duration"] == 6.20
+    assert b1_audit["pause_after"] == 1.50
+    assert b1_audit["total_duration"] == 7.70
+
+
+

@@ -39,6 +39,9 @@ class BeatFootageAudit:
     script_text: str
     beat_type: str
     visual_intent: str
+    vo_duration: Optional[float] = None
+    pause_after: float = 0.0
+    total_duration: Optional[float] = None
     query_tokens: list[str] = field(default_factory=list)
     active_embedding_model: Optional[str] = None
     vector_hits: list[CandidateHitAudit] = field(default_factory=list)
@@ -133,10 +136,23 @@ class FootageDecisionAuditCollector:
         ]
         b.deduplicated_chunks = dedup_actions
 
-    def record_selection(self, beat_id: str, final_clips: list[dict[str, Any]], notes: list[str]):
+    def record_selection(
+        self,
+        beat_id: str,
+        final_clips: list[dict[str, Any]],
+        notes: list[str],
+        vo_duration: Optional[float] = None,
+        pause_after: float = 0.0,
+        total_duration: Optional[float] = None,
+    ):
         b = self.get_or_create(beat_id)
         b.final_selected_clips = final_clips
         b.selection_notes.extend(notes)
+        if vo_duration is not None:
+            b.vo_duration = round(vo_duration, 2)
+        b.pause_after = round(pause_after, 2)
+        if total_duration is not None:
+            b.total_duration = round(total_duration, 2)
 
     def log_beat_summary(self, beat_id: str):
         b = self.beats.get(beat_id)
