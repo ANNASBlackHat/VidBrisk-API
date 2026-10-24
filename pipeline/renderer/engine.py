@@ -240,17 +240,21 @@ class VideoRenderer:
             progress_callback({"percent": 5, "is_rendering": True, "message": "Initializing FFmpeg renderer..."})
 
         try:
-            # Build beat_id -> narrative text lookup from metadata if available
+            # Build beat_id -> narrative text and candidate lookups from metadata if available
             metadata = data.get("metadata", {}) if isinstance(data, dict) else {}
             resolved_beats = metadata.get("resolved_beats") or []
             beat_text_map: dict[str, str] = {}
+            beat_candidates_map: dict[str, list[Any]] = {}
             for rb in resolved_beats:
                 if isinstance(rb, dict):
                     b = rb.get("beat") or {}
-                    b_id = b.get("id")
+                    b_id = str(b.get("id") or "")
                     b_txt = b.get("text")
                     if b_id and b_txt:
-                        beat_text_map[str(b_id)] = str(b_txt)
+                        beat_text_map[b_id] = str(b_txt)
+                    cands = rb.get("footage_candidates") or []
+                    if b_id and cands:
+                        beat_candidates_map[b_id] = cands
 
             # 1. Build Visual Segments
             rendered_video_segments = []
@@ -312,11 +316,53 @@ class VideoRenderer:
 
                         self._log(f"• Segment {idx}: [{asset_type.upper()}] {t_start:.2f}s-{t_end:.2f}s ({dur:.2f}s) - Source: [{source_in:.2f}s-{source_out:.2f}s] - Asset: {asset_repr[:60]}...")
 
+                        beat_id = str(item.get("id", "")).replace("clip_", "").replace("txt_", "").split("_")[0]
+
                         local_asset_file = self._resolve_asset_media(
                             item=item,
                             idx=idx,
                             asset_type=asset_type,
                         )
+
+                        # Candidate Download Fallback Chain:
+                        # If primary asset download failed (e.g. 404, rate limit), attempt runner-up candidates from the beat
+                        if not local_asset_file and beat_id in beat_candidates_map:
+                            alt_candidates = beat_candidates_map[beat_id]
+                            self._log(f"  ⚠️ Primary asset failed to resolve for beat '{beat_id}'. Attempting candidate fallback chain across {len(alt_candidates)} alternative(s)...")
+                            for alt_idx, alt_cand in enumerate(alt_candidates, start=1):
+                                if isinstance(alt_cand, dict):
+                                    alt_cid = alt_cand.get("chunk_id")
+                                    alt_path = alt_cand.get("storage_path") or alt_cand.get("storage_url")
+                                    alt_url = alt_cand.get("storage_url") or ""
+                                    alt_mtype = alt_cand.get("media_type") or asset_type
+                                    alt_start = float(alt_cand.get("start_ts") or 0.0)
+                                else:
+                                    alt_cid = getattr(alt_cand, "chunk_id", None)
+                                    alt_path = getattr(alt_cand, "storage_path", None) or getattr(alt_cand, "storage_url", None)
+                                    alt_url = getattr(alt_cand, "storage_url", None) or ""
+                                    alt_mtype = getattr(alt_cand, "media_type", None) or asset_type
+                                    alt_start = float(getattr(alt_cand, "start_ts", 0.0) or 0.0)
+
+                                if not alt_path or alt_cid == item.get("assetId"):
+                                    continue
+
+                                alt_item = {
+                                    "assetId": alt_cid,
+                                    "storagePath": alt_path,
+                                    "storageUrl": alt_url,
+                                }
+                                self._log(f"  ↳ Trying fallback candidate #{alt_idx} ({alt_cid})...")
+                                alt_resolved = self._resolve_asset_media(
+                                    item=alt_item,
+                                    idx=idx,
+                                    asset_type=alt_mtype,
+                                )
+                                if alt_resolved and os.path.exists(alt_resolved):
+                                    self._log(f"  ✅ Recovered! Fallback candidate #{alt_idx} ({alt_cid}) resolved successfully.")
+                                    local_asset_file = alt_resolved
+                                    source_in = alt_start
+                                    asset_type = alt_mtype
+                                    break
 
                         if local_asset_file and os.path.exists(local_asset_file):
                             if asset_type == "image":
@@ -329,8 +375,7 @@ class VideoRenderer:
                                 )
                             self._log(f"  ✓ Processed visual segment with {fit_mode} framing")
                         else:
-                            # Fallback placeholder card showing beat text
-                            beat_id = str(item.get("id", "")).replace("clip_", "").split("_")[0]
+                            # Fallback placeholder card showing beat text (only when all video candidates fail)
                             display_text = beat_text_map.get(beat_id) or item.get("content") or f"Scene {beat_id.upper()}"
                             self._log(f"  ↳ Using placeholder card for scene: {display_text[:50]}")
                             self._create_text_card_clip(
