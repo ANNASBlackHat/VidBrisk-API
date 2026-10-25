@@ -1122,7 +1122,19 @@ def override_job_beat_selection(db: Session, job_id: str, beat_id: str, chunk_id
     chosen_cand = None
     if beat_id in cands_map and isinstance(cands_map[beat_id], list):
         cands_list = list(cands_map[beat_id])
-        target_idx = next((i for i, c in enumerate(cands_list) if (c.get("chunk_id") == chunk_id or c.get("id") == chunk_id)), -1)
+        target_idx = next(
+            (
+                i
+                for i, c in enumerate(cands_list)
+                if (
+                    c.get("chunk_id") == chunk_id
+                    or c.get("id") == chunk_id
+                    or c.get("clip_id") == chunk_id
+                    or c.get("media_id") == chunk_id
+                )
+            ),
+            -1,
+        )
         if target_idx > -1:
             chosen = cands_list.pop(target_idx)
             cands_list.insert(0, chosen)
@@ -1142,7 +1154,11 @@ def override_job_beat_selection(db: Session, job_id: str, beat_id: str, chunk_id
                         it_copy = dict(it)
                         it_id = str(it_copy.get("id", ""))
                         if beat_id in it_id or it_copy.get("beatId") == beat_id:
-                            it_copy["assetId"] = chosen_cand.get("chunk_id") or chosen_cand.get("id")
+                            it_copy["assetId"] = (
+                                chosen_cand.get("chunk_id")
+                                or chosen_cand.get("id")
+                                or chosen_cand.get("clip_id")
+                            )
                             it_copy["storagePath"] = chosen_cand.get("storage_path") or chosen_cand.get("storage_url")
                             it_copy["storageUrl"] = chosen_cand.get("storage_url") or chosen_cand.get("storage_path")
                             if "start_ts" in chosen_cand:
@@ -1161,6 +1177,12 @@ def override_job_beat_selection(db: Session, job_id: str, beat_id: str, chunk_id
 
     job.beats = updated_beats
     job.footage_candidates = cands_map
+
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(job, "timeline")
+    flag_modified(job, "beats")
+    flag_modified(job, "footage_candidates")
+
     db.commit()
     db.refresh(job)
     return True

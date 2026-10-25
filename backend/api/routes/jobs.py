@@ -226,6 +226,71 @@ def get_job_timeline(
     return job.timeline
 
 
+@router.patch(
+    "/{job_id}/timeline",
+    response_model=dict[str, Any],
+    summary="Update compiled tracks timeline for a job",
+)
+def update_job_timeline(
+    job_id: str,
+    payload: dict[str, Any],
+    db: Session = Depends(get_db),
+) -> Any:
+    """Updates and persists the compiled tracks-shaped timeline JSON for a job."""
+    from sqlalchemy.orm.attributes import flag_modified
+    job = get_job(session=db, job_id=job_id)
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job with ID '{job_id}' was not found.",
+        )
+    timeline_data = payload.get("timeline") if "timeline" in payload else payload
+    job.timeline = timeline_data
+    flag_modified(job, "timeline")
+    db.commit()
+    db.refresh(job)
+    return {"status": "ok", "job_id": job_id, "timeline": job.timeline}
+
+
+@router.patch(
+    "/{job_id}/beats/{beat_id}",
+    summary="Update beat attributes like pause_after",
+)
+def update_job_beat(
+    job_id: str,
+    beat_id: str,
+    payload: dict[str, Any],
+    db: Session = Depends(get_db),
+) -> Any:
+    """Updates properties on an individual beat (such as pause_after)."""
+    from sqlalchemy.orm.attributes import flag_modified
+    job = get_job(session=db, job_id=job_id)
+    if not job or not job.beats:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job with ID '{job_id}' was not found.",
+        )
+    updated_beats = []
+    found = False
+    for b in job.beats:
+        b_copy = dict(b)
+        if b_copy.get("id") == beat_id:
+            found = True
+            for k, v in payload.items():
+                b_copy[k] = v
+        updated_beats.append(b_copy)
+    if not found:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Beat '{beat_id}' not found in job '{job_id}'.",
+        )
+    job.beats = updated_beats
+    flag_modified(job, "beats")
+    db.commit()
+    db.refresh(job)
+    return {"status": "ok", "job_id": job_id, "beat_id": beat_id}
+
+
 @router.post(
     "/{job_id}/approve",
     response_model=JobResponse,

@@ -98,3 +98,7 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+*.png
+.playwright-mcp/
+kaggle_log/
