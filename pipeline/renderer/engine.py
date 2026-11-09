@@ -170,6 +170,7 @@ class VideoRenderer:
         fps: int = 24,
         fit_mode: FitMode = "blur_bg",
         progress_callback: Optional[Callable[[dict[str, Any]], None]] = None,
+        allow_motion_fallback: bool = False,
     ) -> str:
         """Renders a timeline into a standalone MP4 file with aspect ratio fit support."""
         if isinstance(timeline, str):
@@ -181,42 +182,43 @@ class VideoRenderer:
             data = timeline
 
         tracks = data.get("tracks", [])
-        has_motion_items = any(
-            item.get("assetType") == "motion" or bool(item.get("componentId"))
-            for track in tracks
-            for item in track.get("items", [])
-        )
-        if has_motion_items:
-            raise RenderEngineMismatchError(
-                "This timeline contains motion components that require the Remotion "
-                "renderer (headless Chromium + frame-accurate interpolation). The "
-                "ffmpeg-only fallback cannot render these correctly and will not "
-                "attempt to — fix the primary Remotion render path instead of "
-                "silently degrading output."
+        if not allow_motion_fallback:
+            has_motion_items = any(
+                item.get("assetType") == "motion" or bool(item.get("componentId"))
+                for track in tracks
+                for item in track.get("items", [])
             )
+            if has_motion_items:
+                raise RenderEngineMismatchError(
+                    "This timeline contains motion components that require the Remotion "
+                    "renderer (headless Chromium + frame-accurate interpolation). The "
+                    "ffmpeg-only fallback cannot render these correctly and will not "
+                    "attempt to — fix the primary Remotion render path instead of "
+                    "silently degrading output."
+                )
 
-        # Multi-layer layout guard: detect overlay roles, split-screen layouts, or concurrent video intervals
-        has_multilayer_items = any(
-            item.get("layerRole") in ("overlay", "midground")
-            or item.get("layout") in (
-                "split-left",
-                "split-right",
-                "overlay-lower-third",
-                "corner-tl",
-                "corner-tr",
-                "corner-bl",
-                "corner-br",
+            # Multi-layer layout guard: detect overlay roles, split-screen layouts, or concurrent video intervals
+            has_multilayer_items = any(
+                item.get("layerRole") in ("overlay", "midground")
+                or item.get("layout") in (
+                    "split-left",
+                    "split-right",
+                    "overlay-lower-third",
+                    "corner-tl",
+                    "corner-tr",
+                    "corner-bl",
+                    "corner-br",
+                )
+                or (item.get("zIndex") is not None and item.get("zIndex") > 0)
+                for track in tracks
+                for item in track.get("items", [])
             )
-            or (item.get("zIndex") is not None and item.get("zIndex") > 0)
-            for track in tracks
-            for item in track.get("items", [])
-        )
-        if has_multilayer_items:
-            raise RenderEngineMismatchError(
-                "This timeline contains multi-layer visual compositions (split-screen, "
-                "z-ordered overlays, or non-full layouts) that require the Remotion "
-                "compositor. The ffmpeg fallback renderer only supports single-stream sequential cuts."
-            )
+            if has_multilayer_items:
+                raise RenderEngineMismatchError(
+                    "This timeline contains multi-layer visual compositions (split-screen, "
+                    "z-ordered overlays, or non-full layouts) that require the Remotion "
+                    "compositor. The ffmpeg fallback renderer only supports single-stream sequential cuts."
+                )
 
         video_items = []
         text_items = []
@@ -263,7 +265,18 @@ class VideoRenderer:
             for item in video_items:
                 all_visual_items.append({**item, "_kind": "video"})
             for item in text_items:
-                all_visual_items.append({**item, "_kind": "text"})
+                if allow_motion_fallback:
+                    # In single-stream fallback, avoid stacking text cards on top of existing background clips
+                    t_s = float(item.get("trackStart", 0.0))
+                    t_e = float(item.get("trackEnd", 0.0))
+                    has_bg_video = any(
+                        float(v.get("trackStart", 0.0)) < t_e and float(v.get("trackEnd", 0.0)) > t_s
+                        for v in video_items
+                    )
+                    if not has_bg_video:
+                        all_visual_items.append({**item, "_kind": "text"})
+                else:
+                    all_visual_items.append({**item, "_kind": "text"})
 
             all_visual_items.sort(key=lambda x: float(x.get("trackStart", 0.0)))
 

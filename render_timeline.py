@@ -165,10 +165,14 @@ def main():
     )
 
     print(f"▶ Rendering video using engine '{engine.engine_name}'...")
+    render_kwargs = {"fit_mode": args.fit_mode}
+    if args.engine == "native_fast":
+        render_kwargs["allow_motion_fallback"] = True
+
     rendered_path = engine.render(
         compiled_data=timeline_data,
         output_path=interim_output,
-        fit_mode=args.fit_mode,
+        **render_kwargs,
     )
 
     if needs_sub_burn:

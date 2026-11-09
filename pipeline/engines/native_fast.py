@@ -88,6 +88,7 @@ class NativeFastEngine(BaseVideoEngine):
         render_height = compiled_data.get("height", height)
         render_fps = compiled_data.get("fps", fps)
 
+        allow_motion_fallback = kwargs.get("allow_motion_fallback", False)
         renderer = VideoRenderer(ffmpeg_bin=self.ffmpeg_bin, debug=self.debug)
         return renderer.render_timeline(
             timeline=timeline_payload,
@@ -97,6 +98,7 @@ class NativeFastEngine(BaseVideoEngine):
             fps=render_fps,
             fit_mode=fit_mode,
             progress_callback=progress_callback,
+            allow_motion_fallback=allow_motion_fallback,
         )
 
     def validate_support(self, job_or_plan: Union[Any, Dict[str, Any]]) -> Tuple[bool, Optional[str]]:

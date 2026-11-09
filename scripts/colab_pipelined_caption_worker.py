@@ -11,6 +11,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -176,7 +177,23 @@ print('[run] Pipelined caption worker finished successfully!', flush=True)
     )
 
     if not session_exists:
-        sh("colab", "new", "-s", args.session, "--gpu", args.gpu)
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            try:
+                print(f"[session] Requesting new Colab GPU session '{args.session}' (attempt {attempt}/{max_attempts})...", flush=True)
+                sh("colab", "new", "-s", args.session, "--gpu", args.gpu)
+                break
+            except Exception as e:
+                print(f"⚠️ 'colab new' encountered an error on attempt {attempt}: {e}", flush=True)
+                time.sleep(3)
+                chk = subprocess.run(["colab", "status", "-s", args.session], capture_output=True, text=True)
+                if chk.returncode == 0 and "not found" not in chk.stdout.lower() and "error" not in chk.stderr.lower():
+                    print(f"✅ Session '{args.session}' is ready despite CLI timeout!", flush=True)
+                    break
+                if attempt == max_attempts:
+                    raise
+                print("🔄 Retrying in 5 seconds...", flush=True)
+                time.sleep(5)
     else:
         print(f"[session] Reusing existing Colab session '{args.session}' (dependencies already cached!)", flush=True)
 
